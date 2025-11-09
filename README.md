@@ -1,22 +1,6 @@
 # 大学牲期末复习小工具——隐藏/显示超星学习通作业答案
 
-> **✨ v2.0.0 现已采用模块化设计！代码结构更清晰，更易维护和扩展。**
-
 一键隐藏超星考试 / 试卷页面中所有 `div.mark_answer` 答案块，支持**单个控制和全局控制**，可直接在控制台执行或安装为油猴脚本使用。
-
----
-
-## 🆕 v2.0.0 更新内容
-
-- ✅ **全新模块化架构**：代码按功能拆分为独立模块
-- ✅ **配置模块**：所有配置集中管理，修改更方便
-- ✅ **DOM操作模块**：封装所有DOM查询和操作
-- ✅ **UI模块**：统一管理界面元素和样式
-- ✅ **按钮控制模块**：事件处理逻辑独立封装
-- ✅ **通过 @require 自动加载子模块**：安装更简单
-- ✅ **代码可读性和可维护性大幅提升**
-
-详细的模块化设计说明请查看 [MODULE_DESIGN.md](MODULE_DESIGN.md)
 
 ---
 
@@ -28,122 +12,7 @@
 
 ---
 
-## 📦 项目结构
-
-```
-remove-chaoxing-paper-answer/
-├── main.user.js                    # 主入口文件（安装此文件）
-├── modules/                         # 模块目录
-│   ├── config.js                   # 配置模块
-│   ├── dom-handler.js              # DOM操作模块
-│   ├── ui.js                       # UI界面模块
-│   └── button-controller.js        # 按钮控制模块
-├── README.md                        # 本文件
-└── MODULE_DESIGN.md                # 模块化设计详细说明
-```
-
----
-
-## 🧭 使用方式一：安装为油猴脚本（推荐）
-
-### 1. 安装浏览器扩展
-
-首先安装以下任一脚本管理器扩展：
-
-- **Tampermonkey（推荐）**
-  - [Chrome 扩展商店](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
-  - [Edge 扩展商店](https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd)
-  - [Firefox 扩展商店](https://addons.mozilla.org/zh-CN/firefox/addon/tampermonkey/)
-  
-- **Violentmonkey**
-  - [Chrome 扩展商店](https://chrome.google.com/webstore/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag)
-  - [Firefox 扩展商店](https://addons.mozilla.org/zh-CN/firefox/addon/violentmonkey/)
-
-### 2. 安装脚本
-
-点击下方链接安装：
-
-**[📥 点击安装 main.user.js](https://github.com/Grenz1inie/remove-chaoxing-paper-answer/raw/main/main.user.js)**
-
-或者：
-
-1. 在本仓库点击 `main.user.js` 文件
-2. 点击「Raw」按钮
-3. Tampermonkey 会自动识别并提示安装
-
-### 3. 使用脚本
-
-安装完成后，访问超星学习通作业页面（`https://*.chaoxing.com/mooc-ans/mooc2/work/view*`），脚本会自动运行：
-
-- 所有答案块会被隐藏
-- 每个答案位置会显示「显示答案」按钮
-- 页面右上角会显示「显示全部答案」全局控制按钮
-
----
-
-## 🧭 使用方式二：控制台直接执行（快速测试）
-
-如果只是想临时使用而不想安装扩展，可以在浏览器控制台直接执行：
-
-1. 打开超星学习通 **作业页面**（确保页面完全加载完成）  
-2. 打开浏览器开发者工具：  
-   - Windows：按 `F12` 或 `Ctrl+Shift+I`  
-   - Mac：按 `Command+Option+I`  
-   - 或右键页面 → 「检查」  
-3. 切换到「Console」控制台标签页  
-4. 访问 [main.user.js](main.user.js)，复制完整代码并粘贴执行
-
-> ⚠️ **注意**：控制台执行方式需要移除脚本头部的元数据注释（`// ==UserScript==` 部分），或者复制从 `(function() {` 开始的代码。
-
----
-
-## 🎨 自定义配置
-
-### 修改配置项
-
-所有配置集中在 `modules/config.js` 文件中，你可以修改以下内容：
-
-```javascript
-const ChaoxingConfig = {
-    // 按钮位置
-    btnPosition: {
-        marginLeft: '20px',
-        marginTop: '10px',
-        // ...
-    },
-    
-    // 按钮样式
-    btnStyle: {
-        fontSize: '12px',
-        primaryColor: '#4299e1',    // 主色调（蓝色）
-        secondaryColor: '#9f7aea',  // 次要色调（紫色）
-        // ...
-    },
-    
-    // 执行延迟（毫秒）
-    executionDelay: 800,
-    
-    // 日志配置
-    logging: {
-        enabled: true,
-        prefix: '[超星答案工具]'
-    }
-};
-```
-
-### 本地开发
-
-如果要在本地开发并测试：
-
-1. Fork 本仓库
-2. 修改 `main.user.js` 中的 `@require` 路径为你的 GitHub 仓库地址
-3. 修改各模块文件
-4. 提交并推送到你的仓库
-5. 重新安装脚本测试
-
----
-
-## 🧭 使用方式三：控制台直接执行（旧版）
+## 🧭 使用方式一：控制台直接执行
 
 1. 打开超星学习通 **作业页面**（确保页面完全加载完成）  
 2. 打开浏览器开发者工具：  
@@ -332,6 +201,19 @@ const ChaoxingConfig = {
 ---
 
 ## 📜 更新日志
+
+### v2.0.0 (2025-11-09)
+- 🏗️ **重大重构**：采用现代化面向对象设计，大幅提升代码质量
+- 📦 **模块化架构**：将代码拆分为多个独立模块（Config、Logger、DOMHelper、StyleGenerator 等）
+- 🎯 **单一职责原则**：每个类只负责特定功能，提升代码可维护性
+- 🔧 **增强配置系统**：支持深度合并的配置管理，便于自定义扩展
+- 🛠️ **工具类封装**：DOMHelper 提供统一的 DOM 操作接口
+- 🎨 **样式生成器**：StyleGenerator 统一管理所有样式生成逻辑
+- 📊 **控制器模式**：AnswerBlockController 和 GlobalController 分别管理单个和全局控制
+- 🚀 **异步初始化**：使用 async/await 优化页面加载流程
+- 🐛 **错误处理**：完善的 try-catch 机制和日志系统
+- 📝 **代码可读性**：清晰的命名、注释和代码结构
+- 🔄 **易于扩展**：新增功能只需扩展相应类，无需修改核心逻辑
 
 ### v1.0.1
 - 🧩 新增：油猴脚本支持（Tampermonkey 自动执行）
