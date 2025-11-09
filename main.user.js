@@ -76,12 +76,6 @@
                 noteLoadError: '⚠️ 加载笔记失败'
             }
         };
-                noContainer: 'ℹ️ 未找到容器模块，仅启用单个答案块隐藏功能',
-                success: '✅ 超星作业答案块隐藏工具执行完成！',
-                hiddenCount: (count) => `- 已隐藏 ${count} 个答案内容块，每个块已添加独立显示按钮`,
-                globalButton: (hasContainer) => `- ${hasContainer ? '已在容器右上角添加全局控制按钮' : '未找到容器模块，未添加全局按钮'}`
-            }
-        };
 
         constructor(customConfig = {}) {
             this.config = this._deepMerge(Config.DEFAULT, customConfig);
