@@ -611,6 +611,7 @@
             this.noteButton = null;
             this.noteEditor = null;
             this.buttonContainer = null;
+            this.currentAnswerBlock = null;  // 跟踪当前显示的答案块
             this.isHidden = false;
             this.questionId = this._extractQuestionId();
         }
@@ -629,14 +630,16 @@
         }
 
         async initialize() {
-            this._hideBlock();
+            this._hideBlockInitial();
             await this._createButtons();
             await this._createNoteEditor();
             return this.buttonContainer;
         }
 
-        _hideBlock() {
+        _hideBlockInitial() {
+            // 初始化时删除原始答案块
             DOMHelper.removeElement(this.block);
+            this.currentAnswerBlock = null;
             this.isHidden = true;
         }
 
@@ -717,15 +720,33 @@
         }
 
         _showBlock() {
+            // 如果已经有显示的答案块，先删除它（防止重复）
+            if (this.currentAnswerBlock && this.currentAnswerBlock.parentNode) {
+                DOMHelper.removeElement(this.currentAnswerBlock);
+            }
+            
             const tempContainer = document.createElement('div');
             tempContainer.innerHTML = this.originalHTML;
             const restoredBlock = tempContainer.firstChild;
+            
+            // 保存对新创建的答案块的引用
+            this.currentAnswerBlock = restoredBlock;
+            
             // 插入到笔记编辑器之后（如果可见）或按钮容器之后
             const insertAfter = this.noteEditor.isVisible ? 
                 this.noteEditor.getElement().nextSibling : 
                 this.buttonContainer.nextSibling;
             DOMHelper.insertElement(restoredBlock, this.parent, insertAfter);
             this.isHidden = false;
+        }
+
+        _hideBlock() {
+            // 删除当前显示的答案块
+            if (this.currentAnswerBlock && this.currentAnswerBlock.parentNode) {
+                DOMHelper.removeElement(this.currentAnswerBlock);
+                this.currentAnswerBlock = null;
+            }
+            this.isHidden = true;
         }
 
         _updateAnswerButtonState() {
