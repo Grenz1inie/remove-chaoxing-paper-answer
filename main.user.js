@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         （测试）隐藏/显示超星学习通作业答案
 // @namespace    http://tampermonkey.net/
-// @version      2.2.0
+// @version      2.3.0
 // @description  一键隐藏超星学习通作业页面中所有 div.mark_answer 答案块，支持单个控制和全局控制，支持为每道题添加笔记。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -439,6 +439,25 @@
             });
         }
 
+        /**
+         * 获取整个域名下的所有笔记
+         */
+        async getAllDomainNotes() {
+            if (!this.db) await this.init();
+
+            return new Promise((resolve, reject) => {
+                const transaction = this.db.transaction(
+                    [this.config.get('database.stores.notes')],
+                    'readonly'
+                );
+                const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
+                const request = objectStore.getAll();
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
         async deleteNote(workKey, questionId) {
             if (!this.db) await this.init();
 
@@ -717,8 +736,16 @@
             this.modal = null;
             this.notesList = [];
             this.selectedNotes = new Set();
-            this.currentTab = 'settings'; // 'settings' 或 'notes'
+            this.notesScope = 'current'; // 'current', 'course', 'class', 'domain'
+            this.currentTab = 'settings'; // 'settings', 'notes', 'styles'
             this.settings = {};
+            this.notesMenuExpanded = false; // 管理笔记子菜单是否展开
+            
+            // 解析 workKey 获取 courseId, classId, workId
+            const parts = workKey.split('_');
+            this.courseId = parts[0] || '';
+            this.classId = parts[1] || '';
+            this.workId = parts[2] || '';
         }
 
         /**
@@ -758,7 +785,35 @@
          */
         async _loadNotes() {
             try {
-                this.notesList = await this.dbManager.getAllNotes(this.workKey);
+                const allNotes = await this.dbManager.getAllDomainNotes();
+                
+                switch (this.notesScope) {
+                    case 'current':
+                        // 当前页面：完全匹配 workKey
+                        this.notesList = allNotes.filter(note => note.workKey === this.workKey);
+                        break;
+                    case 'course':
+                        // 当前课程：courseId 相同
+                        this.notesList = allNotes.filter(note => {
+                            const parts = note.workKey.split('_');
+                            return parts[0] === this.courseId;
+                        });
+                        break;
+                    case 'class':
+                        // 当前班级：courseId 和 classId 都相同
+                        this.notesList = allNotes.filter(note => {
+                            const parts = note.workKey.split('_');
+                            return parts[0] === this.courseId && parts[1] === this.classId;
+                        });
+                        break;
+                    case 'domain':
+                        // 整个域名：所有笔记
+                        this.notesList = allNotes;
+                        break;
+                    default:
+                        this.notesList = allNotes.filter(note => note.workKey === this.workKey);
+                }
+                
                 this.notesList.sort((a, b) => b.timestamp - a.timestamp);
             } catch (error) {
                 Logger.error('加载笔记失败', error);
@@ -928,12 +983,23 @@
             // 菜单项
             const menuItems = [
                 { id: 'settings', icon: '⚙️', text: '设置' },
-                { id: 'notes', icon: '📝', text: '管理笔记' },
+                { 
+                    id: 'notes', 
+                    icon: '📝', 
+                    text: '管理笔记',
+                    hasSubmenu: true,
+                    submenu: [
+                        { id: 'notes-current', icon: '📄', text: '当前页面', scope: 'current' },
+                        { id: 'notes-course', icon: '📚', text: '当前课程', scope: 'course' },
+                        { id: 'notes-class', icon: '👥', text: '当前班级', scope: 'class' },
+                        { id: 'notes-domain', icon: '🌐', text: '整个域名', scope: 'domain' }
+                    ]
+                },
                 { id: 'styles', icon: '🎨', text: '样式管理' }
             ];
 
             menuItems.forEach(item => {
-                const menuItem = this._createMenuItem(item.id, item.icon, item.text);
+                const menuItem = this._createMenuItem(item);
                 sidebar.appendChild(menuItem);
             });
 
@@ -941,22 +1007,31 @@
         }
 
         /**
-         * 创建菜单项
+         * 创建菜单项（支持子菜单）
          */
-        _createMenuItem(id, icon, text) {
-            const isActive = this.currentTab === id;
-
+        _createMenuItem(item) {
+            const container = DOMHelper.createElement('div');
+            
+            // 主菜单项
             const menuItem = DOMHelper.createElement('div', {
-                dataset: { tab: id },
+                dataset: { tab: item.id },
                 style: {
                     padding: '12px 20px',
                     cursor: 'pointer',
-                    color: isActive ? 'white' : '#a0aec0',
-                    backgroundColor: isActive ? '#4a5568' : 'transparent',
-                    borderLeft: isActive ? '3px solid #4299e1' : '3px solid transparent',
+                    color: this.currentTab === item.id ? 'white' : '#a0aec0',
+                    backgroundColor: this.currentTab === item.id ? '#4a5568' : 'transparent',
+                    borderLeft: this.currentTab === item.id ? '3px solid #4299e1' : '3px solid transparent',
+                    fontWeight: this.currentTab === item.id ? 'bold' : 'normal',
                     transition: 'all 0.2s',
-                    fontSize: '14px',
-                    fontWeight: isActive ? 'bold' : 'normal',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    justifyContent: 'space-between'
+                }
+            });
+
+            const leftContent = DOMHelper.createElement('div', {
+                style: {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px'
@@ -964,38 +1039,143 @@
             });
 
             const iconSpan = DOMHelper.createElement('span', {
-                innerText: icon,
-                style: { fontSize: '16px' }
+                innerText: item.icon,
+                style: {
+                    fontSize: '16px'
+                }
             });
 
             const textSpan = DOMHelper.createElement('span', {
-                innerText: text
-            });
-
-            menuItem.appendChild(iconSpan);
-            menuItem.appendChild(textSpan);
-
-            menuItem.addEventListener('mouseenter', () => {
-                if (this.currentTab !== id) {
-                    menuItem.style.backgroundColor = '#4a5568';
-                    menuItem.style.color = '#e2e8f0';
+                innerText: item.text,
+                style: {
+                    fontSize: '14px'
                 }
             });
 
-            menuItem.addEventListener('mouseleave', () => {
-                if (this.currentTab !== id) {
-                    menuItem.style.backgroundColor = 'transparent';
-                    menuItem.style.color = '#a0aec0';
+            leftContent.appendChild(iconSpan);
+            leftContent.appendChild(textSpan);
+            menuItem.appendChild(leftContent);
+
+            // 如果有子菜单，添加展开图标
+            if (item.hasSubmenu) {
+                const expandIcon = DOMHelper.createElement('span', {
+                    innerText: '▼',
+                    style: {
+                        fontSize: '10px',
+                        transition: 'transform 0.2s',
+                        transform: this.notesMenuExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'
+                    }
+                });
+                menuItem.appendChild(expandIcon);
+
+                // 创建子菜单容器
+                const submenuContainer = DOMHelper.createElement('div', {
+                    style: {
+                        display: this.notesMenuExpanded ? 'block' : 'none',
+                        backgroundColor: '#1a202c'
+                    }
+                });
+
+                item.submenu.forEach(subItem => {
+                    const subMenuItem = this._createSubMenuItem(subItem);
+                    submenuContainer.appendChild(subMenuItem);
+                });
+
+                menuItem.addEventListener('click', () => {
+                    this.notesMenuExpanded = !this.notesMenuExpanded;
+                    expandIcon.style.transform = this.notesMenuExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+                    submenuContainer.style.display = this.notesMenuExpanded ? 'block' : 'none';
+                });
+
+                container.appendChild(menuItem);
+                container.appendChild(submenuContainer);
+            } else {
+                // 无子菜单的普通菜单项
+                menuItem.addEventListener('mouseenter', () => {
+                    if (this.currentTab !== item.id) {
+                        menuItem.style.backgroundColor = '#4a5568';
+                        menuItem.style.color = '#e2e8f0';
+                    }
+                });
+
+                menuItem.addEventListener('mouseleave', () => {
+                    if (this.currentTab !== item.id) {
+                        menuItem.style.backgroundColor = 'transparent';
+                        menuItem.style.color = '#a0aec0';
+                    }
+                });
+
+                menuItem.addEventListener('click', () => {
+                    this.currentTab = item.id;
+                    this._updateSidebarState();
+                    this._renderContent();
+                });
+
+                container.appendChild(menuItem);
+            }
+
+            return container;
+        }
+
+        /**
+         * 创建子菜单项
+         */
+        _createSubMenuItem(subItem) {
+            const isActive = this.currentTab === 'notes' && this.notesScope === subItem.scope;
+            
+            const subMenuItem = DOMHelper.createElement('div', {
+                dataset: { scope: subItem.scope },
+                style: {
+                    padding: '10px 20px 10px 50px',
+                    cursor: 'pointer',
+                    color: isActive ? '#4299e1' : '#718096',
+                    backgroundColor: isActive ? '#2d3748' : 'transparent',
+                    fontSize: '13px',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
                 }
             });
 
-            menuItem.addEventListener('click', () => {
-                this.currentTab = id;
+            const icon = DOMHelper.createElement('span', {
+                innerText: subItem.icon,
+                style: {
+                    fontSize: '14px'
+                }
+            });
+
+            const text = DOMHelper.createElement('span', {
+                innerText: subItem.text
+            });
+
+            subMenuItem.appendChild(icon);
+            subMenuItem.appendChild(text);
+
+            subMenuItem.addEventListener('mouseenter', () => {
+                if (!(this.currentTab === 'notes' && this.notesScope === subItem.scope)) {
+                    subMenuItem.style.backgroundColor = '#2d3748';
+                    subMenuItem.style.color = '#a0aec0';
+                }
+            });
+
+            subMenuItem.addEventListener('mouseleave', () => {
+                if (!(this.currentTab === 'notes' && this.notesScope === subItem.scope)) {
+                    subMenuItem.style.backgroundColor = 'transparent';
+                    subMenuItem.style.color = '#718096';
+                }
+            });
+
+            subMenuItem.addEventListener('click', async () => {
+                this.currentTab = 'notes';
+                this.notesScope = subItem.scope;
+                this.selectedNotes.clear();
+                await this._loadNotes();
                 this._updateSidebarState();
                 this._renderContent();
             });
 
-            return menuItem;
+            return subMenuItem;
         }
 
         /**
@@ -1323,10 +1503,20 @@
                 }
             });
 
-            this.notesList.forEach(note => {
-                const noteItem = this._createNoteItem(note);
-                notesList.appendChild(noteItem);
-            });
+            if (this.notesScope === 'current') {
+                // 当前页面：直接显示笔记列表
+                this.notesList.forEach(note => {
+                    const noteItem = this._createNoteItem(note);
+                    notesList.appendChild(noteItem);
+                });
+            } else {
+                // 其他范围：按 workKey 分组显示
+                const groupedNotes = this._groupNotesByWorkKey(this.notesList);
+                Object.entries(groupedNotes).forEach(([workKey, notes]) => {
+                    const group = this._createNotesGroup(workKey, notes);
+                    notesList.appendChild(group);
+                });
+            }
 
             container.appendChild(toolbar);
             container.appendChild(notesList);
@@ -1487,6 +1677,148 @@
                 const selectedText = this.selectedNotes.size > 0 ? `，已选中 ${this.selectedNotes.size} 条` : '';
                 info.innerText = `共 ${this.notesList.length} 条笔记${selectedText}`;
             }
+        }
+
+        /**
+         * 按 workKey 分组笔记
+         */
+        _groupNotesByWorkKey(notes) {
+            const groups = {};
+            notes.forEach(note => {
+                if (!groups[note.workKey]) {
+                    groups[note.workKey] = [];
+                }
+                groups[note.workKey].push(note);
+            });
+            // 按时间戳排序每个组
+            Object.keys(groups).forEach(key => {
+                groups[key].sort((a, b) => b.timestamp - a.timestamp);
+            });
+            return groups;
+        }
+
+        /**
+         * 创建笔记组（用于域名模式）
+         */
+        _createNotesGroup(workKey, notes) {
+            const group = DOMHelper.createElement('div', {
+                style: {
+                    marginBottom: '30px'
+                }
+            });
+
+            // 组标题
+            const groupHeader = DOMHelper.createElement('div', {
+                style: {
+                    padding: '12px 16px',
+                    backgroundColor: '#e3f2fd',
+                    borderRadius: '8px',
+                    marginBottom: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                }
+            });
+
+            const headerLeft = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                }
+            });
+
+            const collapseIcon = DOMHelper.createElement('span', {
+                innerText: '▼',
+                style: {
+                    fontSize: '12px',
+                    color: '#1976d2',
+                    transition: 'transform 0.2s'
+                }
+            });
+
+            const groupTitle = DOMHelper.createElement('span', {
+                innerText: `📄 ${workKey}`,
+                style: {
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#1976d2'
+                }
+            });
+
+            const groupCount = DOMHelper.createElement('span', {
+                innerText: `(${notes.length} 条)`,
+                style: {
+                    fontSize: '13px',
+                    color: '#64b5f6',
+                    marginLeft: '8px'
+                }
+            });
+
+            headerLeft.appendChild(collapseIcon);
+            headerLeft.appendChild(groupTitle);
+            headerLeft.appendChild(groupCount);
+
+            // 全选此组的按钮
+            const selectGroupBtn = DOMHelper.createElement('button', {
+                innerText: '全选',
+                style: {
+                    padding: '4px 10px',
+                    border: '1px solid #2196f3',
+                    borderRadius: '4px',
+                    backgroundColor: 'white',
+                    color: '#2196f3',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                }
+            });
+
+            selectGroupBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const allSelected = notes.every(note => this.selectedNotes.has(note.id));
+                if (allSelected) {
+                    notes.forEach(note => this.selectedNotes.delete(note.id));
+                    selectGroupBtn.innerText = '全选';
+                } else {
+                    notes.forEach(note => this.selectedNotes.add(note.id));
+                    selectGroupBtn.innerText = '取消';
+                }
+                this._renderContent();
+            });
+
+            groupHeader.appendChild(headerLeft);
+            groupHeader.appendChild(selectGroupBtn);
+
+            // 笔记列表容器
+            const notesContainer = DOMHelper.createElement('div', {
+                style: {
+                    display: 'block',
+                    paddingLeft: '20px'
+                }
+            });
+
+            notes.forEach(note => {
+                const noteItem = this._createNoteItem(note);
+                notesContainer.appendChild(noteItem);
+            });
+
+            // 折叠/展开功能
+            let isCollapsed = false;
+            groupHeader.addEventListener('click', (e) => {
+                if (e.target === selectGroupBtn) return;
+                isCollapsed = !isCollapsed;
+                notesContainer.style.display = isCollapsed ? 'none' : 'block';
+                collapseIcon.style.transform = isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+            });
+
+            group.appendChild(groupHeader);
+            group.appendChild(notesContainer);
+
+            return group;
         }
 
         /**
