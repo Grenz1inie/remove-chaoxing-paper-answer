@@ -1193,6 +1193,14 @@
                 item.style.borderLeft = isActive ? '3px solid #4299e1' : '3px solid transparent';
                 item.style.fontWeight = isActive ? 'bold' : 'normal';
             });
+
+            // 更新子菜单项状态
+            const subMenuItems = this.modal.querySelectorAll('[data-scope]');
+            subMenuItems.forEach(item => {
+                const isActive = this.currentTab === 'notes' && this.notesScope === item.dataset.scope;
+                item.style.color = isActive ? '#4299e1' : '#718096';
+                item.style.backgroundColor = isActive ? '#2d3748' : 'transparent';
+            });
         }
 
         /**
