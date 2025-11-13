@@ -103,7 +103,7 @@
                 position: {
                     marginLeft: '5px',       // 按钮左外边距（与笔记按钮的间距）
                     marginRight: '0px',      // 按钮右外边距
-                    marginTop: '0px',        // 按钮上外边距
+                    marginTop: '10px',        // 按钮上外边距
                     marginBottom: '0px',     // 按钮下外边距
                     verticalAlign: 'middle'  // 垂直对齐方式
                 },
@@ -162,7 +162,7 @@
             // ========== 笔记编辑器配置 ==========
             noteEditor: {
                 placeholder: '在这里记录你的笔记...',  // 编辑器占位符文字
-                width: '100%',                          // 编辑器宽度
+                width: '110%',                          // 编辑器宽度
                 minHeight: '60px',                      // 编辑器最小高度
                 maxHeight: '400px',                     // 编辑器最大高度（超出滚动）
                 fontSize: '14px',                       // 编辑器字体大小
@@ -190,7 +190,7 @@
             manageButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    top: '40px',             // 距离容器顶部的距离（在全局按钮下方）
+                    top: '35px',             // 距离容器顶部的距离（在全局按钮下方）
                     right: '8px',            // 距离容器右侧的距离
                     zIndex: '9999'           // 层级（确保在最上层）
                 },
@@ -212,6 +212,36 @@
                 },
                 // --- 按钮文字配置 ---
                 text: '⚙️ 控制面板'    // 控制面板按钮文字
+            },
+
+            // ========== 控制面板保存按钮配置 ==========
+            panelSaveButton: {
+                // --- 按钮样式配置 ---
+                style: {
+                    padding: '10px 24px',       // 内边距（上下 左右）
+                    borderRadius: '6px',        // 圆角半径
+                    border: 'none',             // 边框样式
+                    fontSize: '14px',           // 字体大小
+                    fontWeight: '600',          // 字体粗细
+                    cursor: 'pointer',          // 鼠标样式
+                    transition: 'all 0.2s'      // 过渡动画
+                },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    background: '#4299e1',          // 按钮背景色（蓝色）
+                    hoverBackground: '#3182ce',     // 悬停时背景色
+                    textColor: 'white',             // 按钮文字颜色
+                    successBackground: '#48bb78',   // 保存成功背景色（绿色）
+                    errorBackground: '#f56565',     // 保存失败背景色（红色）
+                    boxShadow: '0 2px 4px rgba(66, 153, 225, 0.3)',           // 默认阴影
+                    hoverBoxShadow: '0 4px 6px rgba(66, 153, 225, 0.4)'       // 悬停阴影
+                },
+                // --- 按钮文字配置 ---
+                text: {
+                    save: '💾 保存设置',      // 默认文字
+                    success: '✅ 保存成功',   // 保存成功文字
+                    error: '❌ 保存失败'      // 保存失败文字
+                }
             },
 
             // ========== 数据库配置 ==========
@@ -898,7 +928,8 @@
             // 菜单项
             const menuItems = [
                 { id: 'settings', icon: '⚙️', text: '设置' },
-                { id: 'notes', icon: '📝', text: '管理笔记' }
+                { id: 'notes', icon: '📝', text: '管理笔记' },
+                { id: 'styles', icon: '🎨', text: '样式管理' }
             ];
 
             menuItems.forEach(item => {
@@ -994,6 +1025,9 @@
             } else if (this.currentTab === 'notes') {
                 headerTitle.innerText = '📝 管理笔记';
                 this._renderNotesPanel(contentBody);
+            } else if (this.currentTab === 'styles') {
+                headerTitle.innerText = '🎨 样式管理';
+                this._renderStylesPanel(contentBody);
             }
         }
 
@@ -1046,32 +1080,35 @@
                 }
             });
 
+            const buttonConfig = this.config.get('panelSaveButton');
             const saveButton = DOMHelper.createElement('button', {
-                innerText: '💾 保存设置',
+                innerText: buttonConfig.text.save,
                 style: {
-                    padding: '10px 24px',
-                    border: 'none',
-                    borderRadius: '6px',
-                    backgroundColor: '#4299e1',
-                    color: 'white',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    boxShadow: '0 2px 4px rgba(66, 153, 225, 0.3)'
+                    padding: buttonConfig.style.padding,
+                    border: buttonConfig.style.border,
+                    borderRadius: buttonConfig.style.borderRadius,
+                    backgroundColor: buttonConfig.colors.background,
+                    color: buttonConfig.colors.textColor,
+                    fontSize: buttonConfig.style.fontSize,
+                    fontWeight: buttonConfig.style.fontWeight,
+                    cursor: buttonConfig.style.cursor,
+                    transition: buttonConfig.style.transition,
+                    boxShadow: buttonConfig.colors.boxShadow
                 }
             });
 
             saveButton.addEventListener('mouseenter', () => {
-                saveButton.style.backgroundColor = '#3182ce';
+                saveButton.style.backgroundColor = buttonConfig.colors.hoverBackground;
                 saveButton.style.transform = 'translateY(-1px)';
-                saveButton.style.boxShadow = '0 4px 6px rgba(66, 153, 225, 0.4)';
+                saveButton.style.boxShadow = buttonConfig.colors.hoverBoxShadow;
             });
 
             saveButton.addEventListener('mouseleave', () => {
-                saveButton.style.backgroundColor = '#4299e1';
-                saveButton.style.transform = 'translateY(0)';
-                saveButton.style.boxShadow = '0 2px 4px rgba(66, 153, 225, 0.3)';
+                if (saveButton.innerText === buttonConfig.text.save) {
+                    saveButton.style.backgroundColor = buttonConfig.colors.background;
+                    saveButton.style.transform = 'translateY(0)';
+                    saveButton.style.boxShadow = buttonConfig.colors.boxShadow;
+                }
             });
 
             saveButton.addEventListener('click', async () => {
@@ -1081,23 +1118,23 @@
                     await this.dbManager.saveSetting('autoSaveDelay', this.settings.autoSaveDelay);
                     
                     // 显示成功提示
-                    saveButton.innerText = '✅ 保存成功';
-                    saveButton.style.backgroundColor = '#48bb78';
+                    saveButton.innerText = buttonConfig.text.success;
+                    saveButton.style.backgroundColor = buttonConfig.colors.successBackground;
                     
                     setTimeout(() => {
-                        saveButton.innerText = '💾 保存设置';
-                        saveButton.style.backgroundColor = '#4299e1';
+                        saveButton.innerText = buttonConfig.text.save;
+                        saveButton.style.backgroundColor = buttonConfig.colors.background;
                     }, 2000);
                     
                     Logger.success('设置已保存');
                 } catch (error) {
                     Logger.error('保存设置失败', error);
-                    saveButton.innerText = '❌ 保存失败';
-                    saveButton.style.backgroundColor = '#f56565';
+                    saveButton.innerText = buttonConfig.text.error;
+                    saveButton.style.backgroundColor = buttonConfig.colors.errorBackground;
                     
                     setTimeout(() => {
-                        saveButton.innerText = '💾 保存设置';
-                        saveButton.style.backgroundColor = '#4299e1';
+                        saveButton.innerText = buttonConfig.text.save;
+                        saveButton.style.backgroundColor = buttonConfig.colors.background;
                     }, 2000);
                 }
             });
@@ -1450,6 +1487,272 @@
                 const selectedText = this.selectedNotes.size > 0 ? `，已选中 ${this.selectedNotes.size} 条` : '';
                 info.innerText = `共 ${this.notesList.length} 条笔记${selectedText}`;
             }
+        }
+
+        /**
+         * 渲染样式管理面板
+         */
+        async _renderStylesPanel(container) {
+            container.innerHTML = '';
+
+            // 样式配置的分类
+            const styleCategories = [
+                {
+                    title: '答案按钮样式',
+                    key: 'answerButton',
+                    fields: [
+                        { name: 'fontSize', label: '字体大小', type: 'text', path: 'style.fontSize' },
+                        { name: 'padding', label: '内边距', type: 'text', path: 'style.padding' },
+                        { name: 'borderRadius', label: '圆角半径', type: 'text', path: 'style.borderRadius' },
+                        { name: 'showBackground', label: '显示按钮背景色', type: 'color', path: 'colors.showBackground' },
+                        { name: 'hideBackground', label: '隐藏按钮背景色', type: 'color', path: 'colors.hideBackground' }
+                    ]
+                },
+                {
+                    title: '笔记按钮样式',
+                    key: 'noteButton',
+                    fields: [
+                        { name: 'fontSize', label: '字体大小', type: 'text', path: 'style.fontSize' },
+                        { name: 'padding', label: '内边距', type: 'text', path: 'style.padding' },
+                        { name: 'showBackground', label: '显示按钮背景色', type: 'color', path: 'colors.showBackground' },
+                        { name: 'hideBackground', label: '隐藏按钮背景色', type: 'color', path: 'colors.hideBackground' }
+                    ]
+                },
+                {
+                    title: '保存笔记按钮样式',
+                    key: 'saveNoteButton',
+                    fields: [
+                        { name: 'fontSize', label: '字体大小', type: 'text', path: 'style.fontSize' },
+                        { name: 'padding', label: '内边距', type: 'text', path: 'style.padding' },
+                        { name: 'background', label: '背景色', type: 'color', path: 'colors.background' }
+                    ]
+                },
+                {
+                    title: '笔记编辑器样式',
+                    key: 'noteEditor',
+                    fields: [
+                        { name: 'width', label: '宽度', type: 'text', path: 'width' },
+                        { name: 'minHeight', label: '最小高度', type: 'text', path: 'minHeight' },
+                        { name: 'maxHeight', label: '最大高度', type: 'text', path: 'maxHeight' },
+                        { name: 'fontSize', label: '字体大小', type: 'text', path: 'fontSize' },
+                        { name: 'backgroundColor', label: '背景色', type: 'color', path: 'backgroundColor' },
+                        { name: 'borderColor', label: '边框颜色', type: 'color', path: 'borderColor' }
+                    ]
+                }
+            ];
+
+            // 加载已保存的样式配置
+            const savedStyles = await this.dbManager.getSetting('customStyles', {});
+
+            // 创建滚动容器
+            const scrollContainer = DOMHelper.createElement('div', {
+                style: {
+                    overflow: 'auto',
+                    padding: '20px'
+                }
+            });
+
+            // 为每个分类创建配置区块
+            styleCategories.forEach(category => {
+                const section = this._createStyleSection(category, savedStyles);
+                scrollContainer.appendChild(section);
+            });
+
+            container.appendChild(scrollContainer);
+
+            // 添加保存和重置按钮
+            const buttonContainer = DOMHelper.createElement('div', {
+                style: {
+                    padding: '20px',
+                    borderTop: '1px solid #e2e8f0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    backgroundColor: 'white'
+                }
+            });
+
+            const resetButton = DOMHelper.createElement('button', {
+                innerText: '🔄 重置为默认',
+                style: {
+                    padding: '10px 20px',
+                    border: '1px solid #cbd5e0',
+                    borderRadius: '6px',
+                    backgroundColor: 'white',
+                    color: '#718096',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                }
+            });
+
+            resetButton.addEventListener('click', async () => {
+                if (confirm('确定要重置所有样式为默认值吗？')) {
+                    await this.dbManager.saveSetting('customStyles', {});
+                    Logger.success('样式已重置');
+                    this._renderStylesPanel(container);
+                }
+            });
+
+            const buttonConfig = this.config.get('panelSaveButton');
+            const saveButton = DOMHelper.createElement('button', {
+                innerText: buttonConfig.text.save,
+                style: {
+                    padding: buttonConfig.style.padding,
+                    border: buttonConfig.style.border,
+                    borderRadius: buttonConfig.style.borderRadius,
+                    backgroundColor: buttonConfig.colors.background,
+                    color: buttonConfig.colors.textColor,
+                    fontSize: buttonConfig.style.fontSize,
+                    fontWeight: buttonConfig.style.fontWeight,
+                    cursor: buttonConfig.style.cursor,
+                    transition: buttonConfig.style.transition,
+                    boxShadow: buttonConfig.colors.boxShadow
+                }
+            });
+
+            saveButton.addEventListener('click', async () => {
+                try {
+                    const customStyles = {};
+                    
+                    // 收集所有表单数据
+                    styleCategories.forEach(category => {
+                        category.fields.forEach(field => {
+                            const input = document.getElementById(`style-${category.key}-${field.name}`);
+                            if (input && input.value) {
+                                if (!customStyles[category.key]) {
+                                    customStyles[category.key] = {};
+                                }
+                                // 设置嵌套属性
+                                const pathParts = field.path.split('.');
+                                let target = customStyles[category.key];
+                                for (let i = 0; i < pathParts.length - 1; i++) {
+                                    if (!target[pathParts[i]]) {
+                                        target[pathParts[i]] = {};
+                                    }
+                                    target = target[pathParts[i]];
+                                }
+                                target[pathParts[pathParts.length - 1]] = input.value;
+                            }
+                        });
+                    });
+
+                    await this.dbManager.saveSetting('customStyles', customStyles);
+                    
+                    saveButton.innerText = buttonConfig.text.success;
+                    saveButton.style.backgroundColor = buttonConfig.colors.successBackground;
+                    
+                    setTimeout(() => {
+                        saveButton.innerText = buttonConfig.text.save;
+                        saveButton.style.backgroundColor = buttonConfig.colors.background;
+                    }, 2000);
+                    
+                    Logger.success('样式已保存，刷新页面后生效');
+                    
+                } catch (error) {
+                    Logger.error('保存样式失败', error);
+                    saveButton.innerText = buttonConfig.text.error;
+                    saveButton.style.backgroundColor = buttonConfig.colors.errorBackground;
+                    
+                    setTimeout(() => {
+                        saveButton.innerText = buttonConfig.text.save;
+                        saveButton.style.backgroundColor = buttonConfig.colors.background;
+                    }, 2000);
+                }
+            });
+
+            buttonContainer.appendChild(resetButton);
+            buttonContainer.appendChild(saveButton);
+            container.appendChild(buttonContainer);
+        }
+
+        /**
+         * 创建样式配置区块
+         */
+        _createStyleSection(category, savedStyles) {
+            const section = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    marginBottom: '20px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }
+            });
+
+            const title = DOMHelper.createElement('h3', {
+                innerText: category.title,
+                style: {
+                    margin: '0 0 16px 0',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: '#2d3748',
+                    borderBottom: '2px solid #4299e1',
+                    paddingBottom: '8px'
+                }
+            });
+
+            section.appendChild(title);
+
+            category.fields.forEach(field => {
+                const fieldGroup = DOMHelper.createElement('div', {
+                    style: {
+                        marginBottom: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                    }
+                });
+
+                const label = DOMHelper.createElement('label', {
+                    innerText: field.label,
+                    style: {
+                        fontSize: '14px',
+                        color: '#4a5568',
+                        fontWeight: '500',
+                        flex: '1'
+                    }
+                });
+
+                // 获取当前值（优先使用保存的值，否则使用默认配置值）
+                let currentValue;
+                if (savedStyles[category.key]) {
+                    const pathParts = field.path.split('.');
+                    let value = savedStyles[category.key];
+                    for (let part of pathParts) {
+                        value = value?.[part];
+                    }
+                    currentValue = value;
+                }
+                
+                if (!currentValue) {
+                    const pathParts = field.path.split('.');
+                    let value = this.config.get(category.key);
+                    for (let part of pathParts) {
+                        value = value?.[part];
+                    }
+                    currentValue = value || '';
+                }
+
+                const input = DOMHelper.createElement('input', {
+                    type: field.type,
+                    value: currentValue,
+                    id: `style-${category.key}-${field.name}`,
+                    style: {
+                        width: field.type === 'color' ? '60px' : '150px',
+                        padding: '6px 10px',
+                        border: '1px solid #cbd5e0',
+                        borderRadius: '4px',
+                        fontSize: '13px'
+                    }
+                });
+
+                fieldGroup.appendChild(label);
+                fieldGroup.appendChild(input);
+                section.appendChild(fieldGroup);
+            });
+
+            return section;
         }
 
         /**
@@ -1968,6 +2271,9 @@
                 await this.dbManager.init();
                 Logger.success('数据库初始化成功');
 
+                // 加载自定义样式配置
+                await this._loadCustomStyles();
+
                 await this._waitForPageLoad();
                 const elements = this._findElements();
 
@@ -1980,6 +2286,20 @@
                 this._logSuccess(elements.answerBlocks.length, !!elements.container);
             } catch (error) {
                 Logger.error('初始化失败', error);
+            }
+        }
+
+        async _loadCustomStyles() {
+            try {
+                const customStyles = await this.dbManager.getSetting('customStyles', {});
+                if (customStyles && Object.keys(customStyles).length > 0) {
+                    // 将自定义样式合并到配置中
+                    this.config = new Config(this.config._deepMerge(this.config.config, customStyles));
+                    this.styleGenerator = new StyleGenerator(this.config);
+                    Logger.log('✨ 已加载自定义样式配置');
+                }
+            } catch (error) {
+                Logger.error('加载自定义样式失败', error);
             }
         }
 
