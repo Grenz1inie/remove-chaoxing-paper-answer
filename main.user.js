@@ -740,6 +740,7 @@
             this.currentTab = 'settings'; // 'settings', 'notes', 'styles'
             this.settings = {};
             this.notesMenuExpanded = false; // 管理笔记子菜单是否展开
+            this.notesSortBy = 'time'; // 'time' 或 'alpha' (字母序)
             
             // 解析 workKey 获取 courseId, classId, workId
             const parts = workKey.split('_');
@@ -991,7 +992,7 @@
                     submenu: [
                         { id: 'notes-current', icon: '📄', text: '当前页面', scope: 'current' },
                         { id: 'notes-course', icon: '📚', text: '当前课程', scope: 'course' },
-                        { id: 'notes-domain', icon: '🌐', text: '整个域名', scope: 'domain' }
+                        { id: 'notes-domain', icon: '🌐', text: '当前域名', scope: 'domain' }
                     ]
                 },
                 { id: 'styles', icon: '🎨', text: '样式管理' }
@@ -1214,7 +1215,7 @@
                 headerTitle.innerText = '⚙️ 设置';
                 this._renderSettingsPanel(contentBody);
             } else if (this.currentTab === 'notes') {
-                headerTitle.innerText = '📝 管理笔记';
+                headerTitle.innerText = '📝 笔记管理';
                 this._renderNotesPanel(contentBody);
             } else if (this.currentTab === 'styles') {
                 headerTitle.innerText = '🎨 样式管理';
@@ -1467,6 +1468,27 @@
                 }
             });
 
+            // 排序按钮
+            const sortBtn = DOMHelper.createElement('button', {
+                innerText: this.notesSortBy === 'time' ? '🕒 时间序' : '🔤 字母序',
+                style: {
+                    padding: '6px 14px',
+                    border: '1px solid #cbd5e0',
+                    borderRadius: '4px',
+                    backgroundColor: 'white',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                }
+            });
+
+            sortBtn.addEventListener('click', () => {
+                this.notesSortBy = this.notesSortBy === 'time' ? 'alpha' : 'time';
+                this._sortNotes();
+                this._renderContent();
+            });
+
             const selectAllBtn = DOMHelper.createElement('button', {
                 innerText: '全选',
                 style: {
@@ -1499,6 +1521,7 @@
             selectAllBtn.addEventListener('click', () => this._toggleSelectAll());
             deleteBtn.addEventListener('click', () => this._deleteSelected());
 
+            actions.appendChild(sortBtn);
             actions.appendChild(selectAllBtn);
             actions.appendChild(deleteBtn);
             toolbar.appendChild(info);
@@ -1709,6 +1732,23 @@
         }
 
         /**
+         * 排序笔记
+         */
+        _sortNotes() {
+            if (this.notesSortBy === 'time') {
+                // 按时间倒序
+                this.notesList.sort((a, b) => b.timestamp - a.timestamp);
+            } else {
+                // 按 questionId 字母序
+                this.notesList.sort((a, b) => {
+                    const idA = a.questionId.toLowerCase();
+                    const idB = b.questionId.toLowerCase();
+                    return idA.localeCompare(idB);
+                });
+            }
+        }
+
+        /**
          * 创建笔记组（用于域名模式）
          */
         _createNotesGroup(workKey, notes) {
@@ -1750,8 +1790,17 @@
                 }
             });
 
+            // 格式化 workKey 显示
+            const parts = workKey.split('_');
+            let displayText = '📄 ';
+            if (parts.length === 3) {
+                displayText += `Course${parts[0]}_Class${parts[1]}_Work${parts[2]}`;
+            } else {
+                displayText += workKey;
+            }
+
             const groupTitle = DOMHelper.createElement('span', {
-                innerText: `📄 ${workKey}`,
+                innerText: displayText,
                 style: {
                     fontSize: '14px',
                     fontWeight: '600',
