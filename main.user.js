@@ -670,6 +670,7 @@
             this.toolbar = null;
             this.saveTimer = null;
             this.isVisible = false;
+            this.toolbarButtons = new Map(); // 存储按钮引用
         }
 
         async create() {
@@ -774,10 +775,16 @@
                 this._scheduleAutoSave();
             });
 
+            // 监听光标移动和选择变化
+            this.editor.addEventListener('mouseup', () => this._updateToolbarState());
+            this.editor.addEventListener('keyup', () => this._updateToolbarState());
+            this.editor.addEventListener('click', () => this._updateToolbarState());
+
             // 焦点事件
             this.editor.addEventListener('focus', () => {
                 this.editor.style.borderColor = this.config.get('noteEditor.focusBorderColor');
                 this.toolbar.style.display = 'flex';
+                this._updateToolbarState();
             });
 
             this.editor.addEventListener('blur', (e) => {
@@ -881,11 +888,18 @@
                     });
 
                     button.addEventListener('mouseenter', () => {
-                        button.style.backgroundColor = '#e2e8f0';
+                        const isActive = button.style.backgroundColor === 'rgb(66, 153, 225)' || 
+                                       button.style.backgroundColor === '#4299e1';
+                        if (!isActive) {
+                            button.style.backgroundColor = '#e2e8f0';
+                        }
                     });
 
                     button.addEventListener('mouseleave', () => {
-                        button.style.backgroundColor = 'white';
+                        const isActive = button.style.color === 'white';
+                        if (!isActive) {
+                            button.style.backgroundColor = 'white';
+                        }
                     });
 
                     button.addEventListener('mousedown', (e) => {
@@ -903,7 +917,14 @@
                             this._execCommand(btn.command);
                         }
                         this.editor.focus();
+                        // 延迟更新按钮状态
+                        setTimeout(() => this._updateToolbarState(), 10);
                     });
+
+                    // 保存按钮引用
+                    if (btn.command) {
+                        this.toolbarButtons.set(btn.command, button);
+                    }
 
                     toolbar.appendChild(button);
                 }
@@ -926,6 +947,27 @@
 
         _execCommand(command, value = null) {
             document.execCommand(command, false, value);
+        }
+
+        _updateToolbarState() {
+            // 更新可切换状态的按钮
+            const commands = ['bold', 'italic', 'underline', 'strikeThrough', 'insertUnorderedList', 'insertOrderedList'];
+            
+            commands.forEach(command => {
+                const button = this.toolbarButtons.get(command);
+                if (button) {
+                    const isActive = document.queryCommandState(command);
+                    if (isActive) {
+                        button.style.backgroundColor = '#4299e1';
+                        button.style.color = 'white';
+                        button.style.borderColor = '#3182ce';
+                    } else {
+                        button.style.backgroundColor = 'white';
+                        button.style.color = 'inherit';
+                        button.style.borderColor = '#cbd5e0';
+                    }
+                }
+            });
         }
 
         _toggleCodeStyle() {
