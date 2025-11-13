@@ -613,6 +613,48 @@
                 request.onerror = () => reject(request.error);
             });
         }
+
+        /**
+         * 清空所有数据（还原到初始状态）
+         */
+        async clearAllData() {
+            if (!this.db) await this.init();
+
+            return new Promise((resolve, reject) => {
+                try {
+                    const storeNames = [
+                        this.config.get('database.stores.notes'),
+                        this.config.get('database.stores.settings'),
+                        this.config.get('database.stores.attachments')
+                    ];
+
+                    const transaction = this.db.transaction(storeNames, 'readwrite');
+                    let completed = 0;
+
+                    storeNames.forEach(storeName => {
+                        if (this.db.objectStoreNames.contains(storeName)) {
+                            const objectStore = transaction.objectStore(storeName);
+                            const request = objectStore.clear();
+
+                            request.onsuccess = () => {
+                                completed++;
+                                if (completed === storeNames.filter(name => this.db.objectStoreNames.contains(name)).length) {
+                                    resolve();
+                                }
+                            };
+
+                            request.onerror = () => reject(request.error);
+                        } else {
+                            completed++;
+                        }
+                    });
+
+                    transaction.onerror = () => reject(transaction.error);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
     }
 
     // ===================== 笔记编辑器组件 =====================
@@ -1262,6 +1304,123 @@
             settingsContainer.appendChild(delaySection);
 
             container.appendChild(settingsContainer);
+
+            // 危险操作区域
+            const dangerZone = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    marginBottom: '20px',
+                    border: '2px solid #feb2b2'
+                }
+            });
+
+            const dangerTitle = DOMHelper.createElement('div', {
+                innerText: '⚠️ 危险操作',
+                style: {
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#c53030',
+                    marginBottom: '16px'
+                }
+            });
+
+            const clearDbSection = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingBottom: '16px'
+                }
+            });
+
+            const clearDbInfo = DOMHelper.createElement('div');
+
+            const clearDbLabel = DOMHelper.createElement('div', {
+                innerText: '清空所有数据',
+                style: {
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#2d3748',
+                    marginBottom: '4px'
+                }
+            });
+
+            const clearDbDesc = DOMHelper.createElement('div', {
+                innerText: '删除所有笔记、设置和自定义样式，还原到初始状态。此操作不可恢复！',
+                style: {
+                    fontSize: '13px',
+                    color: '#718096',
+                    lineHeight: '1.5'
+                }
+            });
+
+            clearDbInfo.appendChild(clearDbLabel);
+            clearDbInfo.appendChild(clearDbDesc);
+
+            const clearDbBtn = DOMHelper.createElement('button', {
+                innerText: '清空数据库',
+                style: {
+                    padding: '8px 16px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    backgroundColor: '#f56565',
+                    color: 'white',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap'
+                }
+            });
+
+            clearDbBtn.addEventListener('mouseenter', () => {
+                clearDbBtn.style.backgroundColor = '#e53e3e';
+            });
+
+            clearDbBtn.addEventListener('mouseleave', () => {
+                clearDbBtn.style.backgroundColor = '#f56565';
+            });
+
+            clearDbBtn.addEventListener('click', async () => {
+                const confirmText = '确认要清空所有数据吗？\n\n将删除：\n- 所有笔记\n- 所有设置\n- 所有自定义样式\n\n此操作不可恢复！\n\n请输入 "CLEAR" 确认操作：';
+                const userInput = prompt(confirmText);
+
+                if (userInput === 'CLEAR') {
+                    try {
+                        clearDbBtn.disabled = true;
+                        clearDbBtn.innerText = '清空中...';
+                        clearDbBtn.style.backgroundColor = '#cbd5e0';
+
+                        await this.dbManager.clearAllData();
+
+                        alert('✅ 数据库已清空！\n\n页面将在 2 秒后刷新...');
+                        Logger.success('数据库已成功清空');
+
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } catch (error) {
+                        Logger.error('清空数据库失败', error);
+                        alert('❌ 清空失败，请查看控制台了解详情');
+                        clearDbBtn.disabled = false;
+                        clearDbBtn.innerText = '清空数据库';
+                        clearDbBtn.style.backgroundColor = '#f56565';
+                    }
+                } else if (userInput !== null) {
+                    alert('输入不正确，操作已取消');
+                }
+            });
+
+            clearDbSection.appendChild(clearDbInfo);
+            clearDbSection.appendChild(clearDbBtn);
+
+            dangerZone.appendChild(dangerTitle);
+            dangerZone.appendChild(clearDbSection);
+
+            container.appendChild(dangerZone);
 
             // 添加保存按钮
             const saveButtonContainer = DOMHelper.createElement('div', {
