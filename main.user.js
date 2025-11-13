@@ -665,7 +665,9 @@
             this.dbManager = dbManager;
             this.config = config;
             this.styleGenerator = styleGenerator;
+            this.container = null;
             this.editor = null;
+            this.toolbar = null;
             this.saveTimer = null;
             this.isVisible = false;
         }
@@ -673,48 +675,268 @@
         async create() {
             const noteConfig = this.config.get('noteEditor');
 
-            this.editor = DOMHelper.createElement('textarea', {
-                placeholder: noteConfig.placeholder,
-                style: this.styleGenerator.getNoteEditorStyle()
+            // 创建容器
+            this.container = DOMHelper.createElement('div', {
+                style: {
+                    display: 'none',
+                    marginTop: '12px'
+                }
             });
+
+            // 创建工具栏
+            this.toolbar = this._createToolbar();
+            this.container.appendChild(this.toolbar);
+
+            // 创建编辑器
+            this.editor = DOMHelper.createElement('div', {
+                contentEditable: 'true',
+                style: {
+                    ...this.styleGenerator.getNoteEditorStyle(),
+                    minHeight: noteConfig.minHeight,
+                    maxHeight: noteConfig.maxHeight,
+                    overflowY: 'auto',
+                    outline: 'none',
+                    whiteSpace: 'pre-wrap',
+                    wordWrap: 'break-word'
+                }
+            });
+
+            this.editor.setAttribute('data-placeholder', noteConfig.placeholder);
+
+            // 添加占位符样式
+            const style = document.createElement('style');
+            style.textContent = `
+                [contenteditable][data-placeholder]:empty:before {
+                    content: attr(data-placeholder);
+                    color: #a0aec0;
+                    cursor: text;
+                }
+                [contenteditable] h1 { font-size: 2em; font-weight: bold; margin: 0.67em 0; }
+                [contenteditable] h2 { font-size: 1.5em; font-weight: bold; margin: 0.75em 0; }
+                [contenteditable] h3 { font-size: 1.17em; font-weight: bold; margin: 0.83em 0; }
+                [contenteditable] ul, [contenteditable] ol { margin: 1em 0; padding-left: 2em; }
+                [contenteditable] li { margin: 0.5em 0; }
+                [contenteditable] blockquote { 
+                    border-left: 4px solid #cbd5e0; 
+                    padding-left: 1em; 
+                    margin: 1em 0;
+                    color: #718096;
+                    font-style: italic;
+                }
+                [contenteditable] code {
+                    background: #f7fafc;
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    font-family: 'Courier New', monospace;
+                    font-size: 0.9em;
+                }
+                [contenteditable] pre {
+                    background: #2d3748;
+                    color: #e2e8f0;
+                    padding: 12px;
+                    border-radius: 4px;
+                    overflow-x: auto;
+                    margin: 1em 0;
+                }
+                [contenteditable] a {
+                    color: #4299e1;
+                    text-decoration: underline;
+                }
+                [contenteditable] hr {
+                    border: none;
+                    border-top: 2px solid #e2e8f0;
+                    margin: 1.5em 0;
+                }
+            `;
+            document.head.appendChild(style);
 
             // 加载已保存的笔记
             try {
                 const savedContent = await this.dbManager.getNote(this.workKey, this.questionId);
                 if (savedContent) {
-                    this.editor.value = savedContent;
-                    this._adjustHeight();
+                    this.editor.innerHTML = this._sanitizeHTML(savedContent);
                 }
             } catch (error) {
                 Logger.error(this.config.get('messages.noteLoadError'), error);
             }
 
-            // 监听输入事件，自动调整高度和保存
+            // 监听输入事件
             this.editor.addEventListener('input', () => {
-                this._adjustHeight();
                 this._scheduleAutoSave();
             });
 
-            // 获得焦点时改变边框颜色
+            // 焦点事件
             this.editor.addEventListener('focus', () => {
                 this.editor.style.borderColor = this.config.get('noteEditor.focusBorderColor');
+                this.toolbar.style.display = 'flex';
             });
 
             this.editor.addEventListener('blur', () => {
                 this.editor.style.borderColor = this.config.get('noteEditor.borderColor');
             });
 
-            return this.editor;
+            // 处理快捷键
+            this.editor.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key.toLowerCase()) {
+                        case 'b':
+                            e.preventDefault();
+                            this._execCommand('bold');
+                            break;
+                        case 'i':
+                            e.preventDefault();
+                            this._execCommand('italic');
+                            break;
+                        case 'u':
+                            e.preventDefault();
+                            this._execCommand('underline');
+                            break;
+                    }
+                }
+            });
+
+            this.container.appendChild(this.editor);
+            return this.container;
         }
 
-        _adjustHeight() {
-            // 重置高度以获取正确的 scrollHeight
-            this.editor.style.height = 'auto';
-            const noteConfig = this.config.get('noteEditor');
-            const minHeight = parseInt(noteConfig.minHeight);
-            const maxHeight = parseInt(noteConfig.maxHeight);
-            const newHeight = Math.min(Math.max(this.editor.scrollHeight, minHeight), maxHeight);
-            this.editor.style.height = `${newHeight}px`;
+        _createToolbar() {
+            const toolbar = DOMHelper.createElement('div', {
+                style: {
+                    display: 'none',
+                    flexWrap: 'wrap',
+                    gap: '4px',
+                    padding: '8px',
+                    backgroundColor: '#f7fafc',
+                    borderRadius: '6px 6px 0 0',
+                    border: '1px solid #e2e8f0',
+                    borderBottom: 'none'
+                }
+            });
+
+            const buttons = [
+                { icon: '𝐁', title: '粗体 (Ctrl+B)', command: 'bold' },
+                { icon: '𝐼', title: '斜体 (Ctrl+I)', command: 'italic', style: 'font-style: italic;' },
+                { icon: 'U̲', title: '下划线 (Ctrl+U)', command: 'underline', style: 'text-decoration: underline;' },
+                { icon: 'S̶', title: '删除线', command: 'strikeThrough', style: 'text-decoration: line-through;' },
+                { type: 'separator' },
+                { icon: 'H1', title: '标题1', command: 'formatBlock', value: '<h1>' },
+                { icon: 'H2', title: '标题2', command: 'formatBlock', value: '<h2>' },
+                { icon: 'H3', title: '标题3', command: 'formatBlock', value: '<h3>' },
+                { type: 'separator' },
+                { icon: '•', title: '无序列表', command: 'insertUnorderedList' },
+                { icon: '1.', title: '有序列表', command: 'insertOrderedList' },
+                { icon: '"', title: '引用', command: 'formatBlock', value: '<blockquote>' },
+                { type: 'separator' },
+                { icon: '🔗', title: '插入链接', command: 'createLink', prompt: true },
+                { icon: '<>', title: '代码', command: 'code' },
+                { icon: '—', title: '分隔线', command: 'insertHorizontalRule' },
+                { type: 'separator' },
+                { icon: '↶', title: '撤销', command: 'undo' },
+                { icon: '↷', title: '重做', command: 'redo' },
+                { icon: '🗑', title: '清除格式', command: 'removeFormat' }
+            ];
+
+            buttons.forEach(btn => {
+                if (btn.type === 'separator') {
+                    const separator = DOMHelper.createElement('div', {
+                        style: {
+                            width: '1px',
+                            height: '20px',
+                            backgroundColor: '#cbd5e0',
+                            margin: '0 4px'
+                        }
+                    });
+                    toolbar.appendChild(separator);
+                } else {
+                    const button = DOMHelper.createElement('button', {
+                        innerHTML: btn.icon,
+                        title: btn.title,
+                        style: {
+                            padding: '6px 10px',
+                            border: '1px solid #cbd5e0',
+                            borderRadius: '4px',
+                            backgroundColor: 'white',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s',
+                            ...(btn.style ? this._parseStyle(btn.style) : {})
+                        }
+                    });
+
+                    button.addEventListener('mouseenter', () => {
+                        button.style.backgroundColor = '#e2e8f0';
+                    });
+
+                    button.addEventListener('mouseleave', () => {
+                        button.style.backgroundColor = 'white';
+                    });
+
+                    button.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        if (btn.prompt) {
+                            const url = prompt('请输入链接地址:');
+                            if (url) {
+                                this._execCommand(btn.command, url);
+                            }
+                        } else if (btn.value) {
+                            this._execCommand(btn.command, btn.value);
+                        } else if (btn.command === 'code') {
+                            this._toggleCodeStyle();
+                        } else {
+                            this._execCommand(btn.command);
+                        }
+                        this.editor.focus();
+                    });
+
+                    toolbar.appendChild(button);
+                }
+            });
+
+            return toolbar;
+        }
+
+        _parseStyle(styleString) {
+            const styles = {};
+            styleString.split(';').forEach(rule => {
+                const [key, value] = rule.split(':').map(s => s.trim());
+                if (key && value) {
+                    const camelKey = key.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                    styles[camelKey] = value;
+                }
+            });
+            return styles;
+        }
+
+        _execCommand(command, value = null) {
+            document.execCommand(command, false, value);
+        }
+
+        _toggleCodeStyle() {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+
+            const range = selection.getRangeAt(0);
+            const selectedText = range.toString();
+
+            if (selectedText) {
+                const code = document.createElement('code');
+                code.textContent = selectedText;
+                range.deleteContents();
+                range.insertNode(code);
+            }
+        }
+
+        _sanitizeHTML(html) {
+            // 基本的 HTML 清理，防止 XSS
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            
+            // 移除危险的标签和属性
+            const scripts = div.querySelectorAll('script, iframe, object, embed');
+            scripts.forEach(el => el.remove());
+            
+            return div.innerHTML;
         }
 
         _scheduleAutoSave() {
@@ -738,7 +960,7 @@
 
         async save() {
             try {
-                const content = this.editor.value.trim();
+                const content = this.editor.innerHTML;
                 await this.dbManager.saveNote(this.workKey, this.questionId, content);
             } catch (error) {
                 Logger.error('保存笔记失败', error);
@@ -746,13 +968,12 @@
         }
 
         show() {
-            this.editor.style.display = 'block';
+            this.container.style.display = 'block';
             this.isVisible = true;
-            this._adjustHeight();
         }
 
         hide() {
-            this.editor.style.display = 'none';
+            this.container.style.display = 'none';
             this.isVisible = false;
         }
 
@@ -765,7 +986,7 @@
         }
 
         getElement() {
-            return this.editor;
+            return this.container;
         }
     }
 
