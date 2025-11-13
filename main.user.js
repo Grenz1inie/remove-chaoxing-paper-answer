@@ -991,7 +991,6 @@
                     submenu: [
                         { id: 'notes-current', icon: '📄', text: '当前页面', scope: 'current' },
                         { id: 'notes-course', icon: '📚', text: '当前课程', scope: 'course' },
-                        { id: 'notes-class', icon: '👥', text: '当前班级', scope: 'class' },
                         { id: 'notes-domain', icon: '🌐', text: '整个域名', scope: 'domain' }
                     ]
                 },
@@ -1160,9 +1159,13 @@
             });
 
             subMenuItem.addEventListener('mouseleave', () => {
-                if (!(this.currentTab === 'notes' && this.notesScope === subItem.scope)) {
+                const isCurrentScope = this.currentTab === 'notes' && this.notesScope === subItem.scope;
+                if (!isCurrentScope) {
                     subMenuItem.style.backgroundColor = 'transparent';
                     subMenuItem.style.color = '#718096';
+                } else {
+                    subMenuItem.style.backgroundColor = '#2d3748';
+                    subMenuItem.style.color = '#4299e1';
                 }
             });
 
