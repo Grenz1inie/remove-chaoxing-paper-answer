@@ -691,13 +691,22 @@
             this.editor = DOMHelper.createElement('div', {
                 contentEditable: 'true',
                 style: {
-                    ...this.styleGenerator.getNoteEditorStyle(),
+                    width: noteConfig.width || '100%',
                     minHeight: noteConfig.minHeight,
                     maxHeight: noteConfig.maxHeight,
+                    padding: noteConfig.padding,
+                    fontSize: noteConfig.fontSize,
+                    border: `${noteConfig.borderWidth} ${noteConfig.borderStyle} ${noteConfig.borderColor}`,
+                    borderRadius: noteConfig.borderRadius,
+                    backgroundColor: noteConfig.backgroundColor,
+                    color: noteConfig.textColor,
+                    fontFamily: noteConfig.fontFamily,
                     overflowY: 'auto',
                     outline: 'none',
                     whiteSpace: 'pre-wrap',
-                    wordWrap: 'break-word'
+                    wordWrap: 'break-word',
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
                 }
             });
 
@@ -1250,7 +1259,7 @@
                 { 
                     id: 'notes', 
                     icon: '📝', 
-                    text: '管理笔记',
+                    text: '笔记管理',
                     hasSubmenu: true,
                     submenu: [
                         { id: 'notes-current', icon: '📄', text: '当前页面', scope: 'current' },
