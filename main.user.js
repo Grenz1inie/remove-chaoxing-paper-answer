@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         隐藏/显示超星学习通作业答案
+// @name         （测试）隐藏/显示超星学习通作业答案
 // @namespace    http://tampermonkey.net/
 // @version      2.1.0
 // @description  一键隐藏超星学习通作业页面中所有 div.mark_answer 答案块，支持单个控制和全局控制，支持为每道题添加笔记。
@@ -17,55 +17,147 @@
     // ===================== 配置管理模块 =====================
     class Config {
         static DEFAULT = {
+            // ========== DOM 选择器配置 ==========
             selectors: {
-                answerBlock: 'div.mark_answer',
-                container: 'div.topicNumber',
-                questionItem: 'div.mark_item'
+                answerBlock: 'div.mark_answer',    // 答案块的选择器
+                container: 'div.topicNumber',      // 题目容器的选择器
+                questionItem: 'div.mark_item'      // 题目项的选择器
             },
+
+            // ========== 延迟配置 ==========
             delays: {
-                initialization: 800
+                initialization: 800  // 脚本初始化延迟时间（毫秒），确保页面加载完成
             },
-            button: {
+
+            // ========== 单个答案控制按钮配置 ==========
+            answerButton: {
+                // --- 按钮位置配置 ---
                 position: {
-                    marginLeft: '20px',
-                    marginRight: '0px',
-                    marginTop: '10px',
-                    marginBottom: '0px',
-                    verticalAlign: 'middle'
+                    marginLeft: '20px',      // 按钮左外边距
+                    marginRight: '0px',      // 按钮右外边距
+                    marginTop: '10px',       // 按钮上外边距
+                    marginBottom: '0px',     // 按钮下外边距
+                    verticalAlign: 'middle'  // 垂直对齐方式（top/middle/bottom）
                 },
+                // --- 按钮样式配置 ---
                 style: {
-                    fontSize: '12px',
-                    padding: '3px 10px',
-                    borderRadius: '4px',
-                    primaryColor: '#4299e1',   // 显示按钮颜色
-                    secondaryColor: '#9f7aea', // 隐藏按钮颜色
-                    noteColor: '#48bb78'       // 笔记按钮颜色
+                    fontSize: '12px',        // 字体大小
+                    padding: '2px 8px',      // 内边距（上下 左右）
+                    borderRadius: '3px',     // 圆角半径
+                    border: 'none',          // 边框样式
+                    fontWeight: 'normal',    // 字体粗细（normal/bold/100-900）
+                    cursor: 'pointer',       // 鼠标样式
+                    transition: 'background 0.2s'  // 过渡动画
                 },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    showBackground: '#4299e1',     // "显示答案"按钮背景色（蓝色）
+                    hideBackground: '#9f7aea',     // "隐藏答案"按钮背景色（紫色）
+                    textColor: 'white',            // 按钮文字颜色
+                    hoverOpacity: '0.8'            // 鼠标悬停时的透明度
+                },
+                // --- 按钮文字配置 ---
                 text: {
-                    show: '显示答案',
-                    hide: '隐藏答案',
-                    showAll: '显示全部答案',
-                    hideAll: '隐藏全部答案',
-                    showNote: '显示笔记',
-                    hideNote: '隐藏笔记'
+                    show: '显示答案',   // "显示答案"按钮文字
+                    hide: '隐藏答案'    // "隐藏答案"按钮文字
                 }
             },
-            note: {
-                placeholder: '在这里记录你的笔记...',
-                minHeight: '60px',
-                maxHeight: '400px',
-                fontSize: '14px',
-                padding: '10px',
-                borderRadius: '4px',
-                borderColor: '#cbd5e0',
-                backgroundColor: '#f7fafc',
-                autoSaveDelay: 1000  // 自动保存延迟（毫秒）
+
+            // ========== 笔记控制按钮配置 ==========
+            noteButton: {
+                // --- 按钮位置配置 ---
+                position: {
+                    marginLeft: '5px',       // 按钮左外边距（与答案按钮的间距）
+                    marginRight: '0px',      // 按钮右外边距
+                    marginTop: '0px',        // 按钮上外边距
+                    marginBottom: '0px',     // 按钮下外边距
+                    verticalAlign: 'middle'  // 垂直对齐方式
+                },
+                // --- 按钮样式配置 ---
+                style: {
+                    fontSize: '12px',        // 字体大小
+                    padding: '2px 8px',      // 内边距（上下 左右）
+                    borderRadius: '3px',     // 圆角半径
+                    border: 'none',          // 边框样式
+                    fontWeight: 'normal',    // 字体粗细
+                    cursor: 'pointer',       // 鼠标样式
+                    transition: 'background 0.2s'  // 过渡动画
+                },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    showBackground: '#48bb78',     // "显示笔记"按钮背景色（绿色）
+                    hideBackground: '#9f7aea',     // "隐藏笔记"按钮背景色（紫色）
+                    textColor: 'white',            // 按钮文字颜色
+                    hoverOpacity: '0.8'            // 鼠标悬停时的透明度
+                },
+                // --- 按钮文字配置 ---
+                text: {
+                    show: '显示笔记',   // "显示笔记"按钮文字
+                    hide: '隐藏笔记'    // "隐藏笔记"按钮文字
+                }
             },
+
+            // ========== 全局控制按钮配置 ==========
+            globalButton: {
+                // --- 按钮位置配置 ---
+                position: {
+                    top: '8px',              // 距离容器顶部的距离
+                    right: '8px',            // 距离容器右侧的距离
+                    zIndex: '9999'           // 层级（确保在最上层）
+                },
+                // --- 按钮样式配置 ---
+                style: {
+                    fontSize: '12px',        // 字体大小
+                    padding: '3px 10px',     // 内边距（上下 左右）
+                    borderRadius: '4px',     // 圆角半径
+                    border: 'none',          // 边框样式
+                    fontWeight: 'normal',    // 字体粗细
+                    cursor: 'pointer',       // 鼠标样式
+                    transition: 'background 0.2s'  // 过渡动画
+                },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    showAllBackground: '#4299e1',  // "显示全部答案"按钮背景色（蓝色）
+                    hideAllBackground: '#9f7aea',  // "隐藏全部答案"按钮背景色（紫色）
+                    textColor: 'white',            // 按钮文字颜色
+                    hoverOpacity: '0.8'            // 鼠标悬停时的透明度
+                },
+                // --- 按钮文字配置 ---
+                text: {
+                    showAll: '显示全部答案',   // "显示全部答案"按钮文字
+                    hideAll: '隐藏全部答案'    // "隐藏全部答案"按钮文字
+                }
+            },
+
+            // ========== 笔记编辑器配置 ==========
+            noteEditor: {
+                placeholder: '在这里记录你的笔记...',  // 编辑器占位符文字
+                minHeight: '60px',                      // 编辑器最小高度
+                maxHeight: '400px',                     // 编辑器最大高度（超出滚动）
+                fontSize: '14px',                       // 编辑器字体大小
+                padding: '10px',                        // 编辑器内边距
+                marginTop: '10px',                      // 编辑器上外边距
+                marginBottom: '10px',                   // 编辑器下外边距
+                borderRadius: '4px',                    // 编辑器圆角半径
+                borderWidth: '1px',                     // 编辑器边框宽度
+                borderStyle: 'solid',                   // 编辑器边框样式
+                borderColor: '#cbd5e0',                 // 编辑器边框颜色（默认）
+                focusBorderColor: '#4299e1',            // 编辑器获得焦点时的边框颜色
+                backgroundColor: '#f7fafc',             // 编辑器背景颜色
+                textColor: '#2d3748',                   // 编辑器文字颜色
+                fontFamily: 'inherit',                  // 编辑器字体（继承父元素）
+                resize: 'vertical',                     // 调整大小方式（none/vertical/horizontal/both）
+                autoSaveDelay: 1000                     // 自动保存延迟时间（毫秒）
+            },
+
+            // ========== 数据库配置 ==========
             database: {
-                name: 'ChaoxingNotesDB',
-                version: 1,
-                storeName: 'notes'
+                name: 'ChaoxingNotesDB',  // IndexedDB 数据库名称
+                version: 1,                // 数据库版本号
+                storeName: 'notes'         // 对象存储名称
             },
+
+            // ========== 提示消息配置 ==========
             messages: {
                 noAnswerBlocks: 'ℹ️ 未找到答案块（可能页面未完全加载，可刷新重试）',
                 noContainer: 'ℹ️ 未找到容器模块，仅启用单个答案块隐藏功能',
@@ -246,39 +338,23 @@
 
     // ===================== 笔记编辑器组件 =====================
     class NoteEditor {
-        constructor(questionId, workKey, dbManager, config) {
+        constructor(questionId, workKey, dbManager, config, styleGenerator) {
             this.questionId = questionId;
             this.workKey = workKey;
             this.dbManager = dbManager;
             this.config = config;
+            this.styleGenerator = styleGenerator;
             this.editor = null;
             this.saveTimer = null;
             this.isVisible = false;
         }
 
         async create() {
-            const noteConfig = this.config.get('note');
+            const noteConfig = this.config.get('noteEditor');
             
             this.editor = DOMHelper.createElement('textarea', {
                 placeholder: noteConfig.placeholder,
-                style: {
-                    width: '100%',
-                    minHeight: noteConfig.minHeight,
-                    maxHeight: noteConfig.maxHeight,
-                    padding: noteConfig.padding,
-                    fontSize: noteConfig.fontSize,
-                    border: `1px solid ${noteConfig.borderColor}`,
-                    borderRadius: noteConfig.borderRadius,
-                    backgroundColor: noteConfig.backgroundColor,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                    outline: 'none',
-                    marginTop: '10px',
-                    marginBottom: '10px',
-                    display: 'none',
-                    transition: 'border-color 0.2s',
-                    boxSizing: 'border-box'
-                }
+                style: this.styleGenerator.getNoteEditorStyle()
             });
 
             // 加载已保存的笔记
@@ -300,11 +376,11 @@
 
             // 获得焦点时改变边框颜色
             this.editor.addEventListener('focus', () => {
-                this.editor.style.borderColor = this.config.get('button.style.primaryColor');
+                this.editor.style.borderColor = this.config.get('noteEditor.focusBorderColor');
             });
 
             this.editor.addEventListener('blur', () => {
-                this.editor.style.borderColor = this.config.get('note.borderColor');
+                this.editor.style.borderColor = this.config.get('noteEditor.borderColor');
             });
 
             return this.editor;
@@ -313,7 +389,7 @@
         _adjustHeight() {
             // 重置高度以获取正确的 scrollHeight
             this.editor.style.height = 'auto';
-            const noteConfig = this.config.get('note');
+            const noteConfig = this.config.get('noteEditor');
             const minHeight = parseInt(noteConfig.minHeight);
             const maxHeight = parseInt(noteConfig.maxHeight);
             const newHeight = Math.min(Math.max(this.editor.scrollHeight, minHeight), maxHeight);
@@ -327,7 +403,7 @@
 
             this.saveTimer = setTimeout(async () => {
                 await this.save();
-            }, this.config.get('note.autoSaveDelay'));
+            }, this.config.get('noteEditor.autoSaveDelay'));
         }
 
         async save() {
@@ -406,41 +482,116 @@
             this.config = config;
         }
 
-        getSingleButtonStyle() {
-            const { position, style } = this.config.get('button');
+        /**
+         * 获取单个答案按钮的样式
+         * @param {boolean} isHidden - 是否为隐藏状态
+         * @returns {Object} 样式对象
+         */
+        getAnswerButtonStyle(isHidden = true) {
+            const position = this.config.get('answerButton.position');
+            const style = this.config.get('answerButton.style');
+            const colors = this.config.get('answerButton.colors');
+            
             return {
                 marginLeft: position.marginLeft,
                 marginRight: position.marginRight,
                 marginTop: position.marginTop,
                 marginBottom: position.marginBottom,
                 verticalAlign: position.verticalAlign,
-                padding: '2px 8px',
-                border: 'none',
-                borderRadius: '3px',
-                background: style.primaryColor,
-                color: 'white',
-                fontSize: '12px',
-                cursor: 'pointer',
-                transition: 'background 0.2s',
+                padding: style.padding,
+                border: style.border,
+                borderRadius: style.borderRadius,
+                background: isHidden ? colors.showBackground : colors.hideBackground,
+                color: colors.textColor,
+                fontSize: style.fontSize,
+                fontWeight: style.fontWeight,
+                cursor: style.cursor,
+                transition: style.transition,
                 display: 'inline-block'
             };
         }
 
-        getGlobalButtonStyle() {
-            const { style } = this.config.get('button');
+        /**
+         * 获取笔记按钮的样式
+         * @param {boolean} isVisible - 笔记是否可见
+         * @returns {Object} 样式对象
+         */
+        getNoteButtonStyle(isVisible = false) {
+            const position = this.config.get('noteButton.position');
+            const style = this.config.get('noteButton.style');
+            const colors = this.config.get('noteButton.colors');
+            
+            return {
+                marginLeft: position.marginLeft,
+                marginRight: position.marginRight,
+                marginTop: position.marginTop,
+                marginBottom: position.marginBottom,
+                verticalAlign: position.verticalAlign,
+                padding: style.padding,
+                border: style.border,
+                borderRadius: style.borderRadius,
+                background: isVisible ? colors.hideBackground : colors.showBackground,
+                color: colors.textColor,
+                fontSize: style.fontSize,
+                fontWeight: style.fontWeight,
+                cursor: style.cursor,
+                transition: style.transition,
+                display: 'inline-block'
+            };
+        }
+
+        /**
+         * 获取全局按钮的样式
+         * @param {boolean} isHidden - 是否为全部隐藏状态
+         * @returns {Object} 样式对象
+         */
+        getGlobalButtonStyle(isHidden = true) {
+            const position = this.config.get('globalButton.position');
+            const style = this.config.get('globalButton.style');
+            const colors = this.config.get('globalButton.colors');
+            
             return {
                 position: 'absolute',
-                top: '8px',
-                right: '8px',
-                border: 'none',
+                top: position.top,
+                right: position.right,
+                zIndex: position.zIndex,
+                border: style.border,
                 borderRadius: style.borderRadius,
                 padding: style.padding,
                 fontSize: style.fontSize,
-                color: 'white',
-                cursor: 'pointer',
-                transition: 'background 0.2s',
-                zIndex: '9999',
-                background: style.primaryColor
+                fontWeight: style.fontWeight,
+                color: colors.textColor,
+                cursor: style.cursor,
+                transition: style.transition,
+                background: isHidden ? colors.showAllBackground : colors.hideAllBackground
+            };
+        }
+
+        /**
+         * 获取笔记编辑器的样式
+         * @returns {Object} 样式对象
+         */
+        getNoteEditorStyle() {
+            const noteConfig = this.config.get('noteEditor');
+            
+            return {
+                width: '100%',
+                minHeight: noteConfig.minHeight,
+                maxHeight: noteConfig.maxHeight,
+                padding: noteConfig.padding,
+                marginTop: noteConfig.marginTop,
+                marginBottom: noteConfig.marginBottom,
+                fontSize: noteConfig.fontSize,
+                border: `${noteConfig.borderWidth} ${noteConfig.borderStyle} ${noteConfig.borderColor}`,
+                borderRadius: noteConfig.borderRadius,
+                backgroundColor: noteConfig.backgroundColor,
+                color: noteConfig.textColor,
+                resize: noteConfig.resize,
+                fontFamily: noteConfig.fontFamily,
+                outline: 'none',
+                display: 'none',
+                transition: 'border-color 0.2s',
+                boxSizing: 'border-box'
             };
         }
     }
@@ -494,9 +645,9 @@
             this.buttonContainer = DOMHelper.createElement('div', {
                 style: {
                     display: 'inline-block',
-                    marginLeft: this.config.get('button.position.marginLeft'),
-                    marginTop: this.config.get('button.position.marginTop'),
-                    verticalAlign: this.config.get('button.position.verticalAlign')
+                    marginLeft: this.config.get('answerButton.position.marginLeft'),
+                    marginTop: this.config.get('answerButton.position.marginTop'),
+                    verticalAlign: this.config.get('answerButton.position.verticalAlign')
                 }
             });
 
@@ -511,10 +662,10 @@
         }
 
         _createAnswerToggleButton() {
-            const buttonText = this.config.get('button.text');
+            const buttonText = this.config.get('answerButton.text');
             this.toggleButton = DOMHelper.createElement('button', {
                 innerText: buttonText.show,
-                style: this.styleGenerator.getSingleButtonStyle(),
+                style: this.styleGenerator.getAnswerButtonStyle(true),
                 title: '点击显示/隐藏当前答案块',
                 dataset: {
                     isHidden: 'true',
@@ -527,14 +678,10 @@
         }
 
         _createNoteToggleButton() {
-            const buttonText = this.config.get('button.text');
-            const noteStyle = { ...this.styleGenerator.getSingleButtonStyle() };
-            noteStyle.background = this.config.get('button.style.noteColor');
-            noteStyle.marginLeft = '5px';
-
+            const buttonText = this.config.get('noteButton.text');
             this.noteButton = DOMHelper.createElement('button', {
-                innerText: buttonText.showNote,
-                style: noteStyle,
+                innerText: buttonText.show,
+                style: this.styleGenerator.getNoteButtonStyle(false),
                 title: '点击显示/隐藏笔记编辑器',
                 dataset: {
                     isVisible: 'false'
@@ -550,7 +697,8 @@
                 this.questionId,
                 this.workKey,
                 this.dbManager,
-                this.config
+                this.config,
+                this.styleGenerator
             );
             
             const editorElement = await this.noteEditor.create();
@@ -581,11 +729,11 @@
         }
 
         _updateAnswerButtonState() {
-            const buttonText = this.config.get('button.text');
-            const colors = this.config.get('button.style');
+            const buttonText = this.config.get('answerButton.text');
+            const colors = this.config.get('answerButton.colors');
             
             this.toggleButton.innerText = this.isHidden ? buttonText.show : buttonText.hide;
-            this.toggleButton.style.background = this.isHidden ? colors.primaryColor : colors.secondaryColor;
+            this.toggleButton.style.background = this.isHidden ? colors.showBackground : colors.hideBackground;
             this.toggleButton.dataset.isHidden = String(this.isHidden);
         }
 
@@ -595,11 +743,11 @@
         }
 
         _updateNoteButtonState() {
-            const buttonText = this.config.get('button.text');
-            const colors = this.config.get('button.style');
+            const buttonText = this.config.get('noteButton.text');
+            const colors = this.config.get('noteButton.colors');
             
-            this.noteButton.innerText = this.noteEditor.isVisible ? buttonText.hideNote : buttonText.showNote;
-            this.noteButton.style.background = this.noteEditor.isVisible ? colors.secondaryColor : colors.noteColor;
+            this.noteButton.innerText = this.noteEditor.isVisible ? buttonText.hide : buttonText.show;
+            this.noteButton.style.background = this.noteEditor.isVisible ? colors.hideBackground : colors.showBackground;
             this.noteButton.dataset.isVisible = String(this.noteEditor.isVisible);
         }
 
@@ -631,10 +779,10 @@
         }
 
         _createGlobalButton() {
-            const buttonText = this.config.get('button.text');
+            const buttonText = this.config.get('globalButton.text');
             this.globalButton = DOMHelper.createElement('button', {
                 innerText: buttonText.showAll,
-                style: this.styleGenerator.getGlobalButtonStyle(),
+                style: this.styleGenerator.getGlobalButtonStyle(true),
                 title: '点击一键显示/隐藏所有答案块'
             });
 
@@ -656,11 +804,11 @@
         }
 
         _updateGlobalButtonState(allHidden) {
-            const buttonText = this.config.get('button.text');
-            const colors = this.config.get('button.style');
+            const buttonText = this.config.get('globalButton.text');
+            const colors = this.config.get('globalButton.colors');
             
             this.globalButton.innerText = allHidden ? buttonText.showAll : buttonText.hideAll;
-            this.globalButton.style.background = allHidden ? colors.primaryColor : colors.secondaryColor;
+            this.globalButton.style.background = allHidden ? colors.showAllBackground : colors.hideAllBackground;
         }
     }
 
