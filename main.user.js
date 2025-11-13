@@ -780,8 +780,15 @@
                 this.toolbar.style.display = 'flex';
             });
 
-            this.editor.addEventListener('blur', () => {
-                this.editor.style.borderColor = this.config.get('noteEditor.borderColor');
+            this.editor.addEventListener('blur', (e) => {
+                // 延迟隐藏工具栏，以便点击工具栏按钮能正常工作
+                setTimeout(() => {
+                    // 检查焦点是否在工具栏内
+                    if (!this.toolbar.contains(document.activeElement)) {
+                        this.editor.style.borderColor = this.config.get('noteEditor.borderColor');
+                        this.toolbar.style.display = 'none';
+                    }
+                }, 150);
             });
 
             // 处理快捷键
