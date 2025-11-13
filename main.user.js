@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         （测试）隐藏/显示超星学习通作业答案
 // @namespace    http://tampermonkey.net/
-// @version      2.1.0
+// @version      2.2.0
 // @description  一键隐藏超星学习通作业页面中所有 div.mark_answer 答案块，支持单个控制和全局控制，支持为每道题添加笔记。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -33,7 +33,7 @@
             answerButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    marginLeft: '20px',      // 按钮左外边距
+                    marginLeft: '10px',      // 按钮左外边距
                     marginRight: '0px',      // 按钮右外边距
                     marginTop: '10px',       // 按钮上外边距
                     marginBottom: '0px',     // 按钮下外边距
@@ -69,7 +69,7 @@
                 position: {
                     marginLeft: '5px',       // 按钮左外边距（与答案按钮的间距）
                     marginRight: '0px',      // 按钮右外边距
-                    marginTop: '0px',        // 按钮上外边距
+                    marginTop: '10px',        // 按钮上外边距
                     marginBottom: '0px',     // 按钮下外边距
                     verticalAlign: 'middle'  // 垂直对齐方式
                 },
@@ -95,6 +95,36 @@
                     show: '显示笔记',   // "显示笔记"按钮文字
                     hide: '隐藏笔记'    // "隐藏笔记"按钮文字
                 }
+            },
+
+            // ========== 保存笔记按钮配置 ==========
+            saveNoteButton: {
+                // --- 按钮位置配置 ---
+                position: {
+                    marginLeft: '5px',       // 按钮左外边距（与笔记按钮的间距）
+                    marginRight: '0px',      // 按钮右外边距
+                    marginTop: '0px',        // 按钮上外边距
+                    marginBottom: '0px',     // 按钮下外边距
+                    verticalAlign: 'middle'  // 垂直对齐方式
+                },
+                // --- 按钮样式配置 ---
+                style: {
+                    fontSize: '12px',        // 字体大小
+                    padding: '2px 8px',      // 内边距（上下 左右）
+                    borderRadius: '3px',     // 圆角半径
+                    border: 'none',          // 边框样式
+                    fontWeight: 'normal',    // 字体粗细
+                    cursor: 'pointer',       // 鼠标样式
+                    transition: 'background 0.2s'  // 过渡动画
+                },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    background: '#38b2ac',   // 按钮背景色（青色）
+                    textColor: 'white',      // 按钮文字颜色
+                    hoverOpacity: '0.8'      // 鼠标悬停时的透明度
+                },
+                // --- 按钮文字配置 ---
+                text: '💾 保存'           // 保存按钮文字
             },
 
             // ========== 全局控制按钮配置 ==========
@@ -132,6 +162,7 @@
             // ========== 笔记编辑器配置 ==========
             noteEditor: {
                 placeholder: '在这里记录你的笔记...',  // 编辑器占位符文字
+                width: '100%',                          // 编辑器宽度
                 minHeight: '60px',                      // 编辑器最小高度
                 maxHeight: '400px',                     // 编辑器最大高度（超出滚动）
                 fontSize: '14px',                       // 编辑器字体大小
@@ -146,15 +177,52 @@
                 backgroundColor: '#f7fafc',             // 编辑器背景颜色
                 textColor: '#2d3748',                   // 编辑器文字颜色
                 fontFamily: 'inherit',                  // 编辑器字体（继承父元素）
-                resize: 'vertical',                     // 调整大小方式（none/vertical/horizontal/both）
-                autoSaveDelay: 1000                     // 自动保存延迟时间（毫秒）
+                resize: 'vertical'                      // 调整大小方式（none/vertical/horizontal/both）
+            },
+
+            // ========== 用户设置默认值 ==========
+            settings: {
+                autoSave: false,                        // 是否开启自动保存（默认关闭）
+                autoSaveDelay: 5000                     // 自动保存延迟时间（毫秒）
+            },
+
+            // ========== 控制面板按钮配置 ==========
+            manageButton: {
+                // --- 按钮位置配置 ---
+                position: {
+                    top: '40px',             // 距离容器顶部的距离（在全局按钮下方）
+                    right: '8px',            // 距离容器右侧的距离
+                    zIndex: '9999'           // 层级（确保在最上层）
+                },
+                // --- 按钮样式配置 ---
+                style: {
+                    fontSize: '12px',        // 字体大小
+                    padding: '3px 10px',     // 内边距（上下 左右）
+                    borderRadius: '4px',     // 圆角半径
+                    border: 'none',          // 边框样式
+                    fontWeight: 'normal',    // 字体粗细
+                    cursor: 'pointer',       // 鼠标样式
+                    transition: 'background 0.2s'  // 过渡动画
+                },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    background: '#ed8936',   // 按钮背景色（橙色）
+                    textColor: 'white',      // 按钮文字颜色
+                    hoverOpacity: '0.8'      // 鼠标悬停时的透明度
+                },
+                // --- 按钮文字配置 ---
+                text: '⚙️ 控制面板'    // 控制面板按钮文字
             },
 
             // ========== 数据库配置 ==========
             database: {
-                name: 'ChaoxingNotesDB',  // IndexedDB 数据库名称
-                version: 1,                // 数据库版本号
-                storeName: 'notes'         // 对象存储名称
+                name: 'ChaoxingNotesDB',     // IndexedDB 数据库名称
+                version: 3,                   // 数据库版本号（v3：添加设置存储）
+                stores: {
+                    notes: 'notes',           // 笔记存储名称
+                    attachments: 'attachments', // 附件存储名称
+                    settings: 'settings'      // 用户设置存储名称
+                }
             },
 
             // ========== 提示消息配置 ==========
@@ -245,13 +313,37 @@
 
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
-                    if (!db.objectStoreNames.contains(this.config.get('database.storeName'))) {
-                        const objectStore = db.createObjectStore(
-                            this.config.get('database.storeName'),
+                    const oldVersion = event.oldVersion;
+                    
+                    // 创建或升级笔记存储
+                    if (!db.objectStoreNames.contains(this.config.get('database.stores.notes'))) {
+                        const notesStore = db.createObjectStore(
+                            this.config.get('database.stores.notes'),
                             { keyPath: 'id' }
                         );
-                        objectStore.createIndex('workKey', 'workKey', { unique: false });
-                        objectStore.createIndex('questionId', 'questionId', { unique: false });
+                        notesStore.createIndex('workKey', 'workKey', { unique: false });
+                        notesStore.createIndex('questionId', 'questionId', { unique: false });
+                        notesStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+                    
+                    // v2: 创建附件存储（为未来图片等附件做准备）
+                    if (oldVersion < 2 && !db.objectStoreNames.contains(this.config.get('database.stores.attachments'))) {
+                        const attachmentsStore = db.createObjectStore(
+                            this.config.get('database.stores.attachments'),
+                            { keyPath: 'id' }
+                        );
+                        attachmentsStore.createIndex('noteId', 'noteId', { unique: false });
+                        attachmentsStore.createIndex('workKey', 'workKey', { unique: false });
+                        attachmentsStore.createIndex('type', 'type', { unique: false });
+                        attachmentsStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+
+                    // v3: 创建设置存储
+                    if (oldVersion < 3 && !db.objectStoreNames.contains(this.config.get('database.stores.settings'))) {
+                        db.createObjectStore(
+                            this.config.get('database.stores.settings'),
+                            { keyPath: 'key' }
+                        );
                     }
                 };
             });
@@ -262,10 +354,10 @@
 
             return new Promise((resolve, reject) => {
                 const transaction = this.db.transaction(
-                    [this.config.get('database.storeName')],
+                    [this.config.get('database.stores.notes')],
                     'readwrite'
                 );
-                const objectStore = transaction.objectStore(this.config.get('database.storeName'));
+                const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
                 
                 const id = `${workKey}_${questionId}`;
                 const data = {
@@ -273,24 +365,26 @@
                     workKey,
                     questionId,
                     content,
-                    timestamp: Date.now()
+                    contentType: 'text',  // 内容类型：text, html等
+                    hasAttachments: false, // 是否有附件
+                    attachmentCount: 0,    // 附件数量
+                    timestamp: Date.now(),
+                    updatedAt: Date.now()
                 };
 
                 const request = objectStore.put(data);
                 request.onsuccess = () => resolve(data);
                 request.onerror = () => reject(request.error);
             });
-        }
-
-        async getNote(workKey, questionId) {
+        }        async getNote(workKey, questionId) {
             if (!this.db) await this.init();
 
             return new Promise((resolve, reject) => {
                 const transaction = this.db.transaction(
-                    [this.config.get('database.storeName')],
+                    [this.config.get('database.stores.notes')],
                     'readonly'
                 );
-                const objectStore = transaction.objectStore(this.config.get('database.storeName'));
+                const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
                 
                 const id = `${workKey}_${questionId}`;
                 const request = objectStore.get(id);
@@ -298,17 +392,15 @@
                 request.onsuccess = () => resolve(request.result?.content || '');
                 request.onerror = () => reject(request.error);
             });
-        }
-
-        async getAllNotes(workKey) {
+        }        async getAllNotes(workKey) {
             if (!this.db) await this.init();
 
             return new Promise((resolve, reject) => {
                 const transaction = this.db.transaction(
-                    [this.config.get('database.storeName')],
+                    [this.config.get('database.stores.notes')],
                     'readonly'
                 );
-                const objectStore = transaction.objectStore(this.config.get('database.storeName'));
+                const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
                 const index = objectStore.index('workKey');
                 const request = index.getAll(workKey);
 
@@ -322,15 +414,153 @@
 
             return new Promise((resolve, reject) => {
                 const transaction = this.db.transaction(
-                    [this.config.get('database.storeName')],
+                    [this.config.get('database.stores.notes')],
                     'readwrite'
                 );
-                const objectStore = transaction.objectStore(this.config.get('database.storeName'));
+                const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
                 
                 const id = `${workKey}_${questionId}`;
                 const request = objectStore.delete(id);
 
                 request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * 批量删除笔记
+         * @param {Array<string>} noteIds - 笔记ID数组
+         */
+        async deleteNotes(noteIds) {
+            if (!this.db) await this.init();
+
+            return new Promise((resolve, reject) => {
+                const transaction = this.db.transaction(
+                    [this.config.get('database.stores.notes')],
+                    'readwrite'
+                );
+                const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
+                
+                let completedCount = 0;
+                const totalCount = noteIds.length;
+
+                if (totalCount === 0) {
+                    resolve(0);
+                    return;
+                }
+
+                noteIds.forEach(id => {
+                    const request = objectStore.delete(id);
+                    request.onsuccess = () => {
+                        completedCount++;
+                        if (completedCount === totalCount) {
+                            resolve(completedCount);
+                        }
+                    };
+                    request.onerror = () => {
+                        Logger.error(`删除笔记失败: ${id}`, request.error);
+                        completedCount++;
+                        if (completedCount === totalCount) {
+                            resolve(completedCount);
+                        }
+                    };
+                });
+            });
+        }
+
+        /**
+         * 获取数据库统计信息
+         */
+        async getStatistics() {
+            if (!this.db) await this.init();
+
+            return new Promise((resolve, reject) => {
+                const transaction = this.db.transaction(
+                    [this.config.get('database.stores.notes')],
+                    'readonly'
+                );
+                const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
+                const countRequest = objectStore.count();
+
+                countRequest.onsuccess = () => {
+                    resolve({
+                        totalNotes: countRequest.result,
+                        databaseName: this.config.get('database.name'),
+                        version: this.config.get('database.version')
+                    });
+                };
+                countRequest.onerror = () => reject(countRequest.error);
+            });
+        }
+
+        /**
+         * 保存设置
+         * @param {string} key - 设置键
+         * @param {any} value - 设置值
+         */
+        async saveSetting(key, value) {
+            if (!this.db) await this.init();
+
+            return new Promise((resolve, reject) => {
+                const transaction = this.db.transaction(
+                    [this.config.get('database.stores.settings')],
+                    'readwrite'
+                );
+                const objectStore = transaction.objectStore(this.config.get('database.stores.settings'));
+                
+                const data = { key, value, updatedAt: Date.now() };
+                const request = objectStore.put(data);
+
+                request.onsuccess = () => resolve(data);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * 获取设置
+         * @param {string} key - 设置键
+         * @param {any} defaultValue - 默认值
+         */
+        async getSetting(key, defaultValue = null) {
+            if (!this.db) await this.init();
+
+            return new Promise((resolve, reject) => {
+                const transaction = this.db.transaction(
+                    [this.config.get('database.stores.settings')],
+                    'readonly'
+                );
+                const objectStore = transaction.objectStore(this.config.get('database.stores.settings'));
+                const request = objectStore.get(key);
+
+                request.onsuccess = () => {
+                    const result = request.result;
+                    resolve(result ? result.value : defaultValue);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * 获取所有设置
+         */
+        async getAllSettings() {
+            if (!this.db) await this.init();
+
+            return new Promise((resolve, reject) => {
+                const transaction = this.db.transaction(
+                    [this.config.get('database.stores.settings')],
+                    'readonly'
+                );
+                const objectStore = transaction.objectStore(this.config.get('database.stores.settings'));
+                const request = objectStore.getAll();
+
+                request.onsuccess = () => {
+                    const settings = {};
+                    request.result.forEach(item => {
+                        settings[item.key] = item.value;
+                    });
+                    resolve(settings);
+                };
                 request.onerror = () => reject(request.error);
             });
         }
@@ -351,7 +581,7 @@
 
         async create() {
             const noteConfig = this.config.get('noteEditor');
-            
+
             this.editor = DOMHelper.createElement('textarea', {
                 placeholder: noteConfig.placeholder,
                 style: this.styleGenerator.getNoteEditorStyle()
@@ -397,13 +627,22 @@
         }
 
         _scheduleAutoSave() {
-            if (this.saveTimer) {
-                clearTimeout(this.saveTimer);
-            }
+            // 检查自动保存是否启用
+            this.dbManager.getSetting('autoSave', this.config.get('settings.autoSave'))
+                .then(autoSaveEnabled => {
+                    if (!autoSaveEnabled) return;
 
-            this.saveTimer = setTimeout(async () => {
-                await this.save();
-            }, this.config.get('noteEditor.autoSaveDelay'));
+                    if (this.saveTimer) {
+                        clearTimeout(this.saveTimer);
+                    }
+
+                    this.dbManager.getSetting('autoSaveDelay', this.config.get('settings.autoSaveDelay'))
+                        .then(delay => {
+                            this.saveTimer = setTimeout(async () => {
+                                await this.save();
+                            }, delay);
+                        });
+                });
         }
 
         async save() {
@@ -436,6 +675,791 @@
 
         getElement() {
             return this.editor;
+        }
+    }
+
+    // ===================== 控制面板UI组件 =====================
+    class ControlPanelUI {
+        constructor(dbManager, workKey, config) {
+            this.dbManager = dbManager;
+            this.workKey = workKey;
+            this.config = config;
+            this.modal = null;
+            this.notesList = [];
+            this.selectedNotes = new Set();
+            this.currentTab = 'settings'; // 'settings' 或 'notes'
+            this.settings = {};
+        }
+
+        /**
+         * 显示控制面板
+         */
+        async show() {
+            await this._loadSettings();
+            await this._loadNotes();
+            this._createModal();
+            this._renderContent();
+        }
+
+        /**
+         * 加载用户设置
+         */
+        async _loadSettings() {
+            try {
+                this.settings = await this.dbManager.getAllSettings();
+                // 填充默认值
+                if (!('autoSave' in this.settings)) {
+                    this.settings.autoSave = this.config.get('settings.autoSave');
+                }
+                if (!('autoSaveDelay' in this.settings)) {
+                    this.settings.autoSaveDelay = this.config.get('settings.autoSaveDelay');
+                }
+            } catch (error) {
+                Logger.error('加载设置失败', error);
+                this.settings = {
+                    autoSave: this.config.get('settings.autoSave'),
+                    autoSaveDelay: this.config.get('settings.autoSaveDelay')
+                };
+            }
+        }
+
+        /**
+         * 加载笔记数据
+         */
+        async _loadNotes() {
+            try {
+                this.notesList = await this.dbManager.getAllNotes(this.workKey);
+                this.notesList.sort((a, b) => b.timestamp - a.timestamp);
+            } catch (error) {
+                Logger.error('加载笔记失败', error);
+                this.notesList = [];
+            }
+        }
+
+        /**
+         * 创建模态框
+         */
+        _createModal() {
+            // 创建遮罩层
+            const overlay = DOMHelper.createElement('div', {
+                style: {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: '99999',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }
+            });
+
+            // 创建主容器
+            const mainContainer = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    width: '90%',
+                    maxWidth: '900px',
+                    height: '85vh',
+                    display: 'flex',
+                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+                    overflow: 'hidden'
+                }
+            });
+
+            // 创建左侧边栏
+            const sidebar = this._createSidebar();
+            mainContainer.appendChild(sidebar);
+
+            // 创建右侧内容区
+            const contentArea = DOMHelper.createElement('div', {
+                id: 'panel-content-area',
+                style: {
+                    flex: '1',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    backgroundColor: '#f7fafc'
+                }
+            });
+
+            // 创建内容区标题栏
+            const contentHeader = DOMHelper.createElement('div', {
+                id: 'panel-content-header',
+                style: {
+                    padding: '20px 30px',
+                    borderBottom: '1px solid #e2e8f0',
+                    backgroundColor: 'white',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }
+            });
+
+            const headerTitle = DOMHelper.createElement('h2', {
+                id: 'panel-header-title',
+                innerText: '⚙️ 设置',
+                style: {
+                    margin: '0',
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: '#2d3748'
+                }
+            });
+
+            const closeBtn = DOMHelper.createElement('button', {
+                innerText: '✕',
+                style: {
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    color: '#718096',
+                    padding: '0',
+                    width: '30px',
+                    height: '30px',
+                    lineHeight: '30px',
+                    textAlign: 'center',
+                    borderRadius: '50%',
+                    transition: 'background 0.2s'
+                }
+            });
+
+            closeBtn.addEventListener('mouseenter', () => {
+                closeBtn.style.backgroundColor = '#e2e8f0';
+            });
+
+            closeBtn.addEventListener('mouseleave', () => {
+                closeBtn.style.backgroundColor = 'transparent';
+            });
+
+            closeBtn.addEventListener('click', () => this._close());
+
+            contentHeader.appendChild(headerTitle);
+            contentHeader.appendChild(closeBtn);
+            contentArea.appendChild(contentHeader);
+
+            // 创建内容主体
+            const contentBody = DOMHelper.createElement('div', {
+                id: 'panel-content-body',
+                style: {
+                    flex: '1',
+                    overflow: 'auto',
+                    padding: '30px'
+                }
+            });
+
+            contentArea.appendChild(contentBody);
+            mainContainer.appendChild(contentArea);
+            overlay.appendChild(mainContainer);
+
+            // 点击遮罩层关闭
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    this._close();
+                }
+            });
+
+            this.modal = overlay;
+            document.body.appendChild(overlay);
+        }
+
+        /**
+         * 创建左侧边栏
+         */
+        _createSidebar() {
+            const sidebar = DOMHelper.createElement('div', {
+                style: {
+                    width: '220px',
+                    backgroundColor: '#2d3748',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '20px 0'
+                }
+            });
+
+            // 标题
+            const title = DOMHelper.createElement('div', {
+                innerText: '控制面板',
+                style: {
+                    padding: '0 20px 20px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                    marginBottom: '10px'
+                }
+            });
+
+            sidebar.appendChild(title);
+
+            // 菜单项
+            const menuItems = [
+                { id: 'settings', icon: '⚙️', text: '设置' },
+                { id: 'notes', icon: '📝', text: '管理笔记' }
+            ];
+
+            menuItems.forEach(item => {
+                const menuItem = this._createMenuItem(item.id, item.icon, item.text);
+                sidebar.appendChild(menuItem);
+            });
+
+            return sidebar;
+        }
+
+        /**
+         * 创建菜单项
+         */
+        _createMenuItem(id, icon, text) {
+            const isActive = this.currentTab === id;
+
+            const menuItem = DOMHelper.createElement('div', {
+                dataset: { tab: id },
+                style: {
+                    padding: '12px 20px',
+                    cursor: 'pointer',
+                    color: isActive ? 'white' : '#a0aec0',
+                    backgroundColor: isActive ? '#4a5568' : 'transparent',
+                    borderLeft: isActive ? '3px solid #4299e1' : '3px solid transparent',
+                    transition: 'all 0.2s',
+                    fontSize: '14px',
+                    fontWeight: isActive ? 'bold' : 'normal',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                }
+            });
+
+            const iconSpan = DOMHelper.createElement('span', {
+                innerText: icon,
+                style: { fontSize: '16px' }
+            });
+
+            const textSpan = DOMHelper.createElement('span', {
+                innerText: text
+            });
+
+            menuItem.appendChild(iconSpan);
+            menuItem.appendChild(textSpan);
+
+            menuItem.addEventListener('mouseenter', () => {
+                if (this.currentTab !== id) {
+                    menuItem.style.backgroundColor = '#4a5568';
+                    menuItem.style.color = '#e2e8f0';
+                }
+            });
+
+            menuItem.addEventListener('mouseleave', () => {
+                if (this.currentTab !== id) {
+                    menuItem.style.backgroundColor = 'transparent';
+                    menuItem.style.color = '#a0aec0';
+                }
+            });
+
+            menuItem.addEventListener('click', () => {
+                this.currentTab = id;
+                this._updateSidebarState();
+                this._renderContent();
+            });
+
+            return menuItem;
+        }
+
+        /**
+         * 更新侧边栏状态
+         */
+        _updateSidebarState() {
+            const menuItems = this.modal.querySelectorAll('[data-tab]');
+            menuItems.forEach(item => {
+                const isActive = item.dataset.tab === this.currentTab;
+                item.style.color = isActive ? 'white' : '#a0aec0';
+                item.style.backgroundColor = isActive ? '#4a5568' : 'transparent';
+                item.style.borderLeft = isActive ? '3px solid #4299e1' : '3px solid transparent';
+                item.style.fontWeight = isActive ? 'bold' : 'normal';
+            });
+        }
+
+        /**
+         * 渲染内容区
+         */
+        _renderContent() {
+            const headerTitle = document.getElementById('panel-header-title');
+            const contentBody = document.getElementById('panel-content-body');
+
+            if (this.currentTab === 'settings') {
+                headerTitle.innerText = '⚙️ 设置';
+                this._renderSettingsPanel(contentBody);
+            } else if (this.currentTab === 'notes') {
+                headerTitle.innerText = '📝 管理笔记';
+                this._renderNotesPanel(contentBody);
+            }
+        }
+
+        /**
+         * 渲染设置面板
+         */
+        _renderSettingsPanel(container) {
+            container.innerHTML = '';
+
+            const settingsContainer = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    marginBottom: '20px'
+                }
+            });
+
+            // 自动保存开关
+            const autoSaveSection = this._createSettingItem(
+                '自动保存',
+                '开启后会在输入停止一段时间后自动保存笔记',
+                'checkbox',
+                'autoSave',
+                this.settings.autoSave
+            );
+
+            settingsContainer.appendChild(autoSaveSection);
+
+            // 自动保存延迟时间
+            const delaySection = this._createSettingItem(
+                '自动保存延迟',
+                '输入停止后多久开始保存（毫秒）',
+                'number',
+                'autoSaveDelay',
+                this.settings.autoSaveDelay
+            );
+
+            settingsContainer.appendChild(delaySection);
+
+            container.appendChild(settingsContainer);
+
+            // 添加保存按钮
+            const saveButtonContainer = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '10px'
+                }
+            });
+
+            const saveButton = DOMHelper.createElement('button', {
+                innerText: '💾 保存设置',
+                style: {
+                    padding: '10px 24px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    backgroundColor: '#4299e1',
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 4px rgba(66, 153, 225, 0.3)'
+                }
+            });
+
+            saveButton.addEventListener('mouseenter', () => {
+                saveButton.style.backgroundColor = '#3182ce';
+                saveButton.style.transform = 'translateY(-1px)';
+                saveButton.style.boxShadow = '0 4px 6px rgba(66, 153, 225, 0.4)';
+            });
+
+            saveButton.addEventListener('mouseleave', () => {
+                saveButton.style.backgroundColor = '#4299e1';
+                saveButton.style.transform = 'translateY(0)';
+                saveButton.style.boxShadow = '0 2px 4px rgba(66, 153, 225, 0.3)';
+            });
+
+            saveButton.addEventListener('click', async () => {
+                try {
+                    // 保存所有设置
+                    await this.dbManager.saveSetting('autoSave', this.settings.autoSave);
+                    await this.dbManager.saveSetting('autoSaveDelay', this.settings.autoSaveDelay);
+                    
+                    // 显示成功提示
+                    saveButton.innerText = '✅ 保存成功';
+                    saveButton.style.backgroundColor = '#48bb78';
+                    
+                    setTimeout(() => {
+                        saveButton.innerText = '💾 保存设置';
+                        saveButton.style.backgroundColor = '#4299e1';
+                    }, 2000);
+                    
+                    Logger.success('设置已保存');
+                } catch (error) {
+                    Logger.error('保存设置失败', error);
+                    saveButton.innerText = '❌ 保存失败';
+                    saveButton.style.backgroundColor = '#f56565';
+                    
+                    setTimeout(() => {
+                        saveButton.innerText = '💾 保存设置';
+                        saveButton.style.backgroundColor = '#4299e1';
+                    }, 2000);
+                }
+            });
+
+            saveButtonContainer.appendChild(saveButton);
+            container.appendChild(saveButtonContainer);
+        }
+
+        /**
+         * 创建设置项
+         */
+        _createSettingItem(label, description, type, key, value) {
+            const item = DOMHelper.createElement('div', {
+                style: {
+                    marginBottom: '24px',
+                    paddingBottom: '24px',
+                    borderBottom: '1px solid #e2e8f0'
+                }
+            });
+
+            const labelEl = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '8px'
+                }
+            });
+
+            const labelText = DOMHelper.createElement('span', {
+                innerText: label,
+                style: {
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: '#2d3748'
+                }
+            });
+
+            let input;
+            if (type === 'checkbox') {
+                input = DOMHelper.createElement('input', {
+                    type: 'checkbox',
+                    checked: value,
+                    style: {
+                        width: '20px',
+                        height: '20px',
+                        cursor: 'pointer'
+                    }
+                });
+
+                input.addEventListener('change', () => {
+                    this.settings[key] = input.checked;
+                });
+            } else if (type === 'number') {
+                input = DOMHelper.createElement('input', {
+                    type: 'number',
+                    value: value,
+                    style: {
+                        width: '120px',
+                        padding: '6px 12px',
+                        border: '1px solid #cbd5e0',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                    }
+                });
+
+                input.addEventListener('change', () => {
+                    const numValue = parseInt(input.value);
+                    if (numValue > 0) {
+                        this.settings[key] = numValue;
+                    }
+                });
+            }
+
+            labelEl.appendChild(labelText);
+            labelEl.appendChild(input);
+
+            const desc = DOMHelper.createElement('div', {
+                innerText: description,
+                style: {
+                    fontSize: '13px',
+                    color: '#718096',
+                    marginTop: '4px'
+                }
+            });
+
+            item.appendChild(labelEl);
+            item.appendChild(desc);
+
+            return item;
+        }
+
+        /**
+         * 渲染笔记管理面板
+         */
+        _renderNotesPanel(container) {
+            container.innerHTML = '';
+            container.style.padding = '0';
+
+            if (this.notesList.length === 0) {
+                const emptyMsg = DOMHelper.createElement('div', {
+                    innerText: '📭 暂无笔记',
+                    style: {
+                        textAlign: 'center',
+                        color: '#a0aec0',
+                        padding: '60px 20px',
+                        fontSize: '16px'
+                    }
+                });
+                container.appendChild(emptyMsg);
+                return;
+            }
+
+            // 操作栏
+            const toolbar = DOMHelper.createElement('div', {
+                style: {
+                    padding: '15px 30px',
+                    backgroundColor: 'white',
+                    borderBottom: '1px solid #e2e8f0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }
+            });
+
+            const info = DOMHelper.createElement('span', {
+                id: 'notes-info-text',
+                innerText: `共 ${this.notesList.length} 条笔记`,
+                style: {
+                    fontSize: '14px',
+                    color: '#718096'
+                }
+            });
+
+            const actions = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    gap: '10px'
+                }
+            });
+
+            const selectAllBtn = DOMHelper.createElement('button', {
+                innerText: '全选',
+                style: {
+                    padding: '6px 14px',
+                    border: '1px solid #cbd5e0',
+                    borderRadius: '4px',
+                    backgroundColor: 'white',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                }
+            });
+
+            const deleteBtn = DOMHelper.createElement('button', {
+                innerText: '删除选中',
+                style: {
+                    padding: '6px 14px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    backgroundColor: '#f56565',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                }
+            });
+
+            selectAllBtn.addEventListener('click', () => this._toggleSelectAll());
+            deleteBtn.addEventListener('click', () => this._deleteSelected());
+
+            actions.appendChild(selectAllBtn);
+            actions.appendChild(deleteBtn);
+            toolbar.appendChild(info);
+            toolbar.appendChild(actions);
+
+            // 笔记列表
+            const notesList = DOMHelper.createElement('div', {
+                id: 'notes-list-content',
+                style: {
+                    padding: '20px 30px',
+                    overflow: 'auto',
+                    flex: '1'
+                }
+            });
+
+            this.notesList.forEach(note => {
+                const noteItem = this._createNoteItem(note);
+                notesList.appendChild(noteItem);
+            });
+
+            container.appendChild(toolbar);
+            container.appendChild(notesList);
+        }
+
+        /**
+         * 创建笔记项
+         */
+        _createNoteItem(note) {
+            const item = DOMHelper.createElement('div', {
+                style: {
+                    padding: '16px',
+                    marginBottom: '12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    backgroundColor: this.selectedNotes.has(note.id) ? '#ebf8ff' : 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                }
+            });
+
+            item.addEventListener('mouseenter', () => {
+                if (!this.selectedNotes.has(note.id)) {
+                    item.style.backgroundColor = '#f7fafc';
+                }
+            });
+
+            item.addEventListener('mouseleave', () => {
+                if (!this.selectedNotes.has(note.id)) {
+                    item.style.backgroundColor = 'white';
+                }
+            });
+
+            const header = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginBottom: '10px',
+                    gap: '10px'
+                }
+            });
+
+            const checkbox = DOMHelper.createElement('input', {
+                type: 'checkbox',
+                checked: this.selectedNotes.has(note.id),
+                style: {
+                    width: '16px',
+                    height: '16px',
+                    cursor: 'pointer'
+                }
+            });
+
+            checkbox.addEventListener('change', (e) => {
+                e.stopPropagation();
+                if (checkbox.checked) {
+                    this.selectedNotes.add(note.id);
+                    item.style.backgroundColor = '#ebf8ff';
+                } else {
+                    this.selectedNotes.delete(note.id);
+                    item.style.backgroundColor = 'white';
+                }
+                this._updateNotesInfo();
+            });
+
+            const questionId = DOMHelper.createElement('span', {
+                innerText: note.questionId,
+                style: {
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#4299e1',
+                    flex: '1'
+                }
+            });
+
+            const time = DOMHelper.createElement('span', {
+                innerText: new Date(note.timestamp).toLocaleString('zh-CN'),
+                style: {
+                    fontSize: '12px',
+                    color: '#a0aec0'
+                }
+            });
+
+            header.appendChild(checkbox);
+            header.appendChild(questionId);
+            header.appendChild(time);
+
+            const content = DOMHelper.createElement('div', {
+                innerText: note.content || '(空笔记)',
+                style: {
+                    fontSize: '14px',
+                    color: note.content ? '#2d3748' : '#a0aec0',
+                    lineHeight: '1.6',
+                    maxHeight: '80px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'pre-wrap'
+                }
+            });
+
+            item.appendChild(header);
+            item.appendChild(content);
+
+            item.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+
+            return item;
+        }
+
+        /**
+         * 切换全选
+         */
+        _toggleSelectAll() {
+            if (this.selectedNotes.size === this.notesList.length) {
+                this.selectedNotes.clear();
+            } else {
+                this.notesList.forEach(note => this.selectedNotes.add(note.id));
+            }
+            this._renderContent();
+        }
+
+        /**
+         * 删除选中的笔记
+         */
+        async _deleteSelected() {
+            if (this.selectedNotes.size === 0) {
+                alert('请先选择要删除的笔记');
+                return;
+            }
+
+            if (!confirm(`确定要删除选中的 ${this.selectedNotes.size} 条笔记吗？\n此操作不可恢复！`)) {
+                return;
+            }
+
+            try {
+                const noteIds = Array.from(this.selectedNotes);
+                await this.dbManager.deleteNotes(noteIds);
+                Logger.success(`已删除 ${noteIds.length} 条笔记`);
+
+                this.selectedNotes.clear();
+                await this._loadNotes();
+                this._renderContent();
+            } catch (error) {
+                Logger.error('删除笔记失败', error);
+                alert('删除笔记失败，请查看控制台了解详情');
+            }
+        }
+
+        /**
+         * 更新笔记信息
+         */
+        _updateNotesInfo() {
+            const info = document.getElementById('notes-info-text');
+            if (info) {
+                const selectedText = this.selectedNotes.size > 0 ? `，已选中 ${this.selectedNotes.size} 条` : '';
+                info.innerText = `共 ${this.notesList.length} 条笔记${selectedText}`;
+            }
+        }
+
+        /**
+         * 关闭模态框
+         */
+        _close() {
+            if (this.modal && this.modal.parentNode) {
+                document.body.removeChild(this.modal);
+                this.modal = null;
+            }
         }
     }
 
@@ -491,7 +1515,7 @@
             const position = this.config.get('answerButton.position');
             const style = this.config.get('answerButton.style');
             const colors = this.config.get('answerButton.colors');
-            
+
             return {
                 marginLeft: position.marginLeft,
                 marginRight: position.marginRight,
@@ -520,7 +1544,7 @@
             const position = this.config.get('noteButton.position');
             const style = this.config.get('noteButton.style');
             const colors = this.config.get('noteButton.colors');
-            
+
             return {
                 marginLeft: position.marginLeft,
                 marginRight: position.marginRight,
@@ -541,6 +1565,34 @@
         }
 
         /**
+         * 获取保存笔记按钮的样式
+         * @returns {Object} 样式对象
+         */
+        getSaveNoteButtonStyle() {
+            const position = this.config.get('saveNoteButton.position');
+            const style = this.config.get('saveNoteButton.style');
+            const colors = this.config.get('saveNoteButton.colors');
+
+            return {
+                marginLeft: position.marginLeft,
+                marginRight: position.marginRight,
+                marginTop: position.marginTop,
+                marginBottom: position.marginBottom,
+                verticalAlign: position.verticalAlign,
+                padding: style.padding,
+                border: style.border,
+                borderRadius: style.borderRadius,
+                background: colors.background,
+                color: colors.textColor,
+                fontSize: style.fontSize,
+                fontWeight: style.fontWeight,
+                cursor: style.cursor,
+                transition: style.transition,
+                display: 'inline-block'
+            };
+        }
+
+        /**
          * 获取全局按钮的样式
          * @param {boolean} isHidden - 是否为全部隐藏状态
          * @returns {Object} 样式对象
@@ -549,7 +1601,7 @@
             const position = this.config.get('globalButton.position');
             const style = this.config.get('globalButton.style');
             const colors = this.config.get('globalButton.colors');
-            
+
             return {
                 position: 'absolute',
                 top: position.top,
@@ -573,9 +1625,9 @@
          */
         getNoteEditorStyle() {
             const noteConfig = this.config.get('noteEditor');
-            
+
             return {
-                width: '100%',
+                width: noteConfig.width || '100%',
                 minHeight: noteConfig.minHeight,
                 maxHeight: noteConfig.maxHeight,
                 padding: noteConfig.padding,
@@ -594,6 +1646,32 @@
                 boxSizing: 'border-box'
             };
         }
+
+        /**
+         * 获取管理按钮的样式
+         * @returns {Object} 样式对象
+         */
+        getManageButtonStyle() {
+            const position = this.config.get('manageButton.position');
+            const style = this.config.get('manageButton.style');
+            const colors = this.config.get('manageButton.colors');
+
+            return {
+                position: 'absolute',
+                top: position.top,
+                right: position.right,
+                zIndex: position.zIndex,
+                border: style.border,
+                borderRadius: style.borderRadius,
+                padding: style.padding,
+                fontSize: style.fontSize,
+                fontWeight: style.fontWeight,
+                color: colors.textColor,
+                cursor: style.cursor,
+                transition: style.transition,
+                background: colors.background
+            };
+        }
     }
 
     // ===================== 答案块控制器 =====================
@@ -609,6 +1687,7 @@
             this.originalHTML = block.outerHTML;
             this.toggleButton = null;
             this.noteButton = null;
+            this.saveNoteButton = null;
             this.noteEditor = null;
             this.buttonContainer = null;
             this.currentAnswerBlock = null;  // 跟踪当前显示的答案块
@@ -656,9 +1735,12 @@
 
             // 创建答案切换按钮
             this._createAnswerToggleButton();
-            
+
             // 创建笔记切换按钮
             this._createNoteToggleButton();
+
+            // 创建保存笔记按钮
+            this._createSaveNoteButton();
 
             // 插入按钮容器
             DOMHelper.insertElement(this.buttonContainer, this.parent, this.nextSibling);
@@ -695,6 +1777,21 @@
             this.buttonContainer.appendChild(this.noteButton);
         }
 
+        _createSaveNoteButton() {
+            const buttonText = this.config.get('saveNoteButton.text');
+            this.saveNoteButton = DOMHelper.createElement('button', {
+                innerText: buttonText,
+                style: this.styleGenerator.getSaveNoteButtonStyle(),
+                title: '手动保存当前笔记'
+            });
+
+            this.saveNoteButton.addEventListener('click', async () => {
+                await this.noteEditor.save();
+                Logger.success('💾 笔记已保存');
+            });
+            this.buttonContainer.appendChild(this.saveNoteButton);
+        }
+
         async _createNoteEditor() {
             this.noteEditor = new NoteEditor(
                 this.questionId,
@@ -703,9 +1800,9 @@
                 this.config,
                 this.styleGenerator
             );
-            
+
             const editorElement = await this.noteEditor.create();
-            
+
             // 将编辑器插入到按钮容器之后
             DOMHelper.insertElement(editorElement, this.parent, this.buttonContainer.nextSibling);
         }
@@ -724,17 +1821,17 @@
             if (this.currentAnswerBlock && this.currentAnswerBlock.parentNode) {
                 DOMHelper.removeElement(this.currentAnswerBlock);
             }
-            
+
             const tempContainer = document.createElement('div');
             tempContainer.innerHTML = this.originalHTML;
             const restoredBlock = tempContainer.firstChild;
-            
+
             // 保存对新创建的答案块的引用
             this.currentAnswerBlock = restoredBlock;
-            
+
             // 插入到笔记编辑器之后（如果可见）或按钮容器之后
-            const insertAfter = this.noteEditor.isVisible ? 
-                this.noteEditor.getElement().nextSibling : 
+            const insertAfter = this.noteEditor.isVisible ?
+                this.noteEditor.getElement().nextSibling :
                 this.buttonContainer.nextSibling;
             DOMHelper.insertElement(restoredBlock, this.parent, insertAfter);
             this.isHidden = false;
@@ -752,7 +1849,7 @@
         _updateAnswerButtonState() {
             const buttonText = this.config.get('answerButton.text');
             const colors = this.config.get('answerButton.colors');
-            
+
             this.toggleButton.innerText = this.isHidden ? buttonText.show : buttonText.hide;
             this.toggleButton.style.background = this.isHidden ? colors.showBackground : colors.hideBackground;
             this.toggleButton.dataset.isHidden = String(this.isHidden);
@@ -766,7 +1863,7 @@
         _updateNoteButtonState() {
             const buttonText = this.config.get('noteButton.text');
             const colors = this.config.get('noteButton.colors');
-            
+
             this.noteButton.innerText = this.noteEditor.isVisible ? buttonText.hide : buttonText.show;
             this.noteButton.style.background = this.noteEditor.isVisible ? colors.hideBackground : colors.showBackground;
             this.noteButton.dataset.isVisible = String(this.noteEditor.isVisible);
@@ -783,12 +1880,15 @@
 
     // ===================== 全局控制器 =====================
     class GlobalController {
-        constructor(container, controllers, config, styleGenerator) {
+        constructor(container, controllers, config, styleGenerator, dbManager, workKey) {
             this.container = container;
             this.controllers = controllers;
             this.config = config;
             this.styleGenerator = styleGenerator;
+            this.dbManager = dbManager;
+            this.workKey = workKey;
             this.globalButton = null;
+            this.manageButton = null;
         }
 
         initialize() {
@@ -796,6 +1896,7 @@
 
             DOMHelper.ensureRelativePosition(this.container);
             this._createGlobalButton();
+            this._createManageButton();
             return this.globalButton;
         }
 
@@ -811,9 +1912,26 @@
             this.container.appendChild(this.globalButton);
         }
 
+        _createManageButton() {
+            const buttonText = this.config.get('manageButton.text');
+            this.manageButton = DOMHelper.createElement('button', {
+                innerText: buttonText,
+                style: this.styleGenerator.getManageButtonStyle(),
+                title: '打开控制面板：设置和笔记管理'
+            });
+
+            this.manageButton.addEventListener('click', () => this._handleManageClick());
+            this.container.appendChild(this.manageButton);
+        }
+
+        _handleManageClick() {
+            const controlPanel = new ControlPanelUI(this.dbManager, this.workKey, this.config);
+            controlPanel.show();
+        }
+
         _handleGlobalToggle() {
             const allHidden = this.controllers.every(ctrl => ctrl.getState());
-            
+
             this.controllers.forEach(controller => {
                 const shouldToggle = allHidden ? controller.getState() : !controller.getState();
                 if (shouldToggle) {
@@ -827,7 +1945,7 @@
         _updateGlobalButtonState(allHidden) {
             const buttonText = this.config.get('globalButton.text');
             const colors = this.config.get('globalButton.colors');
-            
+
             this.globalButton.innerText = allHidden ? buttonText.showAll : buttonText.hideAll;
             this.globalButton.style.background = allHidden ? colors.showAllBackground : colors.hideAllBackground;
         }
@@ -852,7 +1970,7 @@
 
                 await this._waitForPageLoad();
                 const elements = this._findElements();
-                
+
                 if (!this._validateElements(elements)) {
                     return;
                 }
@@ -882,19 +2000,19 @@
                 Logger.log(this.config.get('messages.noAnswerBlocks'));
                 return false;
             }
-            
+
             if (!container) {
                 Logger.log(this.config.get('messages.noContainer'), 'warn');
             }
-            
+
             return true;
         }
 
         async _initializeAnswerBlocks(blocks) {
             for (const block of blocks) {
                 const controller = new AnswerBlockController(
-                    block, 
-                    this.config, 
+                    block,
+                    this.config,
                     this.styleGenerator,
                     this.dbManager,
                     this.workKey
@@ -909,7 +2027,9 @@
                 container,
                 this.answerControllers,
                 this.config,
-                this.styleGenerator
+                this.styleGenerator,
+                this.dbManager,
+                this.workKey
             );
             this.globalController.initialize();
         }
