@@ -177,7 +177,23 @@
                 backgroundColor: '#f7fafc',             // 编辑器背景颜色
                 textColor: '#2d3748',                   // 编辑器文字颜色
                 fontFamily: 'inherit',                  // 编辑器字体（继承父元素）
-                resize: 'vertical'                      // 调整大小方式（none/vertical/horizontal/both）
+                resize: 'vertical',                     // 调整大小方式（none/vertical/horizontal/both）
+                // --- 保存按钮配置 ---
+                saveButton: {
+                    text: '💾 保存',                    // 保存按钮文字
+                    style: {
+                        padding: '8px 16px',            // 内边距
+                        border: 'none',                 // 边框
+                        borderRadius: '4px',            // 圆角
+                        backgroundColor: '#805ad5',     // 背景色（紫色）
+                        color: 'white',                 // 文字颜色
+                        fontSize: '14px',               // 字体大小
+                        fontWeight: '500',              // 字体粗细
+                        cursor: 'pointer',              // 鼠标样式
+                        transition: 'all 0.2s',         // 过渡动画
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)' // 阴影
+                    }
+                }
             },
 
             // ========== 用户设置默认值 ==========
