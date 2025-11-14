@@ -183,17 +183,20 @@
                 // --- 按钮样式配置 ---
                 style: {
                     fontSize: '12px',        // 字体大小
-                    padding: '3px 10px',     // 内边距（上下 左右）
-                    borderRadius: '4px',     // 圆角半径
+                    padding: '4px 10px',     // 内边距（上下 左右）- 统一尺寸
+                    borderRadius: '6px',     // 圆角半径 - 统一为6px
                     border: 'none',          // 边框样式
-                    fontWeight: 'normal',    // 字体粗细
+                    fontWeight: '500',       // 字体粗细 - 统一为500
                     cursor: 'pointer',       // 鼠标样式
-                    transition: 'background 0.2s'  // 过渡动画
+                    transition: 'all 0.2s',  // 过渡动画 - 统一为all
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果 - 添加统一阴影
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
                     showAllBackground: '#4299e1',  // "显示全部答案"按钮背景色（蓝色）
                     hideAllBackground: '#9f7aea',  // "隐藏全部答案"按钮背景色（紫色）
+                    showAllHoverBackground: '#3182ce', // "显示全部答案"悬停背景色
+                    hideAllHoverBackground: '#805ad5', // "隐藏全部答案"悬停背景色
                     textColor: 'white',            // 按钮文字颜色
                     hoverOpacity: '0.8'            // 鼠标悬停时的透明度
                 },
@@ -242,16 +245,18 @@
                 // --- 按钮样式配置 ---
                 style: {
                     fontSize: '12px',        // 字体大小
-                    padding: '3px 10px',     // 内边距（上下 左右）
-                    borderRadius: '4px',     // 圆角半径
+                    padding: '4px 10px',     // 内边距（上下 左右）- 统一尺寸
+                    borderRadius: '6px',     // 圆角半径 - 统一为6px
                     border: 'none',          // 边框样式
-                    fontWeight: 'normal',    // 字体粗细
+                    fontWeight: '500',       // 字体粗细 - 统一为500
                     cursor: 'pointer',       // 鼠标样式
-                    transition: 'background 0.2s'  // 过渡动画
+                    transition: 'all 0.2s',  // 过渡动画 - 统一为all
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果 - 添加统一阴影
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
                     background: '#ed8936',   // 按钮背景色（橙色）
+                    hoverBackground: '#dd6b20', // 悬停背景色
                     textColor: 'white',      // 按钮文字颜色
                     hoverOpacity: '0.8'      // 鼠标悬停时的透明度
                 },
@@ -2948,6 +2953,7 @@
                 color: colors.textColor,
                 cursor: style.cursor,
                 transition: style.transition,
+                boxShadow: style.boxShadow,
                 background: isHidden ? colors.showAllBackground : colors.hideAllBackground
             };
         }
@@ -3002,6 +3008,7 @@
                 color: colors.textColor,
                 cursor: style.cursor,
                 transition: style.transition,
+                boxShadow: style.boxShadow,
                 background: colors.background
             };
         }
@@ -3353,11 +3360,17 @@
 
             // 添加悬停动画效果
             this.globalButton.addEventListener('mouseenter', () => {
+                const colors = this.config.get('globalButton.colors');
+                const allHidden = this.controllers.every(ctrl => ctrl.getState());
+                this.globalButton.style.backgroundColor = allHidden ? colors.showAllHoverBackground : colors.hideAllHoverBackground;
                 this.globalButton.style.transform = 'translateY(-1px)';
                 this.globalButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
             });
 
             this.globalButton.addEventListener('mouseleave', () => {
+                const colors = this.config.get('globalButton.colors');
+                const allHidden = this.controllers.every(ctrl => ctrl.getState());
+                this.globalButton.style.backgroundColor = allHidden ? colors.showAllBackground : colors.hideAllBackground;
                 this.globalButton.style.transform = 'translateY(0)';
                 this.globalButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
@@ -3376,11 +3389,15 @@
 
             // 添加悬停动画效果
             this.manageButton.addEventListener('mouseenter', () => {
+                const colors = this.config.get('manageButton.colors');
+                this.manageButton.style.backgroundColor = colors.hoverBackground;
                 this.manageButton.style.transform = 'translateY(-1px)';
                 this.manageButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
             });
 
             this.manageButton.addEventListener('mouseleave', () => {
+                const colors = this.config.get('manageButton.colors');
+                this.manageButton.style.backgroundColor = colors.background;
                 this.manageButton.style.transform = 'translateY(0)';
                 this.manageButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
