@@ -124,10 +124,48 @@
                 colors: {
                     background: '#38b2ac',   // 按钮背景色（青色）
                     textColor: 'white',      // 按钮文字颜色
+                    hoverBackground: '#319795', // 悬停时背景色
                     hoverOpacity: '0.8'      // 鼠标悬停时的透明度
                 },
                 // --- 按钮文字配置 ---
                 text: '💾 保存'           // 保存按钮文字
+            },
+
+            // ========== 编辑模式切换按钮配置 ==========
+            editModeButton: {
+                // --- 按钮位置配置 ---
+                position: {
+                    marginLeft: '5px',       // 按钮左外边距（与笔记按钮的间距）
+                    marginRight: '0px',      // 按钮右外边距
+                    marginTop: '10px',       // 按钮上外边距
+                    marginBottom: '0px',     // 按钮下外边距
+                    verticalAlign: 'middle'  // 垂直对齐方式
+                },
+                // --- 按钮样式配置 ---
+                style: {
+                    fontSize: '12px',        // 字体大小
+                    padding: '4px 10px',     // 内边距（上下 左右）- 缩小尺寸
+                    borderRadius: '6px',     // 圆角半径
+                    border: 'none',          // 边框样式
+                    fontWeight: '500',       // 字体粗细
+                    cursor: 'pointer',       // 鼠标样式
+                    transition: 'all 0.2s',  // 过渡动画
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
+                },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    editBackground: '#48bb78',   // 编辑模式按钮背景色（绿色）
+                    previewBackground: '#ed8936', // 预览模式按钮背景色（橙色）
+                    editHoverBackground: '#38a169', // 编辑模式悬停背景色
+                    previewHoverBackground: '#dd6b20', // 预览模式悬停背景色
+                    textColor: 'white',          // 按钮文字颜色
+                    hoverOpacity: '0.8'          // 鼠标悬停时的透明度
+                },
+                // --- 按钮文字配置 ---
+                text: {
+                    edit: '编辑',      // 编辑模式按钮文字
+                    preview: '预览'   // 预览模式按钮文字
+                }
             },
 
             // ========== 全局控制按钮配置 ==========
@@ -2854,6 +2892,36 @@
         }
 
         /**
+         * 获取编辑模式切换按钮的样式
+         * @param {boolean} isEditMode - 是否为编辑模式
+         * @returns {Object} 样式对象
+         */
+        getEditModeButtonStyle(isEditMode = false) {
+            const position = this.config.get('editModeButton.position');
+            const style = this.config.get('editModeButton.style');
+            const colors = this.config.get('editModeButton.colors');
+
+            return {
+                marginLeft: position.marginLeft,
+                marginRight: position.marginRight,
+                marginTop: position.marginTop,
+                marginBottom: position.marginBottom,
+                verticalAlign: position.verticalAlign,
+                padding: style.padding,
+                border: style.border,
+                borderRadius: style.borderRadius,
+                background: isEditMode ? colors.previewBackground : colors.editBackground,
+                color: colors.textColor,
+                fontSize: style.fontSize,
+                fontWeight: style.fontWeight,
+                cursor: style.cursor,
+                transition: style.transition,
+                boxShadow: style.boxShadow,
+                display: 'inline-block'
+            };
+        }
+
+        /**
          * 获取全局按钮的样式
          * @param {boolean} isHidden - 是否为全部隐藏状态
          * @returns {Object} 样式对象
@@ -3025,11 +3093,17 @@
 
             // 添加悬停动画效果
             this.toggleButton.addEventListener('mouseenter', () => {
+                const colors = this.config.get('answerButton.colors');
+                const isHidden = this.toggleButton.dataset.isHidden === 'true';
+                this.toggleButton.style.backgroundColor = isHidden ? colors.showHoverBackground : colors.hideHoverBackground;
                 this.toggleButton.style.transform = 'translateY(-1px)';
                 this.toggleButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
             });
 
             this.toggleButton.addEventListener('mouseleave', () => {
+                const colors = this.config.get('answerButton.colors');
+                const isHidden = this.toggleButton.dataset.isHidden === 'true';
+                this.toggleButton.style.backgroundColor = isHidden ? colors.showBackground : colors.hideBackground;
                 this.toggleButton.style.transform = 'translateY(0)';
                 this.toggleButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
@@ -3051,11 +3125,17 @@
 
             // 添加悬停动画效果
             this.noteButton.addEventListener('mouseenter', () => {
+                const colors = this.config.get('noteButton.colors');
+                const isVisible = this.noteEditor.isVisible;
+                this.noteButton.style.backgroundColor = isVisible ? colors.hideHoverBackground : colors.showHoverBackground;
                 this.noteButton.style.transform = 'translateY(-1px)';
                 this.noteButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
             });
 
             this.noteButton.addEventListener('mouseleave', () => {
+                const colors = this.config.get('noteButton.colors');
+                const isVisible = this.noteEditor.isVisible;
+                this.noteButton.style.backgroundColor = isVisible ? colors.hideBackground : colors.showBackground;
                 this.noteButton.style.transform = 'translateY(0)';
                 this.noteButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
@@ -3065,48 +3145,44 @@
         }
 
         _createEditModeToggleButton() {
+            const buttonText = this.config.get('editModeButton.text');
+            const style = this.styleGenerator.getEditModeButtonStyle(false);
+            style.display = 'none'; // 初始隐藏
+            
             this.editModeButton = DOMHelper.createElement('button', {
-                innerText: '编辑',
-                style: {
-                    padding: '4px 10px',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    color: '#ffffff',
-                    backgroundColor: '#48bb78',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    marginLeft: '8px',
-                    transition: 'all 0.2s',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    display: 'none'
-                },
+                innerText: buttonText.edit,
+                style: style,
                 title: '切换编辑/预览模式'
             });
 
             this.editModeButton.addEventListener('mouseenter', () => {
-                this.editModeButton.style.backgroundColor = '#38a169';
+                const colors = this.config.get('editModeButton.colors');
+                const isEditMode = this.noteEditor.isEditMode;
+                this.editModeButton.style.backgroundColor = isEditMode ? colors.previewHoverBackground : colors.editHoverBackground;
                 this.editModeButton.style.transform = 'translateY(-1px)';
                 this.editModeButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
             });
 
             this.editModeButton.addEventListener('mouseleave', () => {
-                const bgColor = this.noteEditor.isEditMode ? '#ed8936' : '#48bb78';
-                this.editModeButton.style.backgroundColor = bgColor;
+                const colors = this.config.get('editModeButton.colors');
+                const isEditMode = this.noteEditor.isEditMode;
+                this.editModeButton.style.backgroundColor = isEditMode ? colors.previewBackground : colors.editBackground;
                 this.editModeButton.style.transform = 'translateY(0)';
                 this.editModeButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
 
             this.editModeButton.addEventListener('click', () => {
+                const buttonText = this.config.get('editModeButton.text');
+                const colors = this.config.get('editModeButton.colors');
                 this.noteEditor.toggleEditMode();
                 
                 if (this.noteEditor.isEditMode) {
-                    this.editModeButton.innerText = '预览';
-                    this.editModeButton.style.backgroundColor = '#ed8936';
+                    this.editModeButton.innerText = buttonText.preview;
+                    this.editModeButton.style.backgroundColor = colors.previewBackground;
                     this.editModeButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
                 } else {
-                    this.editModeButton.innerText = '编辑';
-                    this.editModeButton.style.backgroundColor = '#48bb78';
+                    this.editModeButton.innerText = buttonText.edit;
+                    this.editModeButton.style.backgroundColor = colors.editBackground;
                     this.editModeButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
                 }
             });
@@ -3126,11 +3202,15 @@
 
             // 添加悬停动画效果
             this.saveNoteButton.addEventListener('mouseenter', () => {
+                const colors = this.config.get('saveNoteButton.colors');
+                this.saveNoteButton.style.backgroundColor = colors.hoverBackground;
                 this.saveNoteButton.style.transform = 'translateY(-1px)';
                 this.saveNoteButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
             });
 
             this.saveNoteButton.addEventListener('mouseleave', () => {
+                const colors = this.config.get('saveNoteButton.colors');
+                this.saveNoteButton.style.backgroundColor = colors.background;
                 this.saveNoteButton.style.transform = 'translateY(0)';
                 this.saveNoteButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
