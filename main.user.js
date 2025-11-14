@@ -2,7 +2,7 @@
 // @name         （测试）隐藏/显示超星学习通作业答案
 // @namespace    http://tampermonkey.net/
 // @version      2.4.0
-// @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(18+功能按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、样式持久化存储。
+// @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=chaoxing.com
