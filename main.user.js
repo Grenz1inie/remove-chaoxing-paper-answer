@@ -177,23 +177,7 @@
                 backgroundColor: '#f7fafc',             // 编辑器背景颜色
                 textColor: '#2d3748',                   // 编辑器文字颜色
                 fontFamily: 'inherit',                  // 编辑器字体（继承父元素）
-                resize: 'vertical',                     // 调整大小方式（none/vertical/horizontal/both）
-                // --- 保存按钮配置 ---
-                saveButton: {
-                    text: '💾 保存',                    // 保存按钮文字
-                    style: {
-                        padding: '8px 16px',            // 内边距
-                        border: 'none',                 // 边框
-                        borderRadius: '4px',            // 圆角
-                        backgroundColor: '#805ad5',     // 背景色（紫色）
-                        color: 'white',                 // 文字颜色
-                        fontSize: '14px',               // 字体大小
-                        fontWeight: '500',              // 字体粗细
-                        cursor: 'pointer',              // 鼠标样式
-                        transition: 'all 0.2s',         // 过渡动画
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)' // 阴影
-                    }
-                }
+                resize: 'vertical'                      // 调整大小方式（none/vertical/horizontal/both）
             },
 
             // ========== 用户设置默认值 ==========
@@ -686,9 +670,8 @@
             this.toolbar = null;
             this.saveTimer = null;
             this.isVisible = false;
+            this.isEditMode = false; // 初始为预览模式
             this.toolbarButtons = new Map(); // 存储按钮引用
-            this.isPreviewMode = true; // 默认为预览模式
-            this.toggleButton = null; // 切换按钮引用
         }
 
         async create() {
@@ -706,9 +689,9 @@
             this.toolbar = this._createToolbar();
             this.container.appendChild(this.toolbar);
 
-            // 创建编辑器
+            // 创建编辑器（初始为预览模式）
             this.editor = DOMHelper.createElement('div', {
-                contentEditable: 'false', // 默认为预览模式，不可编辑
+                contentEditable: 'false',
                 style: {
                     width: noteConfig.width || '100%',
                     minHeight: noteConfig.minHeight,
@@ -721,14 +704,13 @@
                     color: noteConfig.textColor,
                     fontFamily: noteConfig.fontFamily,
                     overflowY: 'auto',
-                    overflowX: 'auto', // 预览模式下允许水平滚动
+                    overflowX: 'auto',
                     outline: 'none',
                     whiteSpace: 'pre-wrap',
                     wordWrap: 'break-word',
                     transition: 'border-color 0.2s',
                     boxSizing: 'border-box',
-                    resize: 'both', // 允许调整大小
-                    cursor: 'default' // 预览模式下鼠标样式
+                    cursor: 'default'
                 }
             });
 
@@ -801,26 +783,8 @@
             this.editor.addEventListener('keyup', () => this._updateToolbarState());
             this.editor.addEventListener('click', () => this._updateToolbarState());
 
-            // 焦点事件
-            this.editor.addEventListener('focus', () => {
-                this.editor.style.borderColor = this.config.get('noteEditor.focusBorderColor');
-                // 只在编辑模式下显示工具栏
-                if (!this.isPreviewMode) {
-                    this.toolbar.style.display = 'flex';
-                    this._updateToolbarState();
-                }
-            });
-
-            this.editor.addEventListener('blur', (e) => {
-                // 延迟隐藏工具栏，以便点击工具栏按钮能正常工作
-                setTimeout(() => {
-                    // 检查焦点是否在工具栏内
-                    if (!this.toolbar.contains(document.activeElement)) {
-                        this.editor.style.borderColor = this.config.get('noteEditor.borderColor');
-                        this.toolbar.style.display = 'none';
-                    }
-                }, 150);
-            });
+            // 移除自动进入编辑模式的焦点事件处理
+            // 编辑/预览模式切换将由切换按钮控制
 
             // 处理快捷键
             this.editor.addEventListener('keydown', (e) => {
@@ -843,68 +807,6 @@
             });
 
             this.container.appendChild(this.editor);
-
-            // 创建按钮容器
-            const buttonsContainer = DOMHelper.createElement('div', {
-                style: {
-                    display: 'flex',
-                    gap: '8px',
-                    marginTop: '8px'
-                }
-            });
-
-            // 添加编辑/预览切换按钮
-            this.toggleButton = DOMHelper.createElement('button', {
-                innerText: '📝 编辑',
-                style: {
-                    padding: '8px 16px',
-                    border: 'none',
-                    borderRadius: '4px',
-                    backgroundColor: '#4299e1',
-                    color: 'white',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }
-            });
-
-            this.toggleButton.addEventListener('mouseenter', () => {
-                this.toggleButton.style.backgroundColor = this.isPreviewMode ? '#3182ce' : '#38a169';
-                this.toggleButton.style.transform = 'translateY(-1px)';
-                this.toggleButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-            });
-
-            this.toggleButton.addEventListener('mouseleave', () => {
-                this.toggleButton.style.backgroundColor = this.isPreviewMode ? '#4299e1' : '#48bb78';
-                this.toggleButton.style.transform = 'translateY(0)';
-                this.toggleButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-            });
-
-            this.toggleButton.addEventListener('click', () => {
-                this._togglePreviewMode();
-            });
-
-            buttonsContainer.appendChild(this.toggleButton);
-
-            // 添加保存按钮
-            const buttonConfig = this.config.get('noteEditor.saveButton');
-            this.saveButton = DOMHelper.createElement('button', {
-                innerText: buttonConfig.text,
-                style: buttonConfig.style
-            });
-
-            this.saveButton.addEventListener('click', async () => {
-                await this._saveNote();
-                this.saveButton.innerText = '✅ 已保存';
-                setTimeout(() => {
-                    this.saveButton.innerText = buttonConfig.text;
-                }, 2000);
-            });
-
-            buttonsContainer.appendChild(this.saveButton);
-            this.container.appendChild(buttonsContainer);
             return this.container;
         }
 
@@ -1144,29 +1046,6 @@
             return div.innerHTML;
         }
 
-        _togglePreviewMode() {
-            this.isPreviewMode = !this.isPreviewMode;
-
-            if (this.isPreviewMode) {
-                // 切换到预览模式
-                this.editor.contentEditable = 'false';
-                this.editor.style.cursor = 'default';
-                this.editor.style.resize = 'both';
-                this.toolbar.style.display = 'none';
-                this.toggleButton.innerText = '📝 编辑';
-                this.toggleButton.style.backgroundColor = '#4299e1';
-            } else {
-                // 切换到编辑模式
-                this.editor.contentEditable = 'true';
-                this.editor.style.cursor = 'text';
-                this.editor.style.resize = 'none';
-                this.toggleButton.innerText = '👁 预览';
-                this.toggleButton.style.backgroundColor = '#48bb78';
-                this.editor.focus();
-                this._updateToolbarState();
-            }
-        }
-
         _scheduleAutoSave() {
             // 检查自动保存是否启用
             this.dbManager.getSetting('autoSave', this.config.get('settings.autoSave'))
@@ -1210,6 +1089,27 @@
                 this.hide();
             } else {
                 this.show();
+            }
+        }
+
+        toggleEditMode() {
+            this.isEditMode = !this.isEditMode;
+            
+            if (this.isEditMode) {
+                // 切换到编辑模式
+                this.editor.contentEditable = 'true';
+                this.editor.style.cursor = 'text';
+                this.toolbar.style.display = 'flex';
+                this.editor.style.borderColor = this.config.get('noteEditor.focusBorderColor');
+                this.editor.focus();
+                this._updateToolbarState();
+            } else {
+                // 切换到预览模式
+                this.editor.contentEditable = 'false';
+                this.editor.style.cursor = 'default';
+                this.toolbar.style.display = 'none';
+                this.editor.style.borderColor = this.config.get('noteEditor.borderColor');
+                this.editor.blur();
             }
         }
 
@@ -3031,6 +2931,7 @@
                 style: {
                     display: 'inline-block',
                     marginLeft: this.config.get('answerButton.position.marginLeft'),
+                    marginRight: this.config.get('answerButton.position.marginLeft'), // 使右边距与左边距一致
                     marginTop: this.config.get('answerButton.position.marginTop'),
                     verticalAlign: this.config.get('answerButton.position.verticalAlign')
                 }
@@ -3041,6 +2942,9 @@
 
             // 创建笔记切换按钮
             this._createNoteToggleButton();
+
+            // 创建编辑/预览切换按钮
+            this._createEditModeToggleButton();
 
             // 创建保存笔记按钮
             this._createSaveNoteButton();
@@ -3078,6 +2982,56 @@
 
             this.noteButton.addEventListener('click', () => this._handleNoteToggle());
             this.buttonContainer.appendChild(this.noteButton);
+        }
+
+        _createEditModeToggleButton() {
+            this.editModeButton = DOMHelper.createElement('button', {
+                innerText: '编辑',
+                style: {
+                    padding: '6px 14px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#ffffff',
+                    backgroundColor: '#48bb78',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    marginLeft: '8px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 4px rgba(72, 187, 120, 0.3)'
+                },
+                title: '切换编辑/预览模式'
+            });
+
+            this.editModeButton.addEventListener('mouseenter', () => {
+                this.editModeButton.style.backgroundColor = '#38a169';
+                this.editModeButton.style.transform = 'translateY(-1px)';
+                this.editModeButton.style.boxShadow = '0 4px 8px rgba(72, 187, 120, 0.4)';
+            });
+
+            this.editModeButton.addEventListener('mouseleave', () => {
+                const bgColor = this.noteEditor.isEditMode ? '#ed8936' : '#48bb78';
+                this.editModeButton.style.backgroundColor = bgColor;
+                this.editModeButton.style.transform = 'translateY(0)';
+                const shadowColor = this.noteEditor.isEditMode ? 'rgba(237, 137, 54, 0.3)' : 'rgba(72, 187, 120, 0.3)';
+                this.editModeButton.style.boxShadow = `0 2px 4px ${shadowColor}`;
+            });
+
+            this.editModeButton.addEventListener('click', () => {
+                this.noteEditor.toggleEditMode();
+                
+                if (this.noteEditor.isEditMode) {
+                    this.editModeButton.innerText = '预览';
+                    this.editModeButton.style.backgroundColor = '#ed8936';
+                    this.editModeButton.style.boxShadow = '0 2px 4px rgba(237, 137, 54, 0.3)';
+                } else {
+                    this.editModeButton.innerText = '编辑';
+                    this.editModeButton.style.backgroundColor = '#48bb78';
+                    this.editModeButton.style.boxShadow = '0 2px 4px rgba(72, 187, 120, 0.3)';
+                }
+            });
+
+            this.buttonContainer.appendChild(this.editModeButton);
         }
 
         _createSaveNoteButton() {
