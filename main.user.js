@@ -54,6 +54,8 @@
                 colors: {
                     showBackground: '#4299e1',     // "显示答案"按钮背景色（蓝色）
                     hideBackground: '#9f7aea',     // "隐藏答案"按钮背景色（紫色）
+                    showHoverBackground: '#3182ce', // "显示答案"悬停背景色
+                    hideHoverBackground: '#805ad5', // "隐藏答案"悬停背景色
                     textColor: 'white',            // 按钮文字颜色
                     hoverOpacity: '0.8'            // 鼠标悬停时的透明度
                 },
@@ -89,6 +91,8 @@
                 colors: {
                     showBackground: '#48bb78',     // "显示笔记"按钮背景色（绿色）
                     hideBackground: '#9f7aea',     // "隐藏笔记"按钮背景色（紫色）
+                    showHoverBackground: '#38a169', // "显示笔记"悬停背景色
+                    hideHoverBackground: '#805ad5', // "隐藏笔记"悬停背景色
                     textColor: 'white',            // 按钮文字颜色
                     hoverOpacity: '0.8'            // 鼠标悬停时的透明度
                 },
