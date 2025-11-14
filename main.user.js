@@ -42,12 +42,13 @@
                 // --- 按钮样式配置 ---
                 style: {
                     fontSize: '12px',        // 字体大小
-                    padding: '2px 8px',      // 内边距（上下 左右）
-                    borderRadius: '3px',     // 圆角半径
+                    padding: '4px 10px',     // 内边距（上下 左右）- 缩小尺寸
+                    borderRadius: '6px',     // 圆角半径
                     border: 'none',          // 边框样式
-                    fontWeight: 'normal',    // 字体粗细（normal/bold/100-900）
+                    fontWeight: '500',       // 字体粗细（normal/bold/100-900）
                     cursor: 'pointer',       // 鼠标样式
-                    transition: 'background 0.2s'  // 过渡动画
+                    transition: 'all 0.2s',  // 过渡动画
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
@@ -76,12 +77,13 @@
                 // --- 按钮样式配置 ---
                 style: {
                     fontSize: '12px',        // 字体大小
-                    padding: '2px 8px',      // 内边距（上下 左右）
-                    borderRadius: '3px',     // 圆角半径
+                    padding: '4px 10px',     // 内边距（上下 左右）- 缩小尺寸
+                    borderRadius: '6px',     // 圆角半径
                     border: 'none',          // 边框样式
-                    fontWeight: 'normal',    // 字体粗细
+                    fontWeight: '500',       // 字体粗细
                     cursor: 'pointer',       // 鼠标样式
-                    transition: 'background 0.2s'  // 过渡动画
+                    transition: 'all 0.2s',  // 过渡动画
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
@@ -110,12 +112,13 @@
                 // --- 按钮样式配置 ---
                 style: {
                     fontSize: '12px',        // 字体大小
-                    padding: '2px 8px',      // 内边距（上下 左右）
-                    borderRadius: '3px',     // 圆角半径
+                    padding: '4px 10px',     // 内边距（上下 左右）- 缩小尺寸
+                    borderRadius: '6px',     // 圆角半径
                     border: 'none',          // 边框样式
-                    fontWeight: 'normal',    // 字体粗细
+                    fontWeight: '500',       // 字体粗细
                     cursor: 'pointer',       // 鼠标样式
-                    transition: 'background 0.2s'  // 过渡动画
+                    transition: 'all 0.2s',  // 过渡动画
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
@@ -2734,6 +2737,7 @@
                 fontWeight: style.fontWeight,
                 cursor: style.cursor,
                 transition: style.transition,
+                boxShadow: style.boxShadow,
                 display: 'inline-block'
             };
         }
@@ -2763,6 +2767,7 @@
                 fontWeight: style.fontWeight,
                 cursor: style.cursor,
                 transition: style.transition,
+                boxShadow: style.boxShadow,
                 display: 'inline-block'
             };
         }
@@ -2791,6 +2796,7 @@
                 fontWeight: style.fontWeight,
                 cursor: style.cursor,
                 transition: style.transition,
+                boxShadow: style.boxShadow,
                 display: 'inline-block'
             };
         }
@@ -2988,8 +2994,8 @@
             this.editModeButton = DOMHelper.createElement('button', {
                 innerText: '编辑',
                 style: {
-                    padding: '6px 14px',
-                    fontSize: '13px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
                     fontWeight: '500',
                     color: '#ffffff',
                     backgroundColor: '#48bb78',
@@ -2998,7 +3004,8 @@
                     cursor: 'pointer',
                     marginLeft: '8px',
                     transition: 'all 0.2s',
-                    boxShadow: '0 2px 4px rgba(72, 187, 120, 0.3)'
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                    display: 'none'
                 },
                 title: '切换编辑/预览模式'
             });
@@ -3006,15 +3013,14 @@
             this.editModeButton.addEventListener('mouseenter', () => {
                 this.editModeButton.style.backgroundColor = '#38a169';
                 this.editModeButton.style.transform = 'translateY(-1px)';
-                this.editModeButton.style.boxShadow = '0 4px 8px rgba(72, 187, 120, 0.4)';
+                this.editModeButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
             });
 
             this.editModeButton.addEventListener('mouseleave', () => {
                 const bgColor = this.noteEditor.isEditMode ? '#ed8936' : '#48bb78';
                 this.editModeButton.style.backgroundColor = bgColor;
                 this.editModeButton.style.transform = 'translateY(0)';
-                const shadowColor = this.noteEditor.isEditMode ? 'rgba(237, 137, 54, 0.3)' : 'rgba(72, 187, 120, 0.3)';
-                this.editModeButton.style.boxShadow = `0 2px 4px ${shadowColor}`;
+                this.editModeButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
 
             this.editModeButton.addEventListener('click', () => {
@@ -3023,11 +3029,11 @@
                 if (this.noteEditor.isEditMode) {
                     this.editModeButton.innerText = '预览';
                     this.editModeButton.style.backgroundColor = '#ed8936';
-                    this.editModeButton.style.boxShadow = '0 2px 4px rgba(237, 137, 54, 0.3)';
+                    this.editModeButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
                 } else {
                     this.editModeButton.innerText = '编辑';
                     this.editModeButton.style.backgroundColor = '#48bb78';
-                    this.editModeButton.style.boxShadow = '0 2px 4px rgba(72, 187, 120, 0.3)';
+                    this.editModeButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
                 }
             });
 
@@ -3036,9 +3042,11 @@
 
         _createSaveNoteButton() {
             const buttonText = this.config.get('saveNoteButton.text');
+            const style = this.styleGenerator.getSaveNoteButtonStyle();
+            style.display = 'none'; // 初始隐藏
             this.saveNoteButton = DOMHelper.createElement('button', {
                 innerText: buttonText,
-                style: this.styleGenerator.getSaveNoteButtonStyle(),
+                style: style,
                 title: '手动保存当前笔记'
             });
 
@@ -3124,6 +3132,15 @@
             this.noteButton.innerText = this.noteEditor.isVisible ? buttonText.hide : buttonText.show;
             this.noteButton.style.background = this.noteEditor.isVisible ? colors.hideBackground : colors.showBackground;
             this.noteButton.dataset.isVisible = String(this.noteEditor.isVisible);
+            
+            // 联动控制编辑和保存按钮的显示/隐藏
+            if (this.noteEditor.isVisible) {
+                this.editModeButton.style.display = 'inline-block';
+                this.saveNoteButton.style.display = 'inline-block';
+            } else {
+                this.editModeButton.style.display = 'none';
+                this.saveNoteButton.style.display = 'none';
+            }
         }
 
         toggle() {
