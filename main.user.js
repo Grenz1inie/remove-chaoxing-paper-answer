@@ -210,7 +210,7 @@
             // ========== 笔记编辑器配置 ==========
             noteEditor: {
                 placeholder: '在这里记录你的笔记...',  // 编辑器占位符文字
-                width: '110%',                          // 编辑器宽度
+                width: '114.5%',                          // 编辑器宽度
                 minHeight: '60px',                      // 编辑器最小高度
                 maxHeight: '400px',                     // 编辑器最大高度（超出滚动）
                 fontSize: '14px',                       // 编辑器字体大小
@@ -2493,30 +2493,110 @@
                     title: '答案按钮样式',
                     key: 'answerButton',
                     fields: [
+                        // 位置配置
+                        { name: 'marginLeft', label: '左边距', type: 'text', path: 'position.marginLeft' },
+                        { name: 'marginTop', label: '上边距', type: 'text', path: 'position.marginTop' },
+                        // 尺寸配置
                         { name: 'fontSize', label: '字体大小', type: 'text', path: 'style.fontSize' },
                         { name: 'padding', label: '内边距', type: 'text', path: 'style.padding' },
                         { name: 'borderRadius', label: '圆角半径', type: 'text', path: 'style.borderRadius' },
+                        { name: 'fontWeight', label: '字体粗细', type: 'text', path: 'style.fontWeight' },
+                        // 颜色配置
                         { name: 'showBackground', label: '显示按钮背景色', type: 'color', path: 'colors.showBackground' },
-                        { name: 'hideBackground', label: '隐藏按钮背景色', type: 'color', path: 'colors.hideBackground' }
+                        { name: 'hideBackground', label: '隐藏按钮背景色', type: 'color', path: 'colors.hideBackground' },
+                        { name: 'showHoverBackground', label: '显示按钮悬停色', type: 'color', path: 'colors.showHoverBackground' },
+                        { name: 'hideHoverBackground', label: '隐藏按钮悬停色', type: 'color', path: 'colors.hideHoverBackground' }
                     ]
                 },
                 {
                     title: '笔记按钮样式',
                     key: 'noteButton',
                     fields: [
+                        // 位置配置
+                        { name: 'marginLeft', label: '左边距', type: 'text', path: 'position.marginLeft' },
+                        { name: 'marginTop', label: '上边距', type: 'text', path: 'position.marginTop' },
+                        // 尺寸配置
                         { name: 'fontSize', label: '字体大小', type: 'text', path: 'style.fontSize' },
                         { name: 'padding', label: '内边距', type: 'text', path: 'style.padding' },
+                        { name: 'borderRadius', label: '圆角半径', type: 'text', path: 'style.borderRadius' },
+                        { name: 'fontWeight', label: '字体粗细', type: 'text', path: 'style.fontWeight' },
+                        // 颜色配置
                         { name: 'showBackground', label: '显示按钮背景色', type: 'color', path: 'colors.showBackground' },
-                        { name: 'hideBackground', label: '隐藏按钮背景色', type: 'color', path: 'colors.hideBackground' }
+                        { name: 'hideBackground', label: '隐藏按钮背景色', type: 'color', path: 'colors.hideBackground' },
+                        { name: 'showHoverBackground', label: '显示按钮悬停色', type: 'color', path: 'colors.showHoverBackground' },
+                        { name: 'hideHoverBackground', label: '隐藏按钮悬停色', type: 'color', path: 'colors.hideHoverBackground' }
                     ]
                 },
                 {
-                    title: '保存笔记按钮样式',
-                    key: 'saveNoteButton',
+                    title: '编辑按钮样式',
+                    key: 'editModeButton',
                     fields: [
+                        // 位置配置
+                        { name: 'marginLeft', label: '左边距', type: 'text', path: 'position.marginLeft' },
+                        { name: 'marginTop', label: '上边距', type: 'text', path: 'position.marginTop' },
+                        // 尺寸配置
                         { name: 'fontSize', label: '字体大小', type: 'text', path: 'style.fontSize' },
                         { name: 'padding', label: '内边距', type: 'text', path: 'style.padding' },
-                        { name: 'background', label: '背景色', type: 'color', path: 'colors.background' }
+                        { name: 'borderRadius', label: '圆角半径', type: 'text', path: 'style.borderRadius' },
+                        { name: 'fontWeight', label: '字体粗细', type: 'text', path: 'style.fontWeight' },
+                        // 颜色配置
+                        { name: 'editBackground', label: '编辑模式背景色', type: 'color', path: 'colors.editBackground' },
+                        { name: 'previewBackground', label: '预览模式背景色', type: 'color', path: 'colors.previewBackground' },
+                        { name: 'editHoverBackground', label: '编辑模式悬停色', type: 'color', path: 'colors.editHoverBackground' },
+                        { name: 'previewHoverBackground', label: '预览模式悬停色', type: 'color', path: 'colors.previewHoverBackground' }
+                    ]
+                },
+                {
+                    title: '保存按钮样式',
+                    key: 'saveNoteButton',
+                    fields: [
+                        // 位置配置
+                        { name: 'marginLeft', label: '左边距', type: 'text', path: 'position.marginLeft' },
+                        { name: 'marginTop', label: '上边距', type: 'text', path: 'position.marginTop' },
+                        // 尺寸配置
+                        { name: 'fontSize', label: '字体大小', type: 'text', path: 'style.fontSize' },
+                        { name: 'padding', label: '内边距', type: 'text', path: 'style.padding' },
+                        { name: 'borderRadius', label: '圆角半径', type: 'text', path: 'style.borderRadius' },
+                        { name: 'fontWeight', label: '字体粗细', type: 'text', path: 'style.fontWeight' },
+                        // 颜色配置
+                        { name: 'background', label: '背景色', type: 'color', path: 'colors.background' },
+                        { name: 'hoverBackground', label: '悬停背景色', type: 'color', path: 'colors.hoverBackground' }
+                    ]
+                },
+                {
+                    title: '全局按钮样式',
+                    key: 'globalButton',
+                    fields: [
+                        // 位置配置
+                        { name: 'top', label: '距顶部距离', type: 'text', path: 'position.top' },
+                        { name: 'right', label: '距右侧距离', type: 'text', path: 'position.right' },
+                        // 尺寸配置
+                        { name: 'fontSize', label: '字体大小', type: 'text', path: 'style.fontSize' },
+                        { name: 'padding', label: '内边距', type: 'text', path: 'style.padding' },
+                        { name: 'borderRadius', label: '圆角半径', type: 'text', path: 'style.borderRadius' },
+                        { name: 'fontWeight', label: '字体粗细', type: 'text', path: 'style.fontWeight' },
+                        // 颜色配置
+                        { name: 'showAllBackground', label: '显示全部背景色', type: 'color', path: 'colors.showAllBackground' },
+                        { name: 'hideAllBackground', label: '隐藏全部背景色', type: 'color', path: 'colors.hideAllBackground' },
+                        { name: 'showAllHoverBackground', label: '显示全部悬停色', type: 'color', path: 'colors.showAllHoverBackground' },
+                        { name: 'hideAllHoverBackground', label: '隐藏全部悬停色', type: 'color', path: 'colors.hideAllHoverBackground' }
+                    ]
+                },
+                {
+                    title: '控制面板按钮样式',
+                    key: 'manageButton',
+                    fields: [
+                        // 位置配置
+                        { name: 'top', label: '距顶部距离', type: 'text', path: 'position.top' },
+                        { name: 'right', label: '距右侧距离', type: 'text', path: 'position.right' },
+                        // 尺寸配置
+                        { name: 'fontSize', label: '字体大小', type: 'text', path: 'style.fontSize' },
+                        { name: 'padding', label: '内边距', type: 'text', path: 'style.padding' },
+                        { name: 'borderRadius', label: '圆角半径', type: 'text', path: 'style.borderRadius' },
+                        { name: 'fontWeight', label: '字体粗细', type: 'text', path: 'style.fontWeight' },
+                        // 颜色配置
+                        { name: 'background', label: '背景色', type: 'color', path: 'colors.background' },
+                        { name: 'hoverBackground', label: '悬停背景色', type: 'color', path: 'colors.hoverBackground' }
                     ]
                 },
                 {
