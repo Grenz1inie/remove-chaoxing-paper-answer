@@ -671,6 +671,8 @@
             this.saveTimer = null;
             this.isVisible = false;
             this.toolbarButtons = new Map(); // 存储按钮引用
+            this.isPreviewMode = true; // 默认为预览模式
+            this.toggleButton = null; // 切换按钮引用
         }
 
         async create() {
@@ -690,7 +692,7 @@
 
             // 创建编辑器
             this.editor = DOMHelper.createElement('div', {
-                contentEditable: 'true',
+                contentEditable: 'false', // 默认为预览模式，不可编辑
                 style: {
                     width: noteConfig.width || '100%',
                     minHeight: noteConfig.minHeight,
@@ -703,11 +705,14 @@
                     color: noteConfig.textColor,
                     fontFamily: noteConfig.fontFamily,
                     overflowY: 'auto',
+                    overflowX: 'auto', // 预览模式下允许水平滚动
                     outline: 'none',
                     whiteSpace: 'pre-wrap',
                     wordWrap: 'break-word',
                     transition: 'border-color 0.2s',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    resize: 'both', // 允许调整大小
+                    cursor: 'default' // 预览模式下鼠标样式
                 }
             });
 
@@ -783,8 +788,11 @@
             // 焦点事件
             this.editor.addEventListener('focus', () => {
                 this.editor.style.borderColor = this.config.get('noteEditor.focusBorderColor');
-                this.toolbar.style.display = 'flex';
-                this._updateToolbarState();
+                // 只在编辑模式下显示工具栏
+                if (!this.isPreviewMode) {
+                    this.toolbar.style.display = 'flex';
+                    this._updateToolbarState();
+                }
             });
 
             this.editor.addEventListener('blur', (e) => {
@@ -819,6 +827,68 @@
             });
 
             this.container.appendChild(this.editor);
+
+            // 创建按钮容器
+            const buttonsContainer = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    gap: '8px',
+                    marginTop: '8px'
+                }
+            });
+
+            // 添加编辑/预览切换按钮
+            this.toggleButton = DOMHelper.createElement('button', {
+                innerText: '📝 编辑',
+                style: {
+                    padding: '8px 16px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    backgroundColor: '#4299e1',
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }
+            });
+
+            this.toggleButton.addEventListener('mouseenter', () => {
+                this.toggleButton.style.backgroundColor = this.isPreviewMode ? '#3182ce' : '#38a169';
+                this.toggleButton.style.transform = 'translateY(-1px)';
+                this.toggleButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+            });
+
+            this.toggleButton.addEventListener('mouseleave', () => {
+                this.toggleButton.style.backgroundColor = this.isPreviewMode ? '#4299e1' : '#48bb78';
+                this.toggleButton.style.transform = 'translateY(0)';
+                this.toggleButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            });
+
+            this.toggleButton.addEventListener('click', () => {
+                this._togglePreviewMode();
+            });
+
+            buttonsContainer.appendChild(this.toggleButton);
+
+            // 添加保存按钮
+            const buttonConfig = this.config.get('noteEditor.saveButton');
+            this.saveButton = DOMHelper.createElement('button', {
+                innerText: buttonConfig.text,
+                style: buttonConfig.style
+            });
+
+            this.saveButton.addEventListener('click', async () => {
+                await this._saveNote();
+                this.saveButton.innerText = '✅ 已保存';
+                setTimeout(() => {
+                    this.saveButton.innerText = buttonConfig.text;
+                }, 2000);
+            });
+
+            buttonsContainer.appendChild(this.saveButton);
+            this.container.appendChild(buttonsContainer);
             return this.container;
         }
 
@@ -904,21 +974,53 @@
 
                     button.addEventListener('mousedown', (e) => {
                         e.preventDefault();
+                        
+                        // 保存当前选区
+                        const selection = window.getSelection();
+                        let savedRange = null;
+                        if (selection.rangeCount > 0) {
+                            savedRange = selection.getRangeAt(0);
+                        }
+                        
                         if (btn.prompt) {
+                            // 处理链接插入
                             const url = prompt('请输入链接地址:');
                             if (url) {
+                                // 恢复选区
+                                if (savedRange) {
+                                    selection.removeAllRanges();
+                                    selection.addRange(savedRange);
+                                }
                                 this._execCommand(btn.command, url);
                             }
                         } else if (btn.value) {
+                            // 恢复选区
+                            if (savedRange) {
+                                selection.removeAllRanges();
+                                selection.addRange(savedRange);
+                            }
                             this._execCommand(btn.command, btn.value);
                         } else if (btn.command === 'code') {
+                            // 恢复选区
+                            if (savedRange) {
+                                selection.removeAllRanges();
+                                selection.addRange(savedRange);
+                            }
                             this._toggleCodeStyle();
-                        } else {
+                        } else if (btn.command) {
+                            // 恢复选区
+                            if (savedRange) {
+                                selection.removeAllRanges();
+                                selection.addRange(savedRange);
+                            }
                             this._execCommand(btn.command);
                         }
-                        this.editor.focus();
-                        // 延迟更新按钮状态
-                        setTimeout(() => this._updateToolbarState(), 10);
+                        
+                        // 确保编辑器获得焦点
+                        setTimeout(() => {
+                            this.editor.focus();
+                            this._updateToolbarState();
+                        }, 10);
                     });
 
                     // 保存按钮引用
@@ -947,6 +1049,7 @@
 
         _execCommand(command, value = null) {
             document.execCommand(command, false, value);
+            this._updateToolbarState();
         }
 
         _updateToolbarState() {
@@ -980,8 +1083,36 @@
             if (selectedText) {
                 const code = document.createElement('code');
                 code.textContent = selectedText;
-                range.deleteContents();
-                range.insertNode(code);
+                
+                try {
+                    range.deleteContents();
+                    range.insertNode(code);
+                    
+                    // 恢复光标位置到代码块之后
+                    range.setStartAfter(code);
+                    range.setEndAfter(code);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    this.editor.focus();
+                } catch (error) {
+                    Logger.error('插入代码失败', error);
+                }
+            } else {
+                // 如果没有选中文本，在光标位置插入代码标记
+                const code = document.createElement('code');
+                code.textContent = '代码';
+                
+                try {
+                    range.insertNode(code);
+                    range.setStartAfter(code);
+                    range.setEndAfter(code);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    this.editor.focus();
+                } catch (error) {
+                    Logger.error('插入代码失败', error);
+                }
             }
         }
 
@@ -995,6 +1126,29 @@
             scripts.forEach(el => el.remove());
             
             return div.innerHTML;
+        }
+
+        _togglePreviewMode() {
+            this.isPreviewMode = !this.isPreviewMode;
+
+            if (this.isPreviewMode) {
+                // 切换到预览模式
+                this.editor.contentEditable = 'false';
+                this.editor.style.cursor = 'default';
+                this.editor.style.resize = 'both';
+                this.toolbar.style.display = 'none';
+                this.toggleButton.innerText = '📝 编辑';
+                this.toggleButton.style.backgroundColor = '#4299e1';
+            } else {
+                // 切换到编辑模式
+                this.editor.contentEditable = 'true';
+                this.editor.style.cursor = 'text';
+                this.editor.style.resize = 'none';
+                this.toggleButton.innerText = '👁 预览';
+                this.toggleButton.style.backgroundColor = '#48bb78';
+                this.editor.focus();
+                this._updateToolbarState();
+            }
         }
 
         _scheduleAutoSave() {
