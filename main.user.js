@@ -308,10 +308,10 @@
             // ========== 提示消息配置 ==========
             messages: {
                 noAnswerBlocks: 'ℹ️ 未找到答案块（可能页面未完全加载，可刷新重试）',
-                noContainer: 'ℹ️ 未找到容器模块，仅启用单个答案块隐藏功能',
-                success: '✅ 超星作业答案块隐藏工具执行完成！',
-                hiddenCount: (count) => `- 已隐藏 ${count} 个答案内容块，每个块已添加独立显示按钮`,
-                globalButton: (hasContainer) => `- ${hasContainer ? '已在容器右上角添加全局控制按钮' : '未找到容器模块，未添加全局按钮'}`,
+                noContainer: 'ℹ️ 未找到容器模块，仅启用单个答案块控制功能',
+                success: '✅ 超星学习通高效刷题小助手启动成功！',
+                hiddenCount: (count) => `- 已为 ${count} 个题目添加答案控制按钮，可自由控制显示/隐藏`,
+                globalButton: (hasContainer) => `- ${hasContainer ? '已在右上角添加全局控制按钮' : '未找到容器模块，未添加全局按钮'}`,
                 noteSaved: '💾 笔记已自动保存',
                 noteLoadError: '⚠️ 加载笔记失败'
             }
