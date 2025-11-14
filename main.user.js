@@ -1730,10 +1730,12 @@
 
             clearDbBtn.addEventListener('mouseenter', () => {
                 clearDbBtn.style.backgroundColor = '#e53e3e';
+                clearDbBtn.style.transform = 'translateY(-1px)';
             });
 
             clearDbBtn.addEventListener('mouseleave', () => {
                 clearDbBtn.style.backgroundColor = '#f56565';
+                clearDbBtn.style.transform = 'translateY(0)';
             });
 
             clearDbBtn.addEventListener('click', async () => {
@@ -1994,6 +1996,16 @@
                 }
             });
 
+            sortBtn.addEventListener('mouseenter', () => {
+                sortBtn.style.transform = 'translateY(-1px)';
+                sortBtn.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+
+            sortBtn.addEventListener('mouseleave', () => {
+                sortBtn.style.transform = 'translateY(0)';
+                sortBtn.style.boxShadow = 'none';
+            });
+
             sortBtn.addEventListener('click', () => {
                 this.notesSortBy = this.notesSortBy === 'time' ? 'alpha' : 'time';
                 this._sortNotes();
@@ -2014,6 +2026,16 @@
                 }
             });
 
+            selectAllBtn.addEventListener('mouseenter', () => {
+                selectAllBtn.style.transform = 'translateY(-1px)';
+                selectAllBtn.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+
+            selectAllBtn.addEventListener('mouseleave', () => {
+                selectAllBtn.style.transform = 'translateY(0)';
+                selectAllBtn.style.boxShadow = 'none';
+            });
+
             const deleteBtn = DOMHelper.createElement('button', {
                 innerText: '删除选中',
                 style: {
@@ -2027,6 +2049,16 @@
                     fontWeight: '500',
                     transition: 'all 0.2s'
                 }
+            });
+
+            deleteBtn.addEventListener('mouseenter', () => {
+                deleteBtn.style.backgroundColor = '#e53e3e';
+                deleteBtn.style.transform = 'translateY(-1px)';
+            });
+
+            deleteBtn.addEventListener('mouseleave', () => {
+                deleteBtn.style.backgroundColor = '#f56565';
+                deleteBtn.style.transform = 'translateY(0)';
             });
 
             selectAllBtn.addEventListener('click', () => this._toggleSelectAll());
@@ -2348,6 +2380,16 @@
                 }
             });
 
+            selectGroupBtn.addEventListener('mouseenter', () => {
+                selectGroupBtn.style.transform = 'translateY(-1px)';
+                selectGroupBtn.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+
+            selectGroupBtn.addEventListener('mouseleave', () => {
+                selectGroupBtn.style.transform = 'translateY(0)';
+                selectGroupBtn.style.boxShadow = 'none';
+            });
+
             selectGroupBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const allSelected = notes.every(note => this.selectedNotes.has(note.id));
@@ -2487,6 +2529,16 @@
                     cursor: 'pointer',
                     transition: 'all 0.2s'
                 }
+            });
+
+            resetButton.addEventListener('mouseenter', () => {
+                resetButton.style.transform = 'translateY(-1px)';
+                resetButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+
+            resetButton.addEventListener('mouseleave', () => {
+                resetButton.style.transform = 'translateY(0)';
+                resetButton.style.boxShadow = 'none';
             });
 
             resetButton.addEventListener('click', async () => {
@@ -2971,6 +3023,17 @@
                 }
             });
 
+            // 添加悬停动画效果
+            this.toggleButton.addEventListener('mouseenter', () => {
+                this.toggleButton.style.transform = 'translateY(-1px)';
+                this.toggleButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+            });
+
+            this.toggleButton.addEventListener('mouseleave', () => {
+                this.toggleButton.style.transform = 'translateY(0)';
+                this.toggleButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+
             this.toggleButton.addEventListener('click', () => this._handleAnswerToggle());
             this.buttonContainer.appendChild(this.toggleButton);
         }
@@ -2984,6 +3047,17 @@
                 dataset: {
                     isVisible: 'false'
                 }
+            });
+
+            // 添加悬停动画效果
+            this.noteButton.addEventListener('mouseenter', () => {
+                this.noteButton.style.transform = 'translateY(-1px)';
+                this.noteButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+            });
+
+            this.noteButton.addEventListener('mouseleave', () => {
+                this.noteButton.style.transform = 'translateY(0)';
+                this.noteButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
 
             this.noteButton.addEventListener('click', () => this._handleNoteToggle());
@@ -3048,6 +3122,17 @@
                 innerText: buttonText,
                 style: style,
                 title: '手动保存当前笔记'
+            });
+
+            // 添加悬停动画效果
+            this.saveNoteButton.addEventListener('mouseenter', () => {
+                this.saveNoteButton.style.transform = 'translateY(-1px)';
+                this.saveNoteButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+            });
+
+            this.saveNoteButton.addEventListener('mouseleave', () => {
+                this.saveNoteButton.style.transform = 'translateY(0)';
+                this.saveNoteButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
 
             this.saveNoteButton.addEventListener('click', async () => {
@@ -3182,6 +3267,17 @@
                 title: '点击一键显示/隐藏所有答案块'
             });
 
+            // 添加悬停动画效果
+            this.globalButton.addEventListener('mouseenter', () => {
+                this.globalButton.style.transform = 'translateY(-1px)';
+                this.globalButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+            });
+
+            this.globalButton.addEventListener('mouseleave', () => {
+                this.globalButton.style.transform = 'translateY(0)';
+                this.globalButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+
             this.globalButton.addEventListener('click', () => this._handleGlobalToggle());
             this.container.appendChild(this.globalButton);
         }
@@ -3192,6 +3288,17 @@
                 innerText: buttonText,
                 style: this.styleGenerator.getManageButtonStyle(),
                 title: '打开控制面板：设置和笔记管理'
+            });
+
+            // 添加悬停动画效果
+            this.manageButton.addEventListener('mouseenter', () => {
+                this.manageButton.style.transform = 'translateY(-1px)';
+                this.manageButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+            });
+
+            this.manageButton.addEventListener('mouseleave', () => {
+                this.manageButton.style.transform = 'translateY(0)';
+                this.manageButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
 
             this.manageButton.addEventListener('click', () => this._handleManageClick());
