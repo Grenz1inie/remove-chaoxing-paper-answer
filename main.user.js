@@ -1,12 +1,16 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.4.0
-// @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、样式持久化存储。
+// @version      2.6.4
+// @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、导出试题为Word文档（含图片、支持多种题型、可配置导出参数）、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=chaoxing.com
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @connect      p.ananas.chaoxing.com
+// @connect      chaoxing.com
+// @connect      *.chaoxing.com
+// @connect      *
 // @run-at       document-end
 // @license MIT
 // ==/UserScript==
@@ -21,7 +25,8 @@
             selectors: {
                 answerBlock: 'div.mark_answer',    // 答案块的选择器
                 container: 'div.topicNumber',      // 题目容器的选择器
-                questionItem: 'div.mark_item'      // 题目项的选择器
+                questionItem: 'div.mark_item',     // 题目项的选择器
+                sidePanel: 'div.fanyaMarking_right' // 侧边栏容器的选择器
             },
 
             // ========== 延迟配置 ==========
@@ -264,6 +269,30 @@
                 text: '⚙️ 控制面板'    // 控制面板按钮文字
             },
 
+            // ========== 导出试题按钮配置 ==========
+            exportButton: {
+                // --- 按钮样式配置 ---
+                style: {
+                    fontSize: '12px',        // 字体大小
+                    padding: '4px 10px',     // 内边距
+                    borderRadius: '6px',     // 圆角半径
+                    border: 'none',          // 边框样式
+                    fontWeight: '500',       // 字体粗细
+                    cursor: 'pointer',       // 鼠标样式
+                    transition: 'all 0.2s',  // 过渡动画
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
+                },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    background: '#38b2ac',   // 按钮背景色（青色）
+                    hoverBackground: '#319795', // 悬停背景色
+                    textColor: 'white',      // 按钮文字颜色
+                    hoverOpacity: '0.8'      // 鼠标悬停时的透明度
+                },
+                // --- 按钮文字配置 ---
+                text: '📄 导出试题'    // 导出按钮文字
+            },
+
             // ========== 控制面板保存按钮配置 ==========
             panelSaveButton: {
                 // --- 按钮样式配置 ---
@@ -292,6 +321,16 @@
                     success: '✅ 保存成功',   // 保存成功文字
                     error: '❌ 保存失败'      // 保存失败文字
                 }
+            },
+
+            // ========== 导出设置配置 ==========
+            exportSettings: {
+                includeAnswer: true,         // 是否导出答案
+                fontFamily: '宋体',          // 字体
+                fontSize: 12,                // 字号（pt）
+                titleFontSize: 18,           // 标题字号（pt）
+                lineHeight: 1.8,             // 行高
+                pageMargin: '2.5cm 2cm 2cm 2cm'  // 页边距
             },
 
             // ========== 数据库配置 ==========
@@ -328,7 +367,14 @@
         _deepMerge(target, source) {
             const result = { ...target };
             for (const key in source) {
-                if (source[key] instanceof Object && key in target) {
+                // 排除函数和数组，只对普通对象进行深度合并
+                if (source[key] instanceof Object && 
+                    !(source[key] instanceof Function) && 
+                    !Array.isArray(source[key]) &&
+                    key in target &&
+                    target[key] instanceof Object &&
+                    !(target[key] instanceof Function) &&
+                    !Array.isArray(target[key])) {
                     result[key] = this._deepMerge(target[key], source[key]);
                 } else {
                     result[key] = source[key];
@@ -1425,6 +1471,7 @@
             // 菜单项
             const menuItems = [
                 { id: 'settings', icon: '⚙️', text: '设置' },
+                { id: 'export', icon: '📄', text: '导出设置' },
                 { 
                     id: 'notes', 
                     icon: '📝', 
@@ -1655,6 +1702,9 @@
             if (this.currentTab === 'settings') {
                 headerTitle.innerText = '⚙️ 设置';
                 this._renderSettingsPanel(contentBody);
+            } else if (this.currentTab === 'export') {
+                headerTitle.innerText = '📄 导出设置';
+                this._renderExportSettingsPanel(contentBody);
             } else if (this.currentTab === 'notes') {
                 headerTitle.innerText = '📝 笔记管理';
                 this._renderNotesPanel(contentBody);
@@ -1968,6 +2018,390 @@
                 innerText: description,
                 style: {
                     fontSize: '13px',
+                    color: '#718096',
+                    marginTop: '4px'
+                }
+            });
+
+            item.appendChild(labelEl);
+            item.appendChild(desc);
+
+            return item;
+        }
+
+        /**
+         * 渲染导出设置面板
+         */
+        _renderExportSettingsPanel(container) {
+            container.innerHTML = '';
+
+            // 加载导出设置
+            const exportDefaults = this.config.get('exportSettings');
+            const exportSettings = {
+                includeAnswer: this.settings.exportIncludeAnswer ?? exportDefaults.includeAnswer,
+                fontFamily: this.settings.exportFontFamily ?? exportDefaults.fontFamily,
+                fontSize: this.settings.exportFontSize ?? exportDefaults.fontSize,
+                titleFontSize: this.settings.exportTitleFontSize ?? exportDefaults.titleFontSize,
+                lineHeight: this.settings.exportLineHeight ?? exportDefaults.lineHeight,
+                pageMargin: this.settings.exportPageMargin ?? exportDefaults.pageMargin
+            };
+
+            // 主要设置区域
+            const mainContainer = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    marginBottom: '20px'
+                }
+            });
+
+            const sectionTitle = DOMHelper.createElement('div', {
+                innerText: '📄 导出内容设置',
+                style: {
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#2d3748',
+                    marginBottom: '20px',
+                    paddingBottom: '10px',
+                    borderBottom: '2px solid #4299e1'
+                }
+            });
+            mainContainer.appendChild(sectionTitle);
+
+            // 是否导出答案（最重要的选项，放在最上面）
+            const answerSection = DOMHelper.createElement('div', {
+                style: {
+                    marginBottom: '24px',
+                    paddingBottom: '24px',
+                    borderBottom: '1px solid #e2e8f0',
+                    backgroundColor: '#f7fafc',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: '2px solid #4299e1'
+                }
+            });
+
+            const answerLabel = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '8px'
+                }
+            });
+
+            const answerLabelText = DOMHelper.createElement('span', {
+                innerText: '📝 导出答案',
+                style: {
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: '#2d3748'
+                }
+            });
+
+            const answerCheckbox = DOMHelper.createElement('input', {
+                type: 'checkbox',
+                checked: exportSettings.includeAnswer,
+                style: {
+                    width: '24px',
+                    height: '24px',
+                    cursor: 'pointer',
+                    accentColor: '#4299e1'
+                }
+            });
+
+            answerCheckbox.addEventListener('change', () => {
+                this.settings.exportIncludeAnswer = answerCheckbox.checked;
+            });
+
+            answerLabel.appendChild(answerLabelText);
+            answerLabel.appendChild(answerCheckbox);
+
+            const answerDesc = DOMHelper.createElement('div', {
+                innerText: '勾选后导出的文档将包含答案块（我的答案、正确答案、得分等）。取消勾选则只导出题目和选项。',
+                style: {
+                    fontSize: '13px',
+                    color: '#718096',
+                    marginTop: '8px',
+                    lineHeight: '1.5'
+                }
+            });
+
+            answerSection.appendChild(answerLabel);
+            answerSection.appendChild(answerDesc);
+            mainContainer.appendChild(answerSection);
+
+            container.appendChild(mainContainer);
+
+            // 样式设置区域
+            const styleContainer = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    marginBottom: '20px'
+                }
+            });
+
+            const styleTitle = DOMHelper.createElement('div', {
+                innerText: '🎨 样式设置',
+                style: {
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#2d3748',
+                    marginBottom: '20px',
+                    paddingBottom: '10px',
+                    borderBottom: '2px solid #48bb78'
+                }
+            });
+            styleContainer.appendChild(styleTitle);
+
+            // 字体选择
+            const fontFamilySection = this._createExportSettingItem(
+                '字体',
+                '导出文档使用的字体',
+                'select',
+                'exportFontFamily',
+                exportSettings.fontFamily,
+                [
+                    { value: '宋体', label: '宋体' },
+                    { value: '黑体', label: '黑体' },
+                    { value: '楷体', label: '楷体' },
+                    { value: '仿宋', label: '仿宋' },
+                    { value: '微软雅黑', label: '微软雅黑' },
+                    { value: 'Arial', label: 'Arial' },
+                    { value: 'Times New Roman', label: 'Times New Roman' }
+                ]
+            );
+            styleContainer.appendChild(fontFamilySection);
+
+            // 正文字号
+            const fontSizeSection = this._createExportSettingItem(
+                '正文字号',
+                '导出文档正文的字体大小（pt）',
+                'number',
+                'exportFontSize',
+                exportSettings.fontSize
+            );
+            styleContainer.appendChild(fontSizeSection);
+
+            // 标题字号
+            const titleFontSizeSection = this._createExportSettingItem(
+                '标题字号',
+                '导出文档标题的字体大小（pt）',
+                'number',
+                'exportTitleFontSize',
+                exportSettings.titleFontSize
+            );
+            styleContainer.appendChild(titleFontSizeSection);
+
+            // 行高
+            const lineHeightSection = this._createExportSettingItem(
+                '行高',
+                '行与行之间的间距倍数',
+                'number',
+                'exportLineHeight',
+                exportSettings.lineHeight,
+                null,
+                0.1  // step
+            );
+            styleContainer.appendChild(lineHeightSection);
+
+            // 页边距
+            const marginSection = this._createExportSettingItem(
+                '页边距',
+                '导出文档的页边距（格式：上 右 下 左）',
+                'text',
+                'exportPageMargin',
+                exportSettings.pageMargin
+            );
+            styleContainer.appendChild(marginSection);
+
+            container.appendChild(styleContainer);
+
+            // 保存按钮
+            const saveButtonContainer = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '10px'
+                }
+            });
+
+            const buttonConfig = this.config.get('panelSaveButton');
+            const saveButton = DOMHelper.createElement('button', {
+                innerText: buttonConfig.text.save,
+                style: {
+                    padding: buttonConfig.style.padding,
+                    border: buttonConfig.style.border,
+                    borderRadius: buttonConfig.style.borderRadius,
+                    backgroundColor: buttonConfig.colors.background,
+                    color: buttonConfig.colors.textColor,
+                    fontSize: buttonConfig.style.fontSize,
+                    fontWeight: buttonConfig.style.fontWeight,
+                    cursor: buttonConfig.style.cursor,
+                    transition: buttonConfig.style.transition,
+                    boxShadow: buttonConfig.colors.boxShadow
+                }
+            });
+
+            saveButton.addEventListener('mouseenter', () => {
+                saveButton.style.backgroundColor = buttonConfig.colors.hoverBackground;
+                saveButton.style.transform = 'translateY(-1px)';
+                saveButton.style.boxShadow = buttonConfig.colors.hoverBoxShadow;
+            });
+
+            saveButton.addEventListener('mouseleave', () => {
+                if (saveButton.innerText === buttonConfig.text.save) {
+                    saveButton.style.backgroundColor = buttonConfig.colors.background;
+                    saveButton.style.transform = 'translateY(0)';
+                    saveButton.style.boxShadow = buttonConfig.colors.boxShadow;
+                }
+            });
+
+            saveButton.addEventListener('click', async () => {
+                try {
+                    // 保存导出设置
+                    await this.dbManager.saveSetting('exportIncludeAnswer', this.settings.exportIncludeAnswer ?? exportSettings.includeAnswer);
+                    await this.dbManager.saveSetting('exportFontFamily', this.settings.exportFontFamily ?? exportSettings.fontFamily);
+                    await this.dbManager.saveSetting('exportFontSize', this.settings.exportFontSize ?? exportSettings.fontSize);
+                    await this.dbManager.saveSetting('exportTitleFontSize', this.settings.exportTitleFontSize ?? exportSettings.titleFontSize);
+                    await this.dbManager.saveSetting('exportLineHeight', this.settings.exportLineHeight ?? exportSettings.lineHeight);
+                    await this.dbManager.saveSetting('exportPageMargin', this.settings.exportPageMargin ?? exportSettings.pageMargin);
+                    
+                    // 显示成功提示
+                    saveButton.innerText = buttonConfig.text.success;
+                    saveButton.style.backgroundColor = buttonConfig.colors.successBackground;
+                    
+                    setTimeout(() => {
+                        saveButton.innerText = buttonConfig.text.save;
+                        saveButton.style.backgroundColor = buttonConfig.colors.background;
+                    }, 2000);
+                    
+                    Logger.success('导出设置已保存');
+                } catch (error) {
+                    Logger.error('保存导出设置失败', error);
+                    saveButton.innerText = buttonConfig.text.error;
+                    saveButton.style.backgroundColor = buttonConfig.colors.errorBackground;
+                    
+                    setTimeout(() => {
+                        saveButton.innerText = buttonConfig.text.save;
+                        saveButton.style.backgroundColor = buttonConfig.colors.background;
+                    }, 2000);
+                }
+            });
+
+            saveButtonContainer.appendChild(saveButton);
+            container.appendChild(saveButtonContainer);
+        }
+
+        /**
+         * 创建导出设置项
+         */
+        _createExportSettingItem(label, description, type, key, value, options = null, step = 1) {
+            const item = DOMHelper.createElement('div', {
+                style: {
+                    marginBottom: '20px',
+                    paddingBottom: '20px',
+                    borderBottom: '1px solid #e2e8f0'
+                }
+            });
+
+            const labelEl = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '8px'
+                }
+            });
+
+            const labelText = DOMHelper.createElement('span', {
+                innerText: label,
+                style: {
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#2d3748'
+                }
+            });
+
+            let input;
+            if (type === 'select' && options) {
+                input = DOMHelper.createElement('select', {
+                    style: {
+                        width: '160px',
+                        padding: '6px 12px',
+                        border: '1px solid #cbd5e0',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        backgroundColor: 'white'
+                    }
+                });
+
+                options.forEach(opt => {
+                    const option = DOMHelper.createElement('option', {
+                        value: opt.value,
+                        innerText: opt.label
+                    });
+                    if (opt.value === value) {
+                        option.selected = true;
+                    }
+                    input.appendChild(option);
+                });
+
+                input.addEventListener('change', () => {
+                    this.settings[key] = input.value;
+                });
+            } else if (type === 'number') {
+                input = DOMHelper.createElement('input', {
+                    type: 'number',
+                    value: value,
+                    step: step,
+                    style: {
+                        width: '100px',
+                        padding: '6px 12px',
+                        border: '1px solid #cbd5e0',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        textAlign: 'center'
+                    }
+                });
+
+                input.addEventListener('change', () => {
+                    const numValue = parseFloat(input.value);
+                    if (numValue > 0) {
+                        this.settings[key] = numValue;
+                    }
+                });
+            } else if (type === 'text') {
+                input = DOMHelper.createElement('input', {
+                    type: 'text',
+                    value: value,
+                    style: {
+                        width: '200px',
+                        padding: '6px 12px',
+                        border: '1px solid #cbd5e0',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                    }
+                });
+
+                input.addEventListener('change', () => {
+                    this.settings[key] = input.value;
+                });
+            }
+
+            labelEl.appendChild(labelText);
+            labelEl.appendChild(input);
+
+            const desc = DOMHelper.createElement('div', {
+                innerText: description,
+                style: {
+                    fontSize: '12px',
                     color: '#718096',
                     marginTop: '4px'
                 }
@@ -2976,6 +3410,10 @@
             return this._getFloatingButtonStyle('manageButton', 'background');
         }
 
+        getExportButtonStyle() {
+            return this._getFloatingButtonStyle('exportButton', 'background');
+        }
+
         // ========== 悬停效果管理 ==========
 
         /**
@@ -3349,6 +3787,7 @@
             this.workKey = workKey;
             this.globalButton = null;
             this.manageButton = null;
+            this.exportButton = null;
             this.buttonContainer = null;
         }
 
@@ -3359,12 +3798,14 @@
             this._createButtonContainer();
             this._createGlobalButton();
             this._createManageButton();
+            this._createExportButton();
             return this.globalButton;
         }
 
         _createButtonContainer() {
-            // 获取 fanyaMarking_right（topicNumber 的父元素）
-            const fanyaMarkingRight = this.container.parentNode;
+            // 使用统一的选择器配置获取 fanyaMarking_right
+            const sidePanelSelector = this.config.get('selectors.sidePanel');
+            const fanyaMarkingRight = document.querySelector(sidePanelSelector) || this.container.parentNode;
             
             // 创建按钮容器，使用固定定位放在 fanyaMarking_right 右边
             this.buttonContainer = DOMHelper.createElement('div', {
@@ -3431,6 +3872,637 @@
 
             this.manageButton.addEventListener('click', () => this._handleManageClick());
             this.buttonContainer.appendChild(this.manageButton);
+        }
+
+        _createExportButton() {
+            const buttonText = this.config.get('exportButton.text');
+            this.exportButton = DOMHelper.createElement('button', {
+                innerText: buttonText,
+                style: this.styleGenerator.getExportButtonStyle(),
+                title: '导出试题为Word文档（.docx格式）'
+            });
+
+            // 使用统一的悬停效果管理
+            this.styleGenerator.addSimpleHoverEffect(this.exportButton, 'exportButton');
+
+            this.exportButton.addEventListener('click', () => this._handleExport());
+            this.buttonContainer.appendChild(this.exportButton);
+        }
+
+        async _handleExport() {
+            try {
+                // 显示导出中状态
+                const originalText = this.exportButton.innerText;
+                this.exportButton.innerText = '⏳ 导出中...';
+                this.exportButton.disabled = true;
+
+                // 从控制器中获取答案信息
+                if (this.controllers.length === 0) {
+                    alert('未找到任何试题');
+                    this.exportButton.innerText = originalText;
+                    this.exportButton.disabled = false;
+                    return;
+                }
+
+                // 解析题目内容（使用控制器中保存的原始答案）
+                const docContent = this._parseQuestionsToDocx();
+
+                if (!docContent.questions || docContent.questions.length === 0) {
+                    alert('未能解析到试题内容');
+                    this.exportButton.innerText = originalText;
+                    this.exportButton.disabled = false;
+                    return;
+                }
+
+                // 生成并下载文档
+                await this._generateDocx(docContent);
+
+                // 恢复按钮状态
+                this.exportButton.innerText = originalText;
+                this.exportButton.disabled = false;
+            } catch (error) {
+                console.error('导出失败:', error);
+                alert('导出失败，请重试');
+                this.exportButton.innerText = this.config.get('exportButton.text');
+                this.exportButton.disabled = false;
+            }
+        }
+
+        _parseQuestionsToDocx() {
+            const content = [];
+            
+            // 获取文档标题（从 mark_title 获取）
+            const markTitle = document.querySelector('.mark_title');
+            const docTitle = markTitle ? markTitle.innerText.trim() : '试题导出';
+
+            this.controllers.forEach((controller, index) => {
+                // 从控制器获取原始答案HTML（保留完整HTML结构）
+                const answerHTML = controller.originalHTML;
+                
+                // 获取题目信息 - 找到完整的题目容器
+                let questionHTML = '';
+                let titleText = `第${index + 1}题`;
+
+                // 使用 questionId 找到完整的题目容器
+                const questionId = controller.questionId;
+                let questionContainer = null;
+                
+                if (questionId && questionId.startsWith('question')) {
+                    questionContainer = document.getElementById(questionId);
+                }
+                
+                // 如果没找到，尝试从 parent 向上查找
+                if (!questionContainer && controller.parent) {
+                    let element = controller.parent;
+                    while (element && element !== document.body) {
+                        if (element.classList && (element.classList.contains('questionLi') || element.classList.contains('mark_item'))) {
+                            questionContainer = element;
+                            break;
+                        }
+                        element = element.parentElement;
+                    }
+                }
+
+                if (questionContainer) {
+                    // 克隆元素以避免影响原始DOM
+                    const containerClone = questionContainer.cloneNode(true);
+                    
+                    // 移除答案块（我们单独处理答案）
+                    const answerBlocks = containerClone.querySelectorAll('.mark_answer');
+                    answerBlocks.forEach(block => block.remove());
+                    
+                    // 移除脚本添加的按钮
+                    const buttons = containerClone.querySelectorAll('button');
+                    buttons.forEach(btn => btn.remove());
+                    
+                    // 移除脚本添加的编辑器容器
+                    const editDivs = containerClone.querySelectorAll('div[contenteditable]');
+                    editDivs.forEach(div => {
+                        const parent = div.closest('div[style*="display: none"]') || div.closest('div[style*="margin-top: 12px"]');
+                        if (parent) parent.remove();
+                    });
+                    
+                    // 移除按钮容器（脚本添加的inline-block div）
+                    const inlineBlockDivs = containerClone.querySelectorAll('div[style*="display: inline-block"]');
+                    inlineBlockDivs.forEach(div => div.remove());
+
+                    // 获取题号和题目内容
+                    const markName = containerClone.querySelector('.mark_name');
+                    if (markName) {
+                        // 提取题号文本（如 "1. (单选题, 4分)"）
+                        const colorShallow = markName.querySelector('.colorShallow');
+                        const firstTextNode = markName.childNodes[0];
+                        if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
+                            titleText = firstTextNode.textContent.trim();
+                        }
+                        if (colorShallow) {
+                            titleText += ' ' + colorShallow.textContent.trim();
+                        }
+                        
+                        // 获取题目正文HTML（在 qtContent 中）
+                        const qtContent = markName.querySelector('.qtContent');
+                        if (qtContent) {
+                            questionHTML = qtContent.innerHTML;
+                        }
+                    }
+                    
+                    // 获取选项列表 - 支持多种题型
+                    // 1. 单选题/多选题: ul.mark_letter
+                    const markLetter = containerClone.querySelector('ul.mark_letter');
+                    if (markLetter) {
+                        questionHTML += markLetter.outerHTML;
+                    }
+                    
+                    // 2. 完型填空/填空题: div.mark_gestalt
+                    const markGestalt = containerClone.querySelector('div.mark_gestalt');
+                    if (markGestalt) {
+                        // 移除脚本添加的按钮容器（在选项内部的）
+                        const innerButtons = markGestalt.querySelectorAll('div[style*="display: inline-block"]');
+                        innerButtons.forEach(btn => btn.remove());
+                        const innerEditors = markGestalt.querySelectorAll('div[style*="display: none"]');
+                        innerEditors.forEach(div => div.remove());
+                        questionHTML += markGestalt.outerHTML;
+                    }
+
+                    // 移除AI讲解链接
+                    const aiLinks = containerClone.querySelectorAll('a.aiAssistant');
+                    aiLinks.forEach(link => link.remove());
+
+                    // 如果还是没有内容，尝试从 aiAreaContent 获取
+                    if (!questionHTML) {
+                        const aiAreaContent = containerClone.querySelector('.aiAreaContent');
+                        if (aiAreaContent) {
+                            // 移除 mark_name 避免重复
+                            const mn = aiAreaContent.querySelector('.mark_name');
+                            if (mn) mn.remove();
+                            questionHTML = aiAreaContent.innerHTML;
+                        }
+                    }
+                }
+
+                console.log(`题目 ${index + 1}:`, {
+                    title: titleText,
+                    hasQuestionHTML: !!questionHTML,
+                    questionHTMLLength: questionHTML.length,
+                    hasAnswerHTML: !!answerHTML,
+                    answerHTMLLength: answerHTML?.length || 0
+                });
+
+                content.push({
+                    type: 'question',
+                    index: index + 1,
+                    title: titleText,
+                    questionHTML: questionHTML,
+                    answerHTML: answerHTML
+                });
+            });
+
+            return { docTitle, questions: content };
+        }
+
+        async _generateDocx(content) {
+            // 获取导出设置
+            const exportDefaults = this.config.get('exportSettings');
+            let exportSettings = {};
+            try {
+                const allSettings = await this.dbManager.getAllSettings();
+                exportSettings = {
+                    includeAnswer: allSettings.exportIncludeAnswer ?? exportDefaults.includeAnswer,
+                    fontFamily: allSettings.exportFontFamily ?? exportDefaults.fontFamily,
+                    fontSize: allSettings.exportFontSize ?? exportDefaults.fontSize,
+                    titleFontSize: allSettings.exportTitleFontSize ?? exportDefaults.titleFontSize,
+                    lineHeight: allSettings.exportLineHeight ?? exportDefaults.lineHeight,
+                    pageMargin: allSettings.exportPageMargin ?? exportDefaults.pageMargin
+                };
+            } catch (e) {
+                exportSettings = { ...exportDefaults };
+            }
+
+            // 使用 GM_xmlhttpRequest 下载图片（绕过 CORS 限制）
+            const downloadImageAsBase64 = (imgUrl) => {
+                return new Promise((resolve) => {
+                    // 处理相对路径
+                    let fullUrl = imgUrl;
+                    if (imgUrl.startsWith('//')) {
+                        fullUrl = 'https:' + imgUrl;
+                    } else if (imgUrl.startsWith('/')) {
+                        fullUrl = window.location.origin + imgUrl;
+                    }
+                    
+                    console.log('[图片下载] 开始下载:', fullUrl);
+
+                    // 检查是否有 GM_xmlhttpRequest 可用
+                    if (typeof GM_xmlhttpRequest === 'function') {
+                        console.log('[图片下载] 使用 GM_xmlhttpRequest');
+                        try {
+                            GM_xmlhttpRequest({
+                                method: 'GET',
+                                url: fullUrl,
+                                responseType: 'blob',
+                                timeout: 15000,
+                                headers: {
+                                    'Referer': window.location.href
+                                },
+                                onload: function(response) {
+                                    console.log('[图片下载] 响应状态:', response.status, '类型:', response.response?.type);
+                                    if (response.status === 200 && response.response) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                            console.log('[图片下载] 转换成功, base64长度:', reader.result?.length);
+                                            resolve(reader.result);
+                                        };
+                                        reader.onerror = (e) => {
+                                            console.error('[图片下载] FileReader 错误:', e);
+                                            resolve(fullUrl);
+                                        };
+                                        reader.readAsDataURL(response.response);
+                                    } else {
+                                        console.warn('[图片下载] 响应错误:', response.status, response.statusText);
+                                        resolve(fullUrl);
+                                    }
+                                },
+                                onerror: function(error) {
+                                    console.error('[图片下载] GM_xmlhttpRequest 错误:', error);
+                                    resolve(fullUrl);
+                                },
+                                ontimeout: function() {
+                                    console.warn('[图片下载] 超时:', fullUrl);
+                                    resolve(fullUrl);
+                                }
+                            });
+                        } catch (e) {
+                            console.error('[图片下载] GM_xmlhttpRequest 异常:', e);
+                            resolve(fullUrl);
+                        }
+                    } else {
+                        // GM_xmlhttpRequest 不可用，尝试 fetch
+                        console.warn('[图片下载] GM_xmlhttpRequest 不可用，尝试 fetch');
+                        fetch(fullUrl, { mode: 'cors', credentials: 'include' })
+                            .then(response => response.blob())
+                            .then(blob => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve(reader.result);
+                                reader.onerror = () => resolve(fullUrl);
+                                reader.readAsDataURL(blob);
+                            })
+                            .catch(e => {
+                                console.error('[图片下载] fetch 错误:', e);
+                                resolve(fullUrl);
+                            });
+                    }
+                });
+            };
+
+            // 处理HTML中的图片（包括尺寸调整）
+            // A4纸内容区域约 21cm - 4cm边距 = 17cm ≈ 480pt，这里设置稍小一点确保不超出
+            const MAX_IMAGE_WIDTH = 600;  // 最大宽度（像素）
+
+            // 获取图片尺寸，仅当超出最大宽度时才缩放
+            const getScaledImageSize = (base64Data) => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const originalWidth = img.naturalWidth;
+                        const originalHeight = img.naturalHeight;
+                        
+                        // 只有当宽度超出时才缩放
+                        if (originalWidth > MAX_IMAGE_WIDTH) {
+                            const scale = MAX_IMAGE_WIDTH / originalWidth;
+                            const newWidth = MAX_IMAGE_WIDTH;
+                            const newHeight = Math.round(originalHeight * scale);
+                            console.log(`[图片缩放] ${originalWidth}x${originalHeight} → ${newWidth}x${newHeight}`);
+                            resolve({ width: newWidth, height: newHeight, scaled: true });
+                        } else {
+                            // 不需要缩放，保持原尺寸
+                            console.log(`[图片尺寸] ${originalWidth}x${originalHeight} (无需缩放)`);
+                            resolve({ width: originalWidth, height: originalHeight, scaled: false });
+                        }
+                    };
+                    img.onerror = () => {
+                        console.warn('[图片尺寸] 无法获取尺寸');
+                        resolve({ width: null, height: null, scaled: false });
+                    };
+                    img.src = base64Data;
+                });
+            };
+
+            // 处理HTML中的图片
+            const processImagesInHtml = async (html) => {
+                if (!html) return '';
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                
+                const images = tempDiv.querySelectorAll('img');
+                for (const img of images) {
+                    // 优先使用 data-original（高清原图）
+                    const originalSrc = img.getAttribute('data-original');
+                    const src = originalSrc || img.getAttribute('src');
+                    if (src) {
+                        console.log('正在处理图片:', src);
+                        const processedSrc = await downloadImageAsBase64(src);
+                        img.setAttribute('src', processedSrc);
+                        // 移除可能干扰的属性
+                        img.removeAttribute('data-original');
+                        img.removeAttribute('data-src');
+                        
+                        // 检查是否成功转为 base64
+                        if (processedSrc.startsWith('data:')) {
+                            // 获取尺寸信息，只有超宽的才会被缩放
+                            const sizeInfo = await getScaledImageSize(processedSrc);
+                            
+                            if (sizeInfo.scaled && sizeInfo.width && sizeInfo.height) {
+                                // 只有被缩放的图片才设置固定尺寸
+                                img.setAttribute('width', sizeInfo.width);
+                                img.setAttribute('height', sizeInfo.height);
+                                img.style.width = `${sizeInfo.width}px`;
+                                img.style.height = `${sizeInfo.height}px`;
+                            }
+                            // 未缩放的图片保持原样，不设置尺寸属性
+                        } else {
+                            console.warn('图片保留原URL:', processedSrc);
+                            // 对于未转换的图片，使用CSS限制最大宽度作为保险
+                            img.style.maxWidth = `${MAX_IMAGE_WIDTH}px`;
+                            img.style.height = 'auto';
+                        }
+                    }
+                }
+                
+                return tempDiv.innerHTML;
+            };
+
+            // 清理HTML，保留原始样式和结构
+            const cleanHtml = (html) => {
+                if (!html) return '';
+                // 直接返回原始HTML，保留所有样式
+                return html;
+            };
+
+            // 构建纯HTML格式文档（Word可以直接打开.doc格式的HTML）
+            let htmlContent = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="ProgId" content="Word.Document">
+    <meta name="Generator" content="Microsoft Word 15">
+    <!--[if gte mso 9]>
+    <xml>
+        <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+    </xml>
+    <![endif]-->
+    <style>
+        /* 页面基础设置 */
+        @page { 
+            size: A4; 
+            margin: ${exportSettings.pageMargin};
+        }
+        body { 
+            font-family: '${exportSettings.fontFamily}', SimSun, serif; 
+            font-size: ${exportSettings.fontSize}pt; 
+            line-height: ${exportSettings.lineHeight};
+            color: #333;
+        }
+        
+        /* 文档标题 */
+        .doc-title {
+            text-align: center;
+            font-size: ${exportSettings.titleFontSize}pt;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #000;
+        }
+        
+        /* 题目容器（仅添加分隔线） */
+        .question {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        /* 题目标题（题号和分值） */
+        .question-header {
+            font-weight: bold;
+            font-size: ${exportSettings.fontSize}pt;
+            color: #000;
+            margin-bottom: 10px;
+            background-color: #f5f5f5;
+            padding: 5px 10px;
+        }
+        
+        /* 题目内容区域 */
+        .question-content {
+            margin: 10px 0;
+        }
+        .question-content img {
+            max-width: 500px;
+            height: auto;
+        }
+        
+        /* 答案区域 */
+        .answer-section {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #fff8f8;
+            border-left: 3px solid #e74c3c;
+        }
+        .answer-label {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        .answer-content {
+            margin-top: 5px;
+        }
+        .answer-content img {
+            max-width: 500px;
+            height: auto;
+        }
+        
+        /* ========== 保留原始网页样式 ========== */
+        
+        /* 题目名称样式 */
+        .mark_name {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .colorShallow {
+            color: #999;
+            font-weight: normal;
+        }
+        .colorDeep {
+            color: #333;
+        }
+        .colorGreen {
+            color: #48bb78;
+        }
+        
+        /* 单选/多选题选项样式 */
+        .mark_letter {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+        .mark_letter li {
+            padding: 8px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .mark_letter li:last-child {
+            border-bottom: none;
+        }
+        
+        /* 完型填空选项样式 */
+        .mark_gestalt {
+            margin: 15px 0;
+        }
+        .gestalt_row {
+            margin: 12px 0;
+            padding: 8px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .gestalt_row:last-child {
+            border-bottom: none;
+        }
+        .gestalt_row dt {
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+        .gestalt_row dd {
+            display: inline-block;
+            margin: 4px 20px 4px 0;
+        }
+        .gestalt_num {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        /* 答案详情样式 */
+        .mark_answer {
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 4px;
+        }
+        .mark_key {
+            margin-bottom: 10px;
+        }
+        .mark_fill dt {
+            font-weight: bold;
+        }
+        .mark_fill dd {
+            display: inline;
+        }
+        .gestalt_fill {
+            display: inline-block;
+            margin-right: 15px;
+            padding: 2px 8px;
+            background: #edf2f7;
+            border-radius: 4px;
+        }
+        .mark_score {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .totalScore {
+            font-weight: bold;
+            color: #e53e3e;
+        }
+        .fontWeight {
+            font-weight: bold;
+        }
+        .marginRight40 {
+            margin-right: 40px;
+        }
+        .fl {
+            display: inline-block;
+        }
+        .fr {
+            float: right;
+        }
+        .stuAnswerContent, .rightAnswerContent {
+            font-weight: bold;
+        }
+        
+        /* 表格样式 */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+        }
+        td, th {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="doc-title">${this._escapeHtml(content.docTitle)}</div>
+`;
+
+            // 处理每道题目
+            for (const item of content.questions) {
+                // 处理题目HTML中的图片（异步处理，尝试转为base64）
+                const processedQuestionHtml = await processImagesInHtml(cleanHtml(item.questionHTML || ''));
+
+                htmlContent += `
+    <div class="question">
+        <div class="question-header">${this._escapeHtml(item.title)}</div>
+        <div class="question-content">${processedQuestionHtml}</div>`;
+
+                // 根据设置决定是否导出答案
+                if (exportSettings.includeAnswer && item.answerHTML) {
+                    const processedAnswerHtml = await processImagesInHtml(cleanHtml(item.answerHTML || ''));
+                    htmlContent += `
+        <div class="answer-section">
+            <div class="answer-label">【答案】</div>
+            <div class="answer-content">${processedAnswerHtml}</div>
+        </div>`;
+                }
+
+                htmlContent += `
+    </div>
+`;
+            }
+
+            htmlContent += `
+</body>
+</html>`;
+
+            // 添加BOM头确保中文正确显示，使用.doc扩展名（HTML格式的Word文档）
+            const blob = new Blob(['\ufeff' + htmlContent], { 
+                type: 'application/msword'
+            });
+
+            // 生成下载链接
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            
+            // 生成文件名（使用文档标题 + 时间戳）
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+            // 清理文件名中的非法字符
+            const safeTitle = content.docTitle.replace(/[\\/:*?"<>|]/g, '_').substring(0, 50);
+            link.download = `${safeTitle}_${dateStr}_${timeStr}.doc`;
+
+            // 触发下载
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        _escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         _handleManageClick() {
