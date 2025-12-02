@@ -3419,46 +3419,46 @@
         initialize() {
             if (!this.container) return null;
 
-            // 创建包装容器，将 topicNumber 和按钮容器并排放置
-            this._createWrapperLayout();
+            // 将按钮放到 fanyaMarking_right 的右侧外部
+            this._createButtonContainer();
             this._createGlobalButton();
             this._createManageButton();
             return this.globalButton;
         }
 
-        _createWrapperLayout() {
-            // 获取 topicNumber 的父元素
-            const parent = this.container.parentNode;
+        _createButtonContainer() {
+            // 获取 fanyaMarking_right（topicNumber 的父元素）
+            const fanyaMarkingRight = this.container.parentNode;
             
-            // 创建包装容器
-            const wrapper = DOMHelper.createElement('div', {
-                style: {
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px',
-                    width: '100%'
-                }
-            });
-            
-            // 设置 topicNumber 的样式，让它占据大部分空间
-            this.container.style.flex = '1';
-            this.container.style.minWidth = '0';  // 防止内容溢出
-            
-            // 创建按钮容器
+            // 创建按钮容器，使用固定定位放在 fanyaMarking_right 左边
             this.buttonContainer = DOMHelper.createElement('div', {
                 style: {
+                    position: 'fixed',
+                    top: fanyaMarkingRight.style.top || '70px',
+                    right: (parseInt(fanyaMarkingRight.offsetWidth) + 20) + 'px',  // 放在 fanyaMarking_right 左边
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
-                    flexShrink: '0',
-                    paddingTop: '8px'
+                    zIndex: '9999'
                 }
             });
             
-            // 将 topicNumber 插入到包装容器中
-            parent.insertBefore(wrapper, this.container);
-            wrapper.appendChild(this.container);
-            wrapper.appendChild(this.buttonContainer);
+            // 将按钮容器添加到 body
+            document.body.appendChild(this.buttonContainer);
+            
+            // 监听滚动事件，保持按钮位置与 fanyaMarking_right 对齐
+            const updatePosition = () => {
+                const rect = fanyaMarkingRight.getBoundingClientRect();
+                this.buttonContainer.style.top = rect.top + 'px';
+                this.buttonContainer.style.right = (window.innerWidth - rect.left + 10) + 'px';
+            };
+            
+            // 初始更新位置
+            setTimeout(updatePosition, 100);
+            
+            // 滚动时更新位置
+            window.addEventListener('scroll', updatePosition);
+            window.addEventListener('resize', updatePosition);
         }
 
         _createGlobalButton() {
