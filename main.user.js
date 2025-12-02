@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.6.4
-// @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、导出试题为Word文档（含图片、支持多种题型、可配置导出参数）、样式持久化存储。
+// @version      2.6.5
+// @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、双按钮导出试题为Word文档（导出试题/导出答案两个按钮，含图片、支持多种题型、可配置样式参数）、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=chaoxing.com
@@ -287,10 +287,14 @@
                     background: '#38b2ac',   // 按钮背景色（青色）
                     hoverBackground: '#319795', // 悬停背景色
                     textColor: 'white',      // 按钮文字颜色
-                    hoverOpacity: '0.8'      // 鼠标悬停时的透明度
+                    hoverOpacity: '0.8',     // 鼠标悬停时的透明度
+                    // 带答案导出按钮颜色
+                    withAnswerBackground: '#805ad5',  // 紫色
+                    withAnswerHoverBackground: '#6b46c1'
                 },
                 // --- 按钮文字配置 ---
-                text: '📄 导出试题'    // 导出按钮文字
+                text: '📄 导出试题',           // 导出按钮文字（不带答案）
+                textWithAnswer: '📝 导出答案'   // 导出按钮文字（带答案）
             },
 
             // ========== 控制面板保存按钮配置 ==========
@@ -325,7 +329,7 @@
 
             // ========== 导出设置配置 ==========
             exportSettings: {
-                includeAnswer: true,         // 是否导出答案
+                // 注意：includeAnswer 已由导出按钮控制，不再从此配置读取
                 fontFamily: '宋体',          // 字体
                 fontSize: 12,                // 字号（pt）
                 titleFontSize: 18,           // 标题字号（pt）
@@ -2038,7 +2042,6 @@
             // 加载导出设置
             const exportDefaults = this.config.get('exportSettings');
             const exportSettings = {
-                includeAnswer: this.settings.exportIncludeAnswer ?? exportDefaults.includeAnswer,
                 fontFamily: this.settings.exportFontFamily ?? exportDefaults.fontFamily,
                 fontSize: this.settings.exportFontSize ?? exportDefaults.fontSize,
                 titleFontSize: this.settings.exportTitleFontSize ?? exportDefaults.titleFontSize,
@@ -2046,94 +2049,27 @@
                 pageMargin: this.settings.exportPageMargin ?? exportDefaults.pageMargin
             };
 
-            // 主要设置区域
-            const mainContainer = DOMHelper.createElement('div', {
+            // 提示说明区域
+            const tipContainer = DOMHelper.createElement('div', {
                 style: {
-                    backgroundColor: 'white',
+                    backgroundColor: '#ebf8ff',
                     borderRadius: '8px',
-                    padding: '24px',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    marginBottom: '20px'
-                }
-            });
-
-            const sectionTitle = DOMHelper.createElement('div', {
-                innerText: '📄 导出内容设置',
-                style: {
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: '#2d3748',
-                    marginBottom: '20px',
-                    paddingBottom: '10px',
-                    borderBottom: '2px solid #4299e1'
-                }
-            });
-            mainContainer.appendChild(sectionTitle);
-
-            // 是否导出答案（最重要的选项，放在最上面）
-            const answerSection = DOMHelper.createElement('div', {
-                style: {
-                    marginBottom: '24px',
-                    paddingBottom: '24px',
-                    borderBottom: '1px solid #e2e8f0',
-                    backgroundColor: '#f7fafc',
                     padding: '16px',
-                    borderRadius: '8px',
-                    border: '2px solid #4299e1'
+                    marginBottom: '20px',
+                    border: '1px solid #bee3f8'
                 }
             });
 
-            const answerLabel = DOMHelper.createElement('div', {
+            const tipText = DOMHelper.createElement('div', {
+                innerHTML: '💡 <strong>提示：</strong>使用「📄 导出试题」按钮导出不带答案的试卷，使用「📝 导出试题（带答案）」按钮导出带答案的试卷。',
                 style: {
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '8px'
+                    fontSize: '14px',
+                    color: '#2b6cb0',
+                    lineHeight: '1.6'
                 }
             });
-
-            const answerLabelText = DOMHelper.createElement('span', {
-                innerText: '📝 导出答案',
-                style: {
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: '#2d3748'
-                }
-            });
-
-            const answerCheckbox = DOMHelper.createElement('input', {
-                type: 'checkbox',
-                checked: exportSettings.includeAnswer,
-                style: {
-                    width: '24px',
-                    height: '24px',
-                    cursor: 'pointer',
-                    accentColor: '#4299e1'
-                }
-            });
-
-            answerCheckbox.addEventListener('change', () => {
-                this.settings.exportIncludeAnswer = answerCheckbox.checked;
-            });
-
-            answerLabel.appendChild(answerLabelText);
-            answerLabel.appendChild(answerCheckbox);
-
-            const answerDesc = DOMHelper.createElement('div', {
-                innerText: '勾选后导出的文档将包含答案块（我的答案、正确答案、得分等）。取消勾选则只导出题目和选项。',
-                style: {
-                    fontSize: '13px',
-                    color: '#718096',
-                    marginTop: '8px',
-                    lineHeight: '1.5'
-                }
-            });
-
-            answerSection.appendChild(answerLabel);
-            answerSection.appendChild(answerDesc);
-            mainContainer.appendChild(answerSection);
-
-            container.appendChild(mainContainer);
+            tipContainer.appendChild(tipText);
+            container.appendChild(tipContainer);
 
             // 样式设置区域
             const styleContainer = DOMHelper.createElement('div', {
@@ -2264,8 +2200,7 @@
 
             saveButton.addEventListener('click', async () => {
                 try {
-                    // 保存导出设置
-                    await this.dbManager.saveSetting('exportIncludeAnswer', this.settings.exportIncludeAnswer ?? exportSettings.includeAnswer);
+                    // 保存导出设置（不含答案设置，答案由按钮控制）
                     await this.dbManager.saveSetting('exportFontFamily', this.settings.exportFontFamily ?? exportSettings.fontFamily);
                     await this.dbManager.saveSetting('exportFontSize', this.settings.exportFontSize ?? exportSettings.fontSize);
                     await this.dbManager.saveSetting('exportTitleFontSize', this.settings.exportTitleFontSize ?? exportSettings.titleFontSize);
@@ -3876,31 +3811,61 @@
 
         _createExportButton() {
             const buttonText = this.config.get('exportButton.text');
+            const buttonTextWithAnswer = this.config.get('exportButton.textWithAnswer');
+            const colors = this.config.get('exportButton.colors');
+            
+            // 创建导出试题按钮（不带答案）
             this.exportButton = DOMHelper.createElement('button', {
                 innerText: buttonText,
                 style: this.styleGenerator.getExportButtonStyle(),
-                title: '导出试题为Word文档（.docx格式）'
+                title: '导出试题为Word文档（不含答案）'
             });
 
             // 使用统一的悬停效果管理
             this.styleGenerator.addSimpleHoverEffect(this.exportButton, 'exportButton');
 
-            this.exportButton.addEventListener('click', () => this._handleExport());
+            this.exportButton.addEventListener('click', () => this._handleExport(false));
             this.buttonContainer.appendChild(this.exportButton);
+            
+            // 创建导出答案按钮（带答案）
+            const exportWithAnswerStyle = this.styleGenerator.getExportButtonStyle();
+            exportWithAnswerStyle.background = colors.withAnswerBackground;
+            
+            this.exportWithAnswerButton = DOMHelper.createElement('button', {
+                innerText: buttonTextWithAnswer,
+                style: exportWithAnswerStyle,
+                title: '导出试题为Word文档（含答案）'
+            });
+
+            // 手动添加悬停效果（使用紫色）
+            this.exportWithAnswerButton.addEventListener('mouseenter', () => {
+                this.exportWithAnswerButton.style.background = colors.withAnswerHoverBackground;
+                this.exportWithAnswerButton.style.transform = 'translateY(-1px)';
+            });
+            this.exportWithAnswerButton.addEventListener('mouseleave', () => {
+                this.exportWithAnswerButton.style.background = colors.withAnswerBackground;
+                this.exportWithAnswerButton.style.transform = 'translateY(0)';
+            });
+
+            this.exportWithAnswerButton.addEventListener('click', () => this._handleExport(true));
+            this.buttonContainer.appendChild(this.exportWithAnswerButton);
         }
 
-        async _handleExport() {
+        async _handleExport(includeAnswer = false) {
+            // 确定当前操作的按钮
+            const currentButton = includeAnswer ? this.exportWithAnswerButton : this.exportButton;
+            const originalText = currentButton.innerText;
+            
             try {
                 // 显示导出中状态
-                const originalText = this.exportButton.innerText;
-                this.exportButton.innerText = '⏳ 导出中...';
-                this.exportButton.disabled = true;
+                currentButton.innerText = '⏳ 导出中...';
+                currentButton.disabled = true;
 
                 // 从控制器中获取答案信息
                 if (this.controllers.length === 0) {
                     alert('未找到任何试题');
-                    this.exportButton.innerText = originalText;
-                    this.exportButton.disabled = false;
+                    currentButton.innerText = originalText;
+                    currentButton.disabled = false;
                     return;
                 }
 
@@ -3909,22 +3874,22 @@
 
                 if (!docContent.questions || docContent.questions.length === 0) {
                     alert('未能解析到试题内容');
-                    this.exportButton.innerText = originalText;
-                    this.exportButton.disabled = false;
+                    currentButton.innerText = originalText;
+                    currentButton.disabled = false;
                     return;
                 }
 
-                // 生成并下载文档
-                await this._generateDocx(docContent);
+                // 生成并下载文档，传入是否包含答案的参数
+                await this._generateDocx(docContent, includeAnswer);
 
                 // 恢复按钮状态
-                this.exportButton.innerText = originalText;
-                this.exportButton.disabled = false;
+                currentButton.innerText = originalText;
+                currentButton.disabled = false;
             } catch (error) {
                 console.error('导出失败:', error);
                 alert('导出失败，请重试');
-                this.exportButton.innerText = this.config.get('exportButton.text');
-                this.exportButton.disabled = false;
+                currentButton.innerText = originalText;
+                currentButton.disabled = false;
             }
         }
 
@@ -4060,14 +4025,13 @@
             return { docTitle, questions: content };
         }
 
-        async _generateDocx(content) {
-            // 获取导出设置
+        async _generateDocx(content, includeAnswer = false) {
+            // 获取导出设置（答案由参数控制，不从设置读取）
             const exportDefaults = this.config.get('exportSettings');
             let exportSettings = {};
             try {
                 const allSettings = await this.dbManager.getAllSettings();
                 exportSettings = {
-                    includeAnswer: allSettings.exportIncludeAnswer ?? exportDefaults.includeAnswer,
                     fontFamily: allSettings.exportFontFamily ?? exportDefaults.fontFamily,
                     fontSize: allSettings.exportFontSize ?? exportDefaults.fontSize,
                     titleFontSize: allSettings.exportTitleFontSize ?? exportDefaults.titleFontSize,
@@ -4454,8 +4418,8 @@
         <div class="question-header">${this._escapeHtml(item.title)}</div>
         <div class="question-content">${processedQuestionHtml}</div>`;
 
-                // 根据设置决定是否导出答案
-                if (exportSettings.includeAnswer && item.answerHTML) {
+                // 根据参数决定是否导出答案
+                if (includeAnswer && item.answerHTML) {
                     const processedAnswerHtml = await processImagesInHtml(cleanHtml(item.answerHTML || ''));
                     htmlContent += `
         <div class="answer-section">
