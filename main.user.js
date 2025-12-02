@@ -3016,15 +3016,12 @@
          * @returns {Object} 样式对象
          */
         getGlobalButtonStyle(isHidden = true) {
-            const position = this.config.get('globalButton.position');
             const style = this.config.get('globalButton.style');
             const colors = this.config.get('globalButton.colors');
 
             return {
-                position: 'absolute',
-                top: position.top,
-                right: position.right,
-                zIndex: position.zIndex,
+                display: 'inline-block',
+                whiteSpace: 'nowrap',
                 border: style.border,
                 borderRadius: style.borderRadius,
                 padding: style.padding,
@@ -3071,15 +3068,12 @@
          * @returns {Object} 样式对象
          */
         getManageButtonStyle() {
-            const position = this.config.get('manageButton.position');
             const style = this.config.get('manageButton.style');
             const colors = this.config.get('manageButton.colors');
 
             return {
-                position: 'absolute',
-                top: position.top,
-                right: position.right,
-                zIndex: position.zIndex,
+                display: 'inline-block',
+                whiteSpace: 'nowrap',
                 border: style.border,
                 borderRadius: style.borderRadius,
                 padding: style.padding,
@@ -3419,15 +3413,52 @@
             this.workKey = workKey;
             this.globalButton = null;
             this.manageButton = null;
+            this.buttonContainer = null;
         }
 
         initialize() {
             if (!this.container) return null;
 
-            DOMHelper.ensureRelativePosition(this.container);
+            // 创建包装容器，将 topicNumber 和按钮容器并排放置
+            this._createWrapperLayout();
             this._createGlobalButton();
             this._createManageButton();
             return this.globalButton;
+        }
+
+        _createWrapperLayout() {
+            // 获取 topicNumber 的父元素
+            const parent = this.container.parentNode;
+            
+            // 创建包装容器
+            const wrapper = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    width: '100%'
+                }
+            });
+            
+            // 设置 topicNumber 的样式，让它占据大部分空间
+            this.container.style.flex = '1';
+            this.container.style.minWidth = '0';  // 防止内容溢出
+            
+            // 创建按钮容器
+            this.buttonContainer = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    flexShrink: '0',
+                    paddingTop: '8px'
+                }
+            });
+            
+            // 将 topicNumber 插入到包装容器中
+            parent.insertBefore(wrapper, this.container);
+            wrapper.appendChild(this.container);
+            wrapper.appendChild(this.buttonContainer);
         }
 
         _createGlobalButton() {
@@ -3456,7 +3487,7 @@
             });
 
             this.globalButton.addEventListener('click', () => this._handleGlobalToggle());
-            this.container.appendChild(this.globalButton);
+            this.buttonContainer.appendChild(this.globalButton);
         }
 
         _createManageButton() {
@@ -3483,7 +3514,7 @@
             });
 
             this.manageButton.addEventListener('click', () => this._handleManageClick());
-            this.container.appendChild(this.manageButton);
+            this.buttonContainer.appendChild(this.manageButton);
         }
 
         _handleManageClick() {
