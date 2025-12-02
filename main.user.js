@@ -3430,12 +3430,11 @@
             // 获取 fanyaMarking_right（topicNumber 的父元素）
             const fanyaMarkingRight = this.container.parentNode;
             
-            // 创建按钮容器，使用固定定位放在 fanyaMarking_right 左边
+            // 创建按钮容器，使用固定定位放在 fanyaMarking_right 右边
             this.buttonContainer = DOMHelper.createElement('div', {
                 style: {
                     position: 'fixed',
                     top: fanyaMarkingRight.style.top || '70px',
-                    right: (parseInt(fanyaMarkingRight.offsetWidth) + 20) + 'px',  // 放在 fanyaMarking_right 左边
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
@@ -3450,7 +3449,8 @@
             const updatePosition = () => {
                 const rect = fanyaMarkingRight.getBoundingClientRect();
                 this.buttonContainer.style.top = rect.top + 'px';
-                this.buttonContainer.style.right = (window.innerWidth - rect.left + 10) + 'px';
+                // 放在 fanyaMarking_right 右边外部，间隔 10px
+                this.buttonContainer.style.left = (rect.right + 10) + 'px';
             };
             
             // 初始更新位置
