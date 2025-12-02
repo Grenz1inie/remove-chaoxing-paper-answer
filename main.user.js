@@ -2891,15 +2891,18 @@
             this.config = config;
         }
 
+        // ========== 通用按钮样式生成方法 ==========
+        
         /**
-         * 获取单个答案按钮的样式
-         * @param {boolean} isHidden - 是否为隐藏状态
+         * 生成内联按钮样式（答案、笔记、保存、编辑等按钮）
+         * @param {string} configKey - 配置键名（如 'answerButton', 'noteButton'）
+         * @param {string} bgColorKey - 背景色配置键名
          * @returns {Object} 样式对象
          */
-        getAnswerButtonStyle(isHidden = true) {
-            const position = this.config.get('answerButton.position');
-            const style = this.config.get('answerButton.style');
-            const colors = this.config.get('answerButton.colors');
+        _getInlineButtonStyle(configKey, bgColorKey) {
+            const position = this.config.get(`${configKey}.position`);
+            const style = this.config.get(`${configKey}.style`);
+            const colors = this.config.get(`${configKey}.colors`);
 
             return {
                 marginLeft: position.marginLeft,
@@ -2910,7 +2913,7 @@
                 padding: style.padding,
                 border: style.border,
                 borderRadius: style.borderRadius,
-                background: isHidden ? colors.showBackground : colors.hideBackground,
+                background: colors[bgColorKey],
                 color: colors.textColor,
                 fontSize: style.fontSize,
                 fontWeight: style.fontWeight,
@@ -2922,102 +2925,14 @@
         }
 
         /**
-         * 获取笔记按钮的样式
-         * @param {boolean} isVisible - 笔记是否可见
+         * 生成浮动按钮样式（全局、控制面板按钮）
+         * @param {string} configKey - 配置键名
+         * @param {string} bgColorKey - 背景色配置键名
          * @returns {Object} 样式对象
          */
-        getNoteButtonStyle(isVisible = false) {
-            const position = this.config.get('noteButton.position');
-            const style = this.config.get('noteButton.style');
-            const colors = this.config.get('noteButton.colors');
-
-            return {
-                marginLeft: position.marginLeft,
-                marginRight: position.marginRight,
-                marginTop: position.marginTop,
-                marginBottom: position.marginBottom,
-                verticalAlign: position.verticalAlign,
-                padding: style.padding,
-                border: style.border,
-                borderRadius: style.borderRadius,
-                background: isVisible ? colors.hideBackground : colors.showBackground,
-                color: colors.textColor,
-                fontSize: style.fontSize,
-                fontWeight: style.fontWeight,
-                cursor: style.cursor,
-                transition: style.transition,
-                boxShadow: style.boxShadow,
-                display: 'inline-block'
-            };
-        }
-
-        /**
-         * 获取保存笔记按钮的样式
-         * @returns {Object} 样式对象
-         */
-        getSaveNoteButtonStyle() {
-            const position = this.config.get('saveNoteButton.position');
-            const style = this.config.get('saveNoteButton.style');
-            const colors = this.config.get('saveNoteButton.colors');
-
-            return {
-                marginLeft: position.marginLeft,
-                marginRight: position.marginRight,
-                marginTop: position.marginTop,
-                marginBottom: position.marginBottom,
-                verticalAlign: position.verticalAlign,
-                padding: style.padding,
-                border: style.border,
-                borderRadius: style.borderRadius,
-                background: colors.background,
-                color: colors.textColor,
-                fontSize: style.fontSize,
-                fontWeight: style.fontWeight,
-                cursor: style.cursor,
-                transition: style.transition,
-                boxShadow: style.boxShadow,
-                display: 'inline-block'
-            };
-        }
-
-        /**
-         * 获取编辑模式切换按钮的样式
-         * @param {boolean} isEditMode - 是否为编辑模式
-         * @returns {Object} 样式对象
-         */
-        getEditModeButtonStyle(isEditMode = false) {
-            const position = this.config.get('editModeButton.position');
-            const style = this.config.get('editModeButton.style');
-            const colors = this.config.get('editModeButton.colors');
-
-            return {
-                marginLeft: position.marginLeft,
-                marginRight: position.marginRight,
-                marginTop: position.marginTop,
-                marginBottom: position.marginBottom,
-                verticalAlign: position.verticalAlign,
-                padding: style.padding,
-                border: style.border,
-                borderRadius: style.borderRadius,
-                background: isEditMode ? colors.previewBackground : colors.editBackground,
-                color: colors.textColor,
-                fontSize: style.fontSize,
-                fontWeight: style.fontWeight,
-                cursor: style.cursor,
-                transition: style.transition,
-                boxShadow: style.boxShadow,
-                display: 'inline-block'
-            };
-        }
-
-        /**
-         * 获取全局按钮的样式
-         * @param {boolean} isHidden - 是否为全部隐藏状态
-         * @returns {Object} 样式对象
-         */
-        getGlobalButtonStyle(isHidden = true) {
-            const style = this.config.get('globalButton.style');
-            const colors = this.config.get('globalButton.colors');
+        _getFloatingButtonStyle(configKey, bgColorKey) {
+            const style = this.config.get(`${configKey}.style`);
+            const colors = this.config.get(`${configKey}.colors`);
 
             return {
                 display: 'inline-block',
@@ -3031,14 +2946,96 @@
                 cursor: style.cursor,
                 transition: style.transition,
                 boxShadow: style.boxShadow,
-                background: isHidden ? colors.showAllBackground : colors.hideAllBackground
+                background: colors[bgColorKey]
             };
         }
 
+        // ========== 具体按钮样式获取方法 ==========
+
+        getAnswerButtonStyle(isHidden = true) {
+            return this._getInlineButtonStyle('answerButton', isHidden ? 'showBackground' : 'hideBackground');
+        }
+
+        getNoteButtonStyle(isVisible = false) {
+            return this._getInlineButtonStyle('noteButton', isVisible ? 'hideBackground' : 'showBackground');
+        }
+
+        getSaveNoteButtonStyle() {
+            return this._getInlineButtonStyle('saveNoteButton', 'background');
+        }
+
+        getEditModeButtonStyle(isEditMode = false) {
+            return this._getInlineButtonStyle('editModeButton', isEditMode ? 'previewBackground' : 'editBackground');
+        }
+
+        getGlobalButtonStyle(isHidden = true) {
+            return this._getFloatingButtonStyle('globalButton', isHidden ? 'showAllBackground' : 'hideAllBackground');
+        }
+
+        getManageButtonStyle() {
+            return this._getFloatingButtonStyle('manageButton', 'background');
+        }
+
+        // ========== 悬停效果管理 ==========
+
         /**
-         * 获取笔记编辑器的样式
-         * @returns {Object} 样式对象
+         * 为按钮添加统一的悬停动画效果
+         * @param {HTMLElement} button - 按钮元素
+         * @param {Object} options - 配置选项
+         * @param {Function} options.getHoverBg - 获取悬停背景色的函数
+         * @param {Function} options.getNormalBg - 获取正常背景色的函数
          */
+        addHoverEffect(button, options) {
+            const { getHoverBg, getNormalBg } = options;
+            
+            button.addEventListener('mouseenter', () => {
+                button.style.backgroundColor = getHoverBg();
+                button.style.transform = 'translateY(-1px)';
+                button.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+            });
+
+            button.addEventListener('mouseleave', () => {
+                button.style.backgroundColor = getNormalBg();
+                button.style.transform = 'translateY(0)';
+                button.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+        }
+
+        /**
+         * 为双状态按钮添加悬停效果（如显示/隐藏按钮）
+         * @param {HTMLElement} button - 按钮元素
+         * @param {string} configKey - 配置键名
+         * @param {Function} getState - 获取当前状态的函数
+         * @param {string} trueHoverKey - 状态为true时的悬停色配置键
+         * @param {string} falseHoverKey - 状态为false时的悬停色配置键
+         * @param {string} trueBgKey - 状态为true时的背景色配置键
+         * @param {string} falseBgKey - 状态为false时的背景色配置键
+         */
+        addToggleHoverEffect(button, configKey, getState, trueHoverKey, falseHoverKey, trueBgKey, falseBgKey) {
+            const colors = this.config.get(`${configKey}.colors`);
+            
+            this.addHoverEffect(button, {
+                getHoverBg: () => getState() ? colors[trueHoverKey] : colors[falseHoverKey],
+                getNormalBg: () => getState() ? colors[trueBgKey] : colors[falseBgKey]
+            });
+        }
+
+        /**
+         * 为单状态按钮添加悬停效果
+         * @param {HTMLElement} button - 按钮元素
+         * @param {string} configKey - 配置键名
+         */
+        addSimpleHoverEffect(button, configKey) {
+            const colors = this.config.get(`${configKey}.colors`);
+            
+            this.addHoverEffect(button, {
+                getHoverBg: () => colors.hoverBackground,
+                getNormalBg: () => colors.background
+            });
+        }
+
+        // ========== 笔记编辑器样式 ==========
+
         getNoteEditorStyle() {
             const noteConfig = this.config.get('noteEditor');
 
@@ -3060,30 +3057,6 @@
                 display: 'none',
                 transition: 'border-color 0.2s',
                 boxSizing: 'border-box'
-            };
-        }
-
-        /**
-         * 获取管理按钮的样式
-         * @returns {Object} 样式对象
-         */
-        getManageButtonStyle() {
-            const style = this.config.get('manageButton.style');
-            const colors = this.config.get('manageButton.colors');
-
-            return {
-                display: 'inline-block',
-                whiteSpace: 'nowrap',
-                border: style.border,
-                borderRadius: style.borderRadius,
-                padding: style.padding,
-                fontSize: style.fontSize,
-                fontWeight: style.fontWeight,
-                color: colors.textColor,
-                cursor: style.cursor,
-                transition: style.transition,
-                boxShadow: style.boxShadow,
-                background: colors.background
             };
         }
     }
@@ -3176,22 +3149,14 @@
                 }
             });
 
-            // 添加悬停动画效果
-            this.toggleButton.addEventListener('mouseenter', () => {
-                const colors = this.config.get('answerButton.colors');
-                const isHidden = this.toggleButton.dataset.isHidden === 'true';
-                this.toggleButton.style.backgroundColor = isHidden ? colors.showHoverBackground : colors.hideHoverBackground;
-                this.toggleButton.style.transform = 'translateY(-1px)';
-                this.toggleButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-            });
-
-            this.toggleButton.addEventListener('mouseleave', () => {
-                const colors = this.config.get('answerButton.colors');
-                const isHidden = this.toggleButton.dataset.isHidden === 'true';
-                this.toggleButton.style.backgroundColor = isHidden ? colors.showBackground : colors.hideBackground;
-                this.toggleButton.style.transform = 'translateY(0)';
-                this.toggleButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            });
+            // 使用统一的悬停效果管理
+            this.styleGenerator.addToggleHoverEffect(
+                this.toggleButton,
+                'answerButton',
+                () => this.toggleButton.dataset.isHidden === 'true',
+                'showHoverBackground', 'hideHoverBackground',
+                'showBackground', 'hideBackground'
+            );
 
             this.toggleButton.addEventListener('click', () => this._handleAnswerToggle());
             this.buttonContainer.appendChild(this.toggleButton);
@@ -3208,22 +3173,14 @@
                 }
             });
 
-            // 添加悬停动画效果
-            this.noteButton.addEventListener('mouseenter', () => {
-                const colors = this.config.get('noteButton.colors');
-                const isVisible = this.noteEditor.isVisible;
-                this.noteButton.style.backgroundColor = isVisible ? colors.hideHoverBackground : colors.showHoverBackground;
-                this.noteButton.style.transform = 'translateY(-1px)';
-                this.noteButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-            });
-
-            this.noteButton.addEventListener('mouseleave', () => {
-                const colors = this.config.get('noteButton.colors');
-                const isVisible = this.noteEditor.isVisible;
-                this.noteButton.style.backgroundColor = isVisible ? colors.hideBackground : colors.showBackground;
-                this.noteButton.style.transform = 'translateY(0)';
-                this.noteButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            });
+            // 使用统一的悬停效果管理
+            this.styleGenerator.addToggleHoverEffect(
+                this.noteButton,
+                'noteButton',
+                () => !this.noteEditor.isVisible,
+                'showHoverBackground', 'hideHoverBackground',
+                'showBackground', 'hideBackground'
+            );
 
             this.noteButton.addEventListener('click', () => this._handleNoteToggle());
             this.buttonContainer.appendChild(this.noteButton);
@@ -3240,21 +3197,14 @@
                 title: '切换编辑/预览模式'
             });
 
-            this.editModeButton.addEventListener('mouseenter', () => {
-                const colors = this.config.get('editModeButton.colors');
-                const isEditMode = this.noteEditor.isEditMode;
-                this.editModeButton.style.backgroundColor = isEditMode ? colors.previewHoverBackground : colors.editHoverBackground;
-                this.editModeButton.style.transform = 'translateY(-1px)';
-                this.editModeButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-            });
-
-            this.editModeButton.addEventListener('mouseleave', () => {
-                const colors = this.config.get('editModeButton.colors');
-                const isEditMode = this.noteEditor.isEditMode;
-                this.editModeButton.style.backgroundColor = isEditMode ? colors.previewBackground : colors.editBackground;
-                this.editModeButton.style.transform = 'translateY(0)';
-                this.editModeButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            });
+            // 使用统一的悬停效果管理
+            this.styleGenerator.addToggleHoverEffect(
+                this.editModeButton,
+                'editModeButton',
+                () => !this.noteEditor.isEditMode,
+                'editHoverBackground', 'previewHoverBackground',
+                'editBackground', 'previewBackground'
+            );
 
             this.editModeButton.addEventListener('click', () => {
                 const buttonText = this.config.get('editModeButton.text');
@@ -3264,11 +3214,9 @@
                 if (this.noteEditor.isEditMode) {
                     this.editModeButton.innerText = buttonText.preview;
                     this.editModeButton.style.backgroundColor = colors.previewBackground;
-                    this.editModeButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
                 } else {
                     this.editModeButton.innerText = buttonText.edit;
                     this.editModeButton.style.backgroundColor = colors.editBackground;
-                    this.editModeButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
                 }
             });
 
@@ -3285,20 +3233,8 @@
                 title: '手动保存当前笔记'
             });
 
-            // 添加悬停动画效果
-            this.saveNoteButton.addEventListener('mouseenter', () => {
-                const colors = this.config.get('saveNoteButton.colors');
-                this.saveNoteButton.style.backgroundColor = colors.hoverBackground;
-                this.saveNoteButton.style.transform = 'translateY(-1px)';
-                this.saveNoteButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-            });
-
-            this.saveNoteButton.addEventListener('mouseleave', () => {
-                const colors = this.config.get('saveNoteButton.colors');
-                this.saveNoteButton.style.backgroundColor = colors.background;
-                this.saveNoteButton.style.transform = 'translateY(0)';
-                this.saveNoteButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            });
+            // 使用统一的悬停效果管理
+            this.styleGenerator.addSimpleHoverEffect(this.saveNoteButton, 'saveNoteButton');
 
             this.saveNoteButton.addEventListener('click', async () => {
                 await this.noteEditor.save();
@@ -3469,22 +3405,14 @@
                 title: '点击一键显示/隐藏所有答案块'
             });
 
-            // 添加悬停动画效果
-            this.globalButton.addEventListener('mouseenter', () => {
-                const colors = this.config.get('globalButton.colors');
-                const allHidden = this.controllers.every(ctrl => ctrl.getState());
-                this.globalButton.style.backgroundColor = allHidden ? colors.showAllHoverBackground : colors.hideAllHoverBackground;
-                this.globalButton.style.transform = 'translateY(-1px)';
-                this.globalButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-            });
-
-            this.globalButton.addEventListener('mouseleave', () => {
-                const colors = this.config.get('globalButton.colors');
-                const allHidden = this.controllers.every(ctrl => ctrl.getState());
-                this.globalButton.style.backgroundColor = allHidden ? colors.showAllBackground : colors.hideAllBackground;
-                this.globalButton.style.transform = 'translateY(0)';
-                this.globalButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            });
+            // 使用统一的悬停效果管理
+            this.styleGenerator.addToggleHoverEffect(
+                this.globalButton,
+                'globalButton',
+                () => this.controllers.every(ctrl => ctrl.getState()),
+                'showAllHoverBackground', 'hideAllHoverBackground',
+                'showAllBackground', 'hideAllBackground'
+            );
 
             this.globalButton.addEventListener('click', () => this._handleGlobalToggle());
             this.buttonContainer.appendChild(this.globalButton);
@@ -3498,20 +3426,8 @@
                 title: '打开控制面板：设置和笔记管理'
             });
 
-            // 添加悬停动画效果
-            this.manageButton.addEventListener('mouseenter', () => {
-                const colors = this.config.get('manageButton.colors');
-                this.manageButton.style.backgroundColor = colors.hoverBackground;
-                this.manageButton.style.transform = 'translateY(-1px)';
-                this.manageButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-            });
-
-            this.manageButton.addEventListener('mouseleave', () => {
-                const colors = this.config.get('manageButton.colors');
-                this.manageButton.style.backgroundColor = colors.background;
-                this.manageButton.style.transform = 'translateY(0)';
-                this.manageButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            });
+            // 使用统一的悬停效果管理
+            this.styleGenerator.addSimpleHoverEffect(this.manageButton, 'manageButton');
 
             this.manageButton.addEventListener('click', () => this._handleManageClick());
             this.buttonContainer.appendChild(this.manageButton);
