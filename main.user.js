@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.6.5
+// @version      2.6.6
 // @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、双按钮导出试题为Word文档（导出试题/导出答案两个按钮，含图片、支持多种题型、可配置样式参数）、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -4194,11 +4194,18 @@
                 return tempDiv.innerHTML;
             };
 
-            // 清理HTML，保留原始样式和结构
+            // 清理HTML，保留原始样式和结构，移除不需要的元素
             const cleanHtml = (html) => {
                 if (!html) return '';
-                // 直接返回原始HTML，保留所有样式
-                return html;
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                
+                // 移除 element-invisible-hidden 类的元素（包含选项完整内容，如":1968年NATO会议"）
+                // 用户只需要答案字母（如"B"），不需要这些冗余内容
+                const hiddenElements = tempDiv.querySelectorAll('.element-invisible-hidden');
+                hiddenElements.forEach(el => el.remove());
+                
+                return tempDiv.innerHTML;
             };
 
             // 构建纯HTML格式文档（Word可以直接打开.doc格式的HTML）
