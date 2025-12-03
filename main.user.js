@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.0
+// @version      2.7.1
 // @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、双按钮导出试题为Word文档（导出试题/导出答案两个按钮，含图片、支持多种题型、可配置样式参数）、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -181,20 +181,20 @@
             globalButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    top: '10px',             // 距离容器顶部的距离
-                    right: '10px',           // 距离容器右侧的距离
+                    top: '8px',              // 距离容器顶部的距离
+                    right: '8px',            // 距离容器右侧的距离
                     zIndex: '9999'           // 层级（确保在最上层）
                 },
                 // --- 按钮样式配置 ---
                 style: {
-                    fontSize: '14px',        // 字体大小（增大）
-                    padding: '8px 16px',     // 内边距（增大）
-                    borderRadius: '8px',     // 圆角半径（增大）
+                    fontSize: '13px',        // 字体大小
+                    padding: '6px 12px',     // 内边距
+                    borderRadius: '6px',     // 圆角半径
                     border: 'none',          // 边框样式
-                    fontWeight: '600',       // 字体粗细（加粗）
+                    fontWeight: '500',       // 字体粗细
                     cursor: 'pointer',       // 鼠标样式
                     transition: 'all 0.2s',  // 过渡动画
-                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'  // 阴影效果（增强）
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
@@ -243,20 +243,20 @@
             manageButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    top: '50px',             // 距离容器顶部的距离（在全局按钮下方，因按钮变大需调整）
-                    right: '10px',           // 距离容器右侧的距离
+                    top: '42px',             // 距离容器顶部的距离（在全局按钮下方）
+                    right: '8px',            // 距离容器右侧的距离
                     zIndex: '9999'           // 层级（确保在最上层）
                 },
                 // --- 按钮样式配置 ---
                 style: {
-                    fontSize: '14px',        // 字体大小（增大）
-                    padding: '8px 16px',     // 内边距（增大）
-                    borderRadius: '8px',     // 圆角半径（增大）
+                    fontSize: '13px',        // 字体大小
+                    padding: '6px 12px',     // 内边距
+                    borderRadius: '6px',     // 圆角半径
                     border: 'none',          // 边框样式
-                    fontWeight: '600',       // 字体粗细（加粗）
+                    fontWeight: '500',       // 字体粗细
                     cursor: 'pointer',       // 鼠标样式
                     transition: 'all 0.2s',  // 过渡动画
-                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'  // 阴影效果（增强）
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
@@ -273,14 +273,14 @@
             exportButton: {
                 // --- 按钮样式配置 ---
                 style: {
-                    fontSize: '14px',        // 字体大小（增大）
-                    padding: '8px 16px',     // 内边距（增大）
-                    borderRadius: '8px',     // 圆角半径（增大）
+                    fontSize: '13px',        // 字体大小
+                    padding: '6px 12px',     // 内边距
+                    borderRadius: '6px',     // 圆角半径
                     border: 'none',          // 边框样式
-                    fontWeight: '600',       // 字体粗细（加粗）
+                    fontWeight: '500',       // 字体粗细
                     cursor: 'pointer',       // 鼠标样式
                     transition: 'all 0.2s',  // 过渡动画
-                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'  // 阴影效果（增强）
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
@@ -1723,15 +1723,15 @@
                     bottom: '0',
                     left: '0',
                     right: '0',
-                    padding: '16px 24px',
+                    padding: '12px 20px',
                     backgroundColor: 'white',
                     borderTop: '1px solid #e2e8f0',
                     display: 'flex',
                     justifyContent: onReset ? 'space-between' : 'flex-end',
                     alignItems: 'center',
-                    boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.08)',
+                    boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.06)',
                     zIndex: '100',
-                    marginTop: '20px',
+                    marginTop: '16px',
                     marginLeft: '-30px',
                     marginRight: '-30px',
                     marginBottom: '-30px',
@@ -1744,18 +1744,15 @@
                 const resetButton = DOMHelper.createElement('button', {
                     innerText: resetText,
                     style: {
-                        padding: '10px 20px',
+                        padding: '8px 16px',
                         border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
+                        borderRadius: '6px',
                         backgroundColor: 'white',
                         color: '#718096',
-                        fontSize: '14px',
-                        fontWeight: '600',
+                        fontSize: '13px',
+                        fontWeight: '500',
                         cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
+                        transition: 'all 0.2s'
                     }
                 });
 
@@ -1781,19 +1778,16 @@
             const saveButton = DOMHelper.createElement('button', {
                 innerText: saveText,
                 style: {
-                    padding: '10px 24px',
+                    padding: '8px 18px',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     backgroundColor: buttonConfig.colors.background,
                     color: buttonConfig.colors.textColor,
-                    fontSize: '14px',
-                    fontWeight: '600',
+                    fontSize: '13px',
+                    fontWeight: '500',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
-                    boxShadow: buttonConfig.colors.boxShadow,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
+                    boxShadow: buttonConfig.colors.boxShadow
                 }
             });
 
