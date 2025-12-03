@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.1
+// @version      2.7.2
 // @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、双按钮导出试题为Word文档（导出试题/导出答案两个按钮，含图片、支持多种题型、可配置样式参数）、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -181,7 +181,7 @@
             globalButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    top: '8px',              // 距离容器顶部的距离
+                    top: '42px',             // 距离容器顶部的距离（在控制面板按钮下方）
                     right: '8px',            // 距离容器右侧的距离
                     zIndex: '9999'           // 层级（确保在最上层）
                 },
@@ -243,7 +243,7 @@
             manageButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    top: '42px',             // 距离容器顶部的距离（在全局按钮下方）
+                    top: '8px',              // 距离容器顶部的距离（在全局按钮上方）
                     right: '8px',            // 距离容器右侧的距离
                     zIndex: '9999'           // 层级（确保在最上层）
                 },
@@ -266,7 +266,7 @@
                     hoverOpacity: '0.8'      // 鼠标悬停时的透明度
                 },
                 // --- 按钮文字配置 ---
-                text: '⚙️ 控制面板'    // 控制面板按钮文字
+                text: '控制面板'    // 控制面板按钮文字
             },
 
             // ========== 导出试题按钮配置 ==========
@@ -939,7 +939,7 @@
                 { icon: '"', title: '引用', command: 'formatBlock', value: '<blockquote>' },
                 { type: 'separator' },
                 { icon: '🔗', title: '插入链接', command: 'createLink', prompt: true },
-                { icon: '<>', title: '代码', command: 'code' },
+                { icon: '</>', title: '代码', command: 'code' },
                 { icon: '—', title: '分隔线', command: 'insertHorizontalRule' },
                 { type: 'separator' },
                 { icon: '↶', title: '撤销', command: 'undo' },
@@ -1232,6 +1232,7 @@
             this.settings = {};
             this.notesMenuExpanded = false; // 管理笔记子菜单是否展开
             this.notesSortBy = 'time'; // 'time' 或 'alpha' (字母序)
+            this.notesSortOrder = 'desc'; // 'asc' 升序 或 'desc' 降序
             
             // 解析 workKey 获取 courseId, classId, workId
             const parts = workKey.split('_');
@@ -1731,11 +1732,7 @@
                     alignItems: 'center',
                     boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.06)',
                     zIndex: '100',
-                    marginTop: '16px',
-                    marginLeft: '-30px',
-                    marginRight: '-30px',
-                    marginBottom: '-30px',
-                    width: 'calc(100% + 60px)'
+                    marginTop: '16px'
                 }
             });
 
@@ -2458,33 +2455,84 @@
                 }
             });
 
-            // 排序按钮
-            const sortBtn = DOMHelper.createElement('button', {
-                innerText: this.notesSortBy === 'time' ? '🕒 时间序' : '🔤 字母序',
+            // 时间排序按钮
+            const timeSortBtn = DOMHelper.createElement('button', {
+                innerText: this.notesSortBy === 'time' 
+                    ? (this.notesSortOrder === 'desc' ? '🕒 时间 ↓' : '🕒 时间 ↑')
+                    : '🕒 时间',
                 style: {
-                    padding: '6px 14px',
+                    padding: '6px 12px',
                     border: '1px solid #cbd5e0',
                     borderRadius: '4px',
-                    backgroundColor: 'white',
+                    backgroundColor: this.notesSortBy === 'time' ? '#4299e1' : 'white',
+                    color: this.notesSortBy === 'time' ? 'white' : '#4a5568',
                     cursor: 'pointer',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: '500',
                     transition: 'all 0.2s'
                 }
             });
 
-            sortBtn.addEventListener('mouseenter', () => {
-                sortBtn.style.transform = 'translateY(-1px)';
-                sortBtn.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            timeSortBtn.addEventListener('mouseenter', () => {
+                timeSortBtn.style.transform = 'translateY(-1px)';
+                timeSortBtn.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
 
-            sortBtn.addEventListener('mouseleave', () => {
-                sortBtn.style.transform = 'translateY(0)';
-                sortBtn.style.boxShadow = 'none';
+            timeSortBtn.addEventListener('mouseleave', () => {
+                timeSortBtn.style.transform = 'translateY(0)';
+                timeSortBtn.style.boxShadow = 'none';
             });
 
-            sortBtn.addEventListener('click', () => {
-                this.notesSortBy = this.notesSortBy === 'time' ? 'alpha' : 'time';
+            timeSortBtn.addEventListener('click', () => {
+                if (this.notesSortBy === 'time') {
+                    // 已经是时间排序，切换升降序
+                    this.notesSortOrder = this.notesSortOrder === 'desc' ? 'asc' : 'desc';
+                } else {
+                    // 切换到时间排序，默认降序（最新在前）
+                    this.notesSortBy = 'time';
+                    this.notesSortOrder = 'desc';
+                }
+                this._sortNotes();
+                this._renderContent();
+            });
+
+            // 字母排序按钮
+            const alphaSortBtn = DOMHelper.createElement('button', {
+                innerText: this.notesSortBy === 'alpha' 
+                    ? (this.notesSortOrder === 'asc' ? '🔤 字母 ↑' : '🔤 字母 ↓')
+                    : '🔤 字母',
+                style: {
+                    padding: '6px 12px',
+                    border: '1px solid #cbd5e0',
+                    borderRadius: '4px',
+                    backgroundColor: this.notesSortBy === 'alpha' ? '#48bb78' : 'white',
+                    color: this.notesSortBy === 'alpha' ? 'white' : '#4a5568',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                }
+            });
+
+            alphaSortBtn.addEventListener('mouseenter', () => {
+                alphaSortBtn.style.transform = 'translateY(-1px)';
+                alphaSortBtn.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+
+            alphaSortBtn.addEventListener('mouseleave', () => {
+                alphaSortBtn.style.transform = 'translateY(0)';
+                alphaSortBtn.style.boxShadow = 'none';
+            });
+
+            alphaSortBtn.addEventListener('click', () => {
+                if (this.notesSortBy === 'alpha') {
+                    // 已经是字母排序，切换升降序
+                    this.notesSortOrder = this.notesSortOrder === 'asc' ? 'desc' : 'asc';
+                } else {
+                    // 切换到字母排序，默认升序（A-Z）
+                    this.notesSortBy = 'alpha';
+                    this.notesSortOrder = 'asc';
+                }
                 this._sortNotes();
                 this._renderContent();
             });
@@ -2492,12 +2540,12 @@
             const selectAllBtn = DOMHelper.createElement('button', {
                 innerText: '全选',
                 style: {
-                    padding: '6px 14px',
+                    padding: '6px 12px',
                     border: '1px solid #cbd5e0',
                     borderRadius: '4px',
                     backgroundColor: 'white',
                     cursor: 'pointer',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: '500',
                     transition: 'all 0.2s'
                 }
@@ -2516,13 +2564,13 @@
             const deleteBtn = DOMHelper.createElement('button', {
                 innerText: '删除选中',
                 style: {
-                    padding: '6px 14px',
+                    padding: '6px 12px',
                     border: 'none',
                     borderRadius: '4px',
                     backgroundColor: '#f56565',
                     color: 'white',
                     cursor: 'pointer',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: '500',
                     transition: 'all 0.2s'
                 }
@@ -2541,7 +2589,8 @@
             selectAllBtn.addEventListener('click', () => this._toggleSelectAll());
             deleteBtn.addEventListener('click', () => this._deleteSelected());
 
-            actions.appendChild(sortBtn);
+            actions.appendChild(timeSortBtn);
+            actions.appendChild(alphaSortBtn);
             actions.appendChild(selectAllBtn);
             actions.appendChild(deleteBtn);
             toolbar.appendChild(info);
@@ -2756,14 +2805,26 @@
          */
         _sortNotes() {
             if (this.notesSortBy === 'time') {
-                // 按时间倒序
-                this.notesList.sort((a, b) => b.timestamp - a.timestamp);
+                // 按时间排序
+                if (this.notesSortOrder === 'desc') {
+                    // 降序：最新在前
+                    this.notesList.sort((a, b) => b.timestamp - a.timestamp);
+                } else {
+                    // 升序：最旧在前
+                    this.notesList.sort((a, b) => a.timestamp - b.timestamp);
+                }
             } else {
                 // 按 questionId 字母序
                 this.notesList.sort((a, b) => {
                     const idA = a.questionId.toLowerCase();
                     const idB = b.questionId.toLowerCase();
-                    return idA.localeCompare(idB);
+                    if (this.notesSortOrder === 'asc') {
+                        // 升序：A-Z
+                        return idA.localeCompare(idB);
+                    } else {
+                        // 降序：Z-A
+                        return idB.localeCompare(idA);
+                    }
                 });
             }
         }
