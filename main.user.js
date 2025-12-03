@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.6.6
+// @version      2.7.0
 // @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、双按钮导出试题为Word文档（导出试题/导出答案两个按钮，含图片、支持多种题型、可配置样式参数）、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -181,20 +181,20 @@
             globalButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    top: '8px',              // 距离容器顶部的距离
-                    right: '8px',            // 距离容器右侧的距离
+                    top: '10px',             // 距离容器顶部的距离
+                    right: '10px',           // 距离容器右侧的距离
                     zIndex: '9999'           // 层级（确保在最上层）
                 },
                 // --- 按钮样式配置 ---
                 style: {
-                    fontSize: '12px',        // 字体大小
-                    padding: '4px 10px',     // 内边距（上下 左右）- 统一尺寸
-                    borderRadius: '6px',     // 圆角半径 - 统一为6px
+                    fontSize: '14px',        // 字体大小（增大）
+                    padding: '8px 16px',     // 内边距（增大）
+                    borderRadius: '8px',     // 圆角半径（增大）
                     border: 'none',          // 边框样式
-                    fontWeight: '500',       // 字体粗细 - 统一为500
+                    fontWeight: '600',       // 字体粗细（加粗）
                     cursor: 'pointer',       // 鼠标样式
-                    transition: 'all 0.2s',  // 过渡动画 - 统一为all
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果 - 添加统一阴影
+                    transition: 'all 0.2s',  // 过渡动画
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'  // 阴影效果（增强）
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
@@ -243,20 +243,20 @@
             manageButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    top: '35px',             // 距离容器顶部的距离（在全局按钮下方）
-                    right: '8px',            // 距离容器右侧的距离
+                    top: '50px',             // 距离容器顶部的距离（在全局按钮下方，因按钮变大需调整）
+                    right: '10px',           // 距离容器右侧的距离
                     zIndex: '9999'           // 层级（确保在最上层）
                 },
                 // --- 按钮样式配置 ---
                 style: {
-                    fontSize: '12px',        // 字体大小
-                    padding: '4px 10px',     // 内边距（上下 左右）- 统一尺寸
-                    borderRadius: '6px',     // 圆角半径 - 统一为6px
+                    fontSize: '14px',        // 字体大小（增大）
+                    padding: '8px 16px',     // 内边距（增大）
+                    borderRadius: '8px',     // 圆角半径（增大）
                     border: 'none',          // 边框样式
-                    fontWeight: '500',       // 字体粗细 - 统一为500
+                    fontWeight: '600',       // 字体粗细（加粗）
                     cursor: 'pointer',       // 鼠标样式
-                    transition: 'all 0.2s',  // 过渡动画 - 统一为all
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果 - 添加统一阴影
+                    transition: 'all 0.2s',  // 过渡动画
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'  // 阴影效果（增强）
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
@@ -273,14 +273,14 @@
             exportButton: {
                 // --- 按钮样式配置 ---
                 style: {
-                    fontSize: '12px',        // 字体大小
-                    padding: '4px 10px',     // 内边距
-                    borderRadius: '6px',     // 圆角半径
+                    fontSize: '14px',        // 字体大小（增大）
+                    padding: '8px 16px',     // 内边距（增大）
+                    borderRadius: '8px',     // 圆角半径（增大）
                     border: 'none',          // 边框样式
-                    fontWeight: '500',       // 字体粗细
+                    fontWeight: '600',       // 字体粗细（加粗）
                     cursor: 'pointer',       // 鼠标样式
                     transition: 'all 0.2s',  // 过渡动画
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'  // 阴影效果（增强）
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
@@ -293,8 +293,8 @@
                     withAnswerHoverBackground: '#6b46c1'
                 },
                 // --- 按钮文字配置 ---
-                text: '📄 导出试题',           // 导出按钮文字（不带答案）
-                textWithAnswer: '📝 导出答案'   // 导出按钮文字（带答案）
+                text: '📄 导出试题（无答案）',           // 导出按钮文字（不带答案）
+                textWithAnswer: '📝 导出试题（含答案）'   // 导出按钮文字（带答案）
             },
 
             // ========== 控制面板保存按钮配置 ==========
@@ -1697,6 +1697,163 @@
         }
 
         /**
+         * 创建统一的底部悬浮操作栏
+         * @param {Object} options - 配置选项
+         * @param {string} options.saveText - 保存按钮文字
+         * @param {Function} options.onSave - 保存回调函数
+         * @param {Function} options.onReset - 重置回调函数（可选）
+         * @param {string} options.resetText - 重置按钮文字（可选）
+         * @returns {HTMLElement} 操作栏元素
+         */
+        _createFloatingActionBar(options) {
+            const { 
+                saveText = '💾 保存设置', 
+                onSave, 
+                onReset = null, 
+                resetText = '🔄 重置为默认' 
+            } = options;
+            
+            const buttonConfig = this.config.get('panelSaveButton');
+            
+            // 创建悬浮操作栏容器
+            const actionBar = DOMHelper.createElement('div', {
+                className: 'floating-action-bar',
+                style: {
+                    position: 'sticky',
+                    bottom: '0',
+                    left: '0',
+                    right: '0',
+                    padding: '16px 24px',
+                    backgroundColor: 'white',
+                    borderTop: '1px solid #e2e8f0',
+                    display: 'flex',
+                    justifyContent: onReset ? 'space-between' : 'flex-end',
+                    alignItems: 'center',
+                    boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.08)',
+                    zIndex: '100',
+                    marginTop: '20px',
+                    marginLeft: '-30px',
+                    marginRight: '-30px',
+                    marginBottom: '-30px',
+                    width: 'calc(100% + 60px)'
+                }
+            });
+
+            // 创建重置按钮（如果提供了重置回调）
+            if (onReset) {
+                const resetButton = DOMHelper.createElement('button', {
+                    innerText: resetText,
+                    style: {
+                        padding: '10px 20px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        backgroundColor: 'white',
+                        color: '#718096',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                    }
+                });
+
+                resetButton.addEventListener('mouseenter', () => {
+                    resetButton.style.backgroundColor = '#f7fafc';
+                    resetButton.style.borderColor = '#cbd5e0';
+                    resetButton.style.transform = 'translateY(-1px)';
+                    resetButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                });
+
+                resetButton.addEventListener('mouseleave', () => {
+                    resetButton.style.backgroundColor = 'white';
+                    resetButton.style.borderColor = '#e2e8f0';
+                    resetButton.style.transform = 'translateY(0)';
+                    resetButton.style.boxShadow = 'none';
+                });
+
+                resetButton.addEventListener('click', onReset);
+                actionBar.appendChild(resetButton);
+            }
+
+            // 创建保存按钮
+            const saveButton = DOMHelper.createElement('button', {
+                innerText: saveText,
+                style: {
+                    padding: '10px 24px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    backgroundColor: buttonConfig.colors.background,
+                    color: buttonConfig.colors.textColor,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: buttonConfig.colors.boxShadow,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                }
+            });
+
+            saveButton.addEventListener('mouseenter', () => {
+                saveButton.style.backgroundColor = buttonConfig.colors.hoverBackground;
+                saveButton.style.transform = 'translateY(-1px)';
+                saveButton.style.boxShadow = buttonConfig.colors.hoverBoxShadow;
+            });
+
+            saveButton.addEventListener('mouseleave', () => {
+                if (!saveButton.dataset.success && !saveButton.dataset.error) {
+                    saveButton.style.backgroundColor = buttonConfig.colors.background;
+                    saveButton.style.transform = 'translateY(0)';
+                    saveButton.style.boxShadow = buttonConfig.colors.boxShadow;
+                }
+            });
+
+            // 封装保存逻辑
+            saveButton.addEventListener('click', async () => {
+                try {
+                    saveButton.disabled = true;
+                    saveButton.innerText = '⏳ 保存中...';
+                    
+                    await onSave();
+                    
+                    // 显示成功状态
+                    saveButton.dataset.success = 'true';
+                    saveButton.innerText = buttonConfig.text.success;
+                    saveButton.style.backgroundColor = buttonConfig.colors.successBackground;
+                    
+                    setTimeout(() => {
+                        delete saveButton.dataset.success;
+                        saveButton.innerText = saveText;
+                        saveButton.style.backgroundColor = buttonConfig.colors.background;
+                        saveButton.disabled = false;
+                    }, 2000);
+                    
+                } catch (error) {
+                    Logger.error('保存失败', error);
+                    
+                    // 显示错误状态
+                    saveButton.dataset.error = 'true';
+                    saveButton.innerText = buttonConfig.text.error;
+                    saveButton.style.backgroundColor = buttonConfig.colors.errorBackground;
+                    
+                    setTimeout(() => {
+                        delete saveButton.dataset.error;
+                        saveButton.innerText = saveText;
+                        saveButton.style.backgroundColor = buttonConfig.colors.background;
+                        saveButton.disabled = false;
+                    }, 2000);
+                }
+            });
+
+            actionBar.appendChild(saveButton);
+            
+            return actionBar;
+        }
+
+        /**
          * 渲染内容区
          */
         _renderContent() {
@@ -1877,76 +2034,28 @@
 
             container.appendChild(dangerZone);
 
-            // 添加保存按钮
-            const saveButtonContainer = DOMHelper.createElement('div', {
-                style: {
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: '10px'
-                }
-            });
-
-            const buttonConfig = this.config.get('panelSaveButton');
-            const saveButton = DOMHelper.createElement('button', {
-                innerText: buttonConfig.text.save,
-                style: {
-                    padding: buttonConfig.style.padding,
-                    border: buttonConfig.style.border,
-                    borderRadius: buttonConfig.style.borderRadius,
-                    backgroundColor: buttonConfig.colors.background,
-                    color: buttonConfig.colors.textColor,
-                    fontSize: buttonConfig.style.fontSize,
-                    fontWeight: buttonConfig.style.fontWeight,
-                    cursor: buttonConfig.style.cursor,
-                    transition: buttonConfig.style.transition,
-                    boxShadow: buttonConfig.colors.boxShadow
-                }
-            });
-
-            saveButton.addEventListener('mouseenter', () => {
-                saveButton.style.backgroundColor = buttonConfig.colors.hoverBackground;
-                saveButton.style.transform = 'translateY(-1px)';
-                saveButton.style.boxShadow = buttonConfig.colors.hoverBoxShadow;
-            });
-
-            saveButton.addEventListener('mouseleave', () => {
-                if (saveButton.innerText === buttonConfig.text.save) {
-                    saveButton.style.backgroundColor = buttonConfig.colors.background;
-                    saveButton.style.transform = 'translateY(0)';
-                    saveButton.style.boxShadow = buttonConfig.colors.boxShadow;
-                }
-            });
-
-            saveButton.addEventListener('click', async () => {
-                try {
-                    // 保存所有设置
+            // 添加统一的底部操作栏
+            const actionBar = this._createFloatingActionBar({
+                saveText: '💾 保存基础设置',
+                onSave: async () => {
                     await this.dbManager.saveSetting('autoSave', this.settings.autoSave);
                     await this.dbManager.saveSetting('autoSaveDelay', this.settings.autoSaveDelay);
-                    
-                    // 显示成功提示
-                    saveButton.innerText = buttonConfig.text.success;
-                    saveButton.style.backgroundColor = buttonConfig.colors.successBackground;
-                    
-                    setTimeout(() => {
-                        saveButton.innerText = buttonConfig.text.save;
-                        saveButton.style.backgroundColor = buttonConfig.colors.background;
-                    }, 2000);
-                    
-                    Logger.success('设置已保存');
-                } catch (error) {
-                    Logger.error('保存设置失败', error);
-                    saveButton.innerText = buttonConfig.text.error;
-                    saveButton.style.backgroundColor = buttonConfig.colors.errorBackground;
-                    
-                    setTimeout(() => {
-                        saveButton.innerText = buttonConfig.text.save;
-                        saveButton.style.backgroundColor = buttonConfig.colors.background;
-                    }, 2000);
-                }
+                    Logger.success('基础设置已保存');
+                },
+                onReset: async () => {
+                    if (confirm('确定要重置基础设置为默认值吗？')) {
+                        const defaults = this.config.get('settings');
+                        this.settings.autoSave = defaults.autoSave;
+                        this.settings.autoSaveDelay = defaults.autoSaveDelay;
+                        await this.dbManager.saveSetting('autoSave', defaults.autoSave);
+                        await this.dbManager.saveSetting('autoSaveDelay', defaults.autoSaveDelay);
+                        Logger.success('基础设置已重置');
+                        this._renderSettingsPanel(container);
+                    }
+                },
+                resetText: '🔄 重置基础设置'
             });
-
-            saveButtonContainer.appendChild(saveButton);
-            container.appendChild(saveButtonContainer);
+            container.appendChild(actionBar);
         }
 
         /**
@@ -2061,7 +2170,7 @@
             });
 
             const tipText = DOMHelper.createElement('div', {
-                innerHTML: '💡 <strong>提示：</strong>使用「📄 导出试题」按钮导出不带答案的试卷，使用「📝 导出试题（带答案）」按钮导出带答案的试卷。',
+                innerHTML: '💡 <strong>提示：</strong>使用「📄 导出试题（无答案）」按钮导出不带答案的试卷，使用「📝 导出试题（含答案）」按钮导出带答案的试卷。',
                 style: {
                     fontSize: '14px',
                     color: '#2b6cb0',
@@ -2158,79 +2267,37 @@
 
             container.appendChild(styleContainer);
 
-            // 保存按钮
-            const saveButtonContainer = DOMHelper.createElement('div', {
-                style: {
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: '10px'
-                }
-            });
-
-            const buttonConfig = this.config.get('panelSaveButton');
-            const saveButton = DOMHelper.createElement('button', {
-                innerText: buttonConfig.text.save,
-                style: {
-                    padding: buttonConfig.style.padding,
-                    border: buttonConfig.style.border,
-                    borderRadius: buttonConfig.style.borderRadius,
-                    backgroundColor: buttonConfig.colors.background,
-                    color: buttonConfig.colors.textColor,
-                    fontSize: buttonConfig.style.fontSize,
-                    fontWeight: buttonConfig.style.fontWeight,
-                    cursor: buttonConfig.style.cursor,
-                    transition: buttonConfig.style.transition,
-                    boxShadow: buttonConfig.colors.boxShadow
-                }
-            });
-
-            saveButton.addEventListener('mouseenter', () => {
-                saveButton.style.backgroundColor = buttonConfig.colors.hoverBackground;
-                saveButton.style.transform = 'translateY(-1px)';
-                saveButton.style.boxShadow = buttonConfig.colors.hoverBoxShadow;
-            });
-
-            saveButton.addEventListener('mouseleave', () => {
-                if (saveButton.innerText === buttonConfig.text.save) {
-                    saveButton.style.backgroundColor = buttonConfig.colors.background;
-                    saveButton.style.transform = 'translateY(0)';
-                    saveButton.style.boxShadow = buttonConfig.colors.boxShadow;
-                }
-            });
-
-            saveButton.addEventListener('click', async () => {
-                try {
-                    // 保存导出设置（不含答案设置，答案由按钮控制）
+            // 添加统一的底部操作栏
+            const actionBar = this._createFloatingActionBar({
+                saveText: '💾 保存导出设置',
+                onSave: async () => {
                     await this.dbManager.saveSetting('exportFontFamily', this.settings.exportFontFamily ?? exportSettings.fontFamily);
                     await this.dbManager.saveSetting('exportFontSize', this.settings.exportFontSize ?? exportSettings.fontSize);
                     await this.dbManager.saveSetting('exportTitleFontSize', this.settings.exportTitleFontSize ?? exportSettings.titleFontSize);
                     await this.dbManager.saveSetting('exportLineHeight', this.settings.exportLineHeight ?? exportSettings.lineHeight);
                     await this.dbManager.saveSetting('exportPageMargin', this.settings.exportPageMargin ?? exportSettings.pageMargin);
-                    
-                    // 显示成功提示
-                    saveButton.innerText = buttonConfig.text.success;
-                    saveButton.style.backgroundColor = buttonConfig.colors.successBackground;
-                    
-                    setTimeout(() => {
-                        saveButton.innerText = buttonConfig.text.save;
-                        saveButton.style.backgroundColor = buttonConfig.colors.background;
-                    }, 2000);
-                    
                     Logger.success('导出设置已保存');
-                } catch (error) {
-                    Logger.error('保存导出设置失败', error);
-                    saveButton.innerText = buttonConfig.text.error;
-                    saveButton.style.backgroundColor = buttonConfig.colors.errorBackground;
-                    
-                    setTimeout(() => {
-                        saveButton.innerText = buttonConfig.text.save;
-                        saveButton.style.backgroundColor = buttonConfig.colors.background;
-                    }, 2000);
-                }
+                },
+                onReset: async () => {
+                    if (confirm('确定要重置导出设置为默认值吗？')) {
+                        const defaults = this.config.get('exportSettings');
+                        this.settings.exportFontFamily = defaults.fontFamily;
+                        this.settings.exportFontSize = defaults.fontSize;
+                        this.settings.exportTitleFontSize = defaults.titleFontSize;
+                        this.settings.exportLineHeight = defaults.lineHeight;
+                        this.settings.exportPageMargin = defaults.pageMargin;
+                        await this.dbManager.saveSetting('exportFontFamily', defaults.fontFamily);
+                        await this.dbManager.saveSetting('exportFontSize', defaults.fontSize);
+                        await this.dbManager.saveSetting('exportTitleFontSize', defaults.titleFontSize);
+                        await this.dbManager.saveSetting('exportLineHeight', defaults.lineHeight);
+                        await this.dbManager.saveSetting('exportPageMargin', defaults.pageMargin);
+                        Logger.success('导出设置已重置');
+                        this._renderExportSettingsPanel(container);
+                    }
+                },
+                resetText: '🔄 重置导出设置'
             });
-
-            saveButtonContainer.appendChild(saveButton);
-            container.appendChild(saveButtonContainer);
+            container.appendChild(actionBar);
         }
 
         /**
@@ -3001,69 +3068,10 @@
 
             container.appendChild(scrollContainer);
 
-            // 添加保存和重置按钮
-            const buttonContainer = DOMHelper.createElement('div', {
-                style: {
-                    padding: '20px',
-                    borderTop: '1px solid #e2e8f0',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    backgroundColor: 'white'
-                }
-            });
-
-            const resetButton = DOMHelper.createElement('button', {
-                innerText: '🔄 重置为默认',
-                style: {
-                    padding: '10px 20px',
-                    border: '1px solid #cbd5e0',
-                    borderRadius: '6px',
-                    backgroundColor: 'white',
-                    color: '#718096',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                }
-            });
-
-            resetButton.addEventListener('mouseenter', () => {
-                resetButton.style.transform = 'translateY(-1px)';
-                resetButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            });
-
-            resetButton.addEventListener('mouseleave', () => {
-                resetButton.style.transform = 'translateY(0)';
-                resetButton.style.boxShadow = 'none';
-            });
-
-            resetButton.addEventListener('click', async () => {
-                if (confirm('确定要重置所有样式为默认值吗？')) {
-                    await this.dbManager.saveSetting('customStyles', {});
-                    Logger.success('样式已重置');
-                    this._renderStylesPanel(container);
-                }
-            });
-
-            const buttonConfig = this.config.get('panelSaveButton');
-            const saveButton = DOMHelper.createElement('button', {
-                innerText: buttonConfig.text.save,
-                style: {
-                    padding: buttonConfig.style.padding,
-                    border: buttonConfig.style.border,
-                    borderRadius: buttonConfig.style.borderRadius,
-                    backgroundColor: buttonConfig.colors.background,
-                    color: buttonConfig.colors.textColor,
-                    fontSize: buttonConfig.style.fontSize,
-                    fontWeight: buttonConfig.style.fontWeight,
-                    cursor: buttonConfig.style.cursor,
-                    transition: buttonConfig.style.transition,
-                    boxShadow: buttonConfig.colors.boxShadow
-                }
-            });
-
-            saveButton.addEventListener('click', async () => {
-                try {
+            // 添加统一的底部操作栏
+            const actionBar = this._createFloatingActionBar({
+                saveText: '💾 保存样式设置',
+                onSave: async () => {
                     const customStyles = {};
                     
                     // 收集所有表单数据
@@ -3089,32 +3097,18 @@
                     });
 
                     await this.dbManager.saveSetting('customStyles', customStyles);
-                    
-                    saveButton.innerText = buttonConfig.text.success;
-                    saveButton.style.backgroundColor = buttonConfig.colors.successBackground;
-                    
-                    setTimeout(() => {
-                        saveButton.innerText = buttonConfig.text.save;
-                        saveButton.style.backgroundColor = buttonConfig.colors.background;
-                    }, 2000);
-                    
                     Logger.success('样式已保存，刷新页面后生效');
-                    
-                } catch (error) {
-                    Logger.error('保存样式失败', error);
-                    saveButton.innerText = buttonConfig.text.error;
-                    saveButton.style.backgroundColor = buttonConfig.colors.errorBackground;
-                    
-                    setTimeout(() => {
-                        saveButton.innerText = buttonConfig.text.save;
-                        saveButton.style.backgroundColor = buttonConfig.colors.background;
-                    }, 2000);
-                }
+                },
+                onReset: async () => {
+                    if (confirm('确定要重置所有样式为默认值吗？')) {
+                        await this.dbManager.saveSetting('customStyles', {});
+                        Logger.success('样式已重置');
+                        this._renderStylesPanel(container);
+                    }
+                },
+                resetText: '🔄 重置样式设置'
             });
-
-            buttonContainer.appendChild(resetButton);
-            buttonContainer.appendChild(saveButton);
-            container.appendChild(buttonContainer);
+            container.appendChild(actionBar);
         }
 
         /**
