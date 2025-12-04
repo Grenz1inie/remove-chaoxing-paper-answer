@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.2
+// @version      2.7.3
 // @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、双按钮导出试题为Word文档（导出试题/导出答案两个按钮，含图片、支持多种题型、可配置样式参数）、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -334,7 +334,12 @@
                 fontSize: 12,                // 字号（pt）
                 titleFontSize: 18,           // 标题字号（pt）
                 lineHeight: 1.8,             // 行高
-                pageMargin: '2.5cm 2cm 2cm 2cm'  // 页边距
+                pageMargin: '2.5cm 2cm 2cm 2cm',  // 页边距
+                // 导出内容选项
+                exportMyAnswer: true,        // 导出"我的答案"
+                exportCorrectAnswer: true,   // 导出"正确答案"
+                exportScore: true,           // 导出"本题得分"
+                exportAnalysis: true         // 导出"答案解析"
             },
 
             // ========== 数据库配置 ==========
@@ -2146,7 +2151,12 @@
                 fontSize: this.settings.exportFontSize ?? exportDefaults.fontSize,
                 titleFontSize: this.settings.exportTitleFontSize ?? exportDefaults.titleFontSize,
                 lineHeight: this.settings.exportLineHeight ?? exportDefaults.lineHeight,
-                pageMargin: this.settings.exportPageMargin ?? exportDefaults.pageMargin
+                pageMargin: this.settings.exportPageMargin ?? exportDefaults.pageMargin,
+                // 导出内容选项
+                exportMyAnswer: this.settings.exportMyAnswer ?? exportDefaults.exportMyAnswer,
+                exportCorrectAnswer: this.settings.exportCorrectAnswer ?? exportDefaults.exportCorrectAnswer,
+                exportScore: this.settings.exportScore ?? exportDefaults.exportScore,
+                exportAnalysis: this.settings.exportAnalysis ?? exportDefaults.exportAnalysis
             };
 
             // 提示说明区域
@@ -2161,7 +2171,7 @@
             });
 
             const tipText = DOMHelper.createElement('div', {
-                innerHTML: '💡 <strong>提示：</strong>使用「📄 导出试题（无答案）」按钮导出不带答案的试卷，使用「📝 导出试题（含答案）」按钮导出带答案的试卷。',
+                innerHTML: '💡 <strong>提示：</strong>使用「📄 导出试题（无答案）」按钮导出不带答案的试卷，使用「📝 导出试题（含答案）」按钮导出带答案的试卷。下方「导出内容选项」仅在导出含答案时生效。',
                 style: {
                     fontSize: '14px',
                     color: '#2b6cb0',
@@ -2170,6 +2180,88 @@
             });
             tipContainer.appendChild(tipText);
             container.appendChild(tipContainer);
+
+            // ========== 导出内容选项区域 ==========
+            const contentContainer = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    marginBottom: '20px'
+                }
+            });
+
+            const contentTitle = DOMHelper.createElement('div', {
+                innerText: '📋 导出内容选项',
+                style: {
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#2d3748',
+                    marginBottom: '20px',
+                    paddingBottom: '10px',
+                    borderBottom: '2px solid #4299e1'
+                }
+            });
+            contentContainer.appendChild(contentTitle);
+
+            const contentDesc = DOMHelper.createElement('div', {
+                innerText: '选择导出含答案时包含哪些内容（导出无答案时此选项不生效）',
+                style: {
+                    fontSize: '13px',
+                    color: '#718096',
+                    marginBottom: '16px'
+                }
+            });
+            contentContainer.appendChild(contentDesc);
+
+            // 创建勾选框容器
+            const checkboxGrid = DOMHelper.createElement('div', {
+                style: {
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '12px'
+                }
+            });
+
+            // 我的答案
+            const myAnswerCheckbox = this._createExportCheckboxItem(
+                '我的答案',
+                '导出时包含"我的答案"信息',
+                'exportMyAnswer',
+                exportSettings.exportMyAnswer
+            );
+            checkboxGrid.appendChild(myAnswerCheckbox);
+
+            // 正确答案
+            const correctAnswerCheckbox = this._createExportCheckboxItem(
+                '正确答案',
+                '导出时包含"正确答案"信息',
+                'exportCorrectAnswer',
+                exportSettings.exportCorrectAnswer
+            );
+            checkboxGrid.appendChild(correctAnswerCheckbox);
+
+            // 本题得分
+            const scoreCheckbox = this._createExportCheckboxItem(
+                '本题得分',
+                '导出时包含本题得分信息',
+                'exportScore',
+                exportSettings.exportScore
+            );
+            checkboxGrid.appendChild(scoreCheckbox);
+
+            // 答案解析
+            const analysisCheckbox = this._createExportCheckboxItem(
+                '答案解析',
+                '导出时包含答案解析内容',
+                'exportAnalysis',
+                exportSettings.exportAnalysis
+            );
+            checkboxGrid.appendChild(analysisCheckbox);
+
+            contentContainer.appendChild(checkboxGrid);
+            container.appendChild(contentContainer);
 
             // 样式设置区域
             const styleContainer = DOMHelper.createElement('div', {
@@ -2262,26 +2354,42 @@
             const actionBar = this._createFloatingActionBar({
                 saveText: '💾 保存导出设置',
                 onSave: async () => {
+                    // 保存样式设置
                     await this.dbManager.saveSetting('exportFontFamily', this.settings.exportFontFamily ?? exportSettings.fontFamily);
                     await this.dbManager.saveSetting('exportFontSize', this.settings.exportFontSize ?? exportSettings.fontSize);
                     await this.dbManager.saveSetting('exportTitleFontSize', this.settings.exportTitleFontSize ?? exportSettings.titleFontSize);
                     await this.dbManager.saveSetting('exportLineHeight', this.settings.exportLineHeight ?? exportSettings.lineHeight);
                     await this.dbManager.saveSetting('exportPageMargin', this.settings.exportPageMargin ?? exportSettings.pageMargin);
+                    // 保存导出内容选项
+                    await this.dbManager.saveSetting('exportMyAnswer', this.settings.exportMyAnswer ?? exportSettings.exportMyAnswer);
+                    await this.dbManager.saveSetting('exportCorrectAnswer', this.settings.exportCorrectAnswer ?? exportSettings.exportCorrectAnswer);
+                    await this.dbManager.saveSetting('exportScore', this.settings.exportScore ?? exportSettings.exportScore);
+                    await this.dbManager.saveSetting('exportAnalysis', this.settings.exportAnalysis ?? exportSettings.exportAnalysis);
                     Logger.success('导出设置已保存');
                 },
                 onReset: async () => {
                     if (confirm('确定要重置导出设置为默认值吗？')) {
                         const defaults = this.config.get('exportSettings');
+                        // 重置样式设置
                         this.settings.exportFontFamily = defaults.fontFamily;
                         this.settings.exportFontSize = defaults.fontSize;
                         this.settings.exportTitleFontSize = defaults.titleFontSize;
                         this.settings.exportLineHeight = defaults.lineHeight;
                         this.settings.exportPageMargin = defaults.pageMargin;
+                        // 重置导出内容选项
+                        this.settings.exportMyAnswer = defaults.exportMyAnswer;
+                        this.settings.exportCorrectAnswer = defaults.exportCorrectAnswer;
+                        this.settings.exportScore = defaults.exportScore;
+                        this.settings.exportAnalysis = defaults.exportAnalysis;
                         await this.dbManager.saveSetting('exportFontFamily', defaults.fontFamily);
                         await this.dbManager.saveSetting('exportFontSize', defaults.fontSize);
                         await this.dbManager.saveSetting('exportTitleFontSize', defaults.titleFontSize);
                         await this.dbManager.saveSetting('exportLineHeight', defaults.lineHeight);
                         await this.dbManager.saveSetting('exportPageMargin', defaults.pageMargin);
+                        await this.dbManager.saveSetting('exportMyAnswer', defaults.exportMyAnswer);
+                        await this.dbManager.saveSetting('exportCorrectAnswer', defaults.exportCorrectAnswer);
+                        await this.dbManager.saveSetting('exportScore', defaults.exportScore);
+                        await this.dbManager.saveSetting('exportAnalysis', defaults.exportAnalysis);
                         Logger.success('导出设置已重置');
                         this._renderExportSettingsPanel(container);
                     }
@@ -2289,6 +2397,98 @@
                 resetText: '🔄 重置导出设置'
             });
             container.appendChild(actionBar);
+        }
+
+        /**
+         * 创建导出内容勾选框项
+         */
+        _createExportCheckboxItem(label, description, key, checked) {
+            const item = DOMHelper.createElement('div', {
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '12px',
+                    backgroundColor: '#f7fafc',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    border: '1px solid #e2e8f0'
+                }
+            });
+
+            const checkbox = DOMHelper.createElement('input', {
+                type: 'checkbox',
+                checked: checked,
+                style: {
+                    width: '18px',
+                    height: '18px',
+                    marginRight: '12px',
+                    cursor: 'pointer',
+                    accentColor: '#4299e1'
+                }
+            });
+
+            const textContainer = DOMHelper.createElement('div', {
+                style: {
+                    flex: '1'
+                }
+            });
+
+            const labelText = DOMHelper.createElement('div', {
+                innerText: label,
+                style: {
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#2d3748'
+                }
+            });
+
+            const descText = DOMHelper.createElement('div', {
+                innerText: description,
+                style: {
+                    fontSize: '12px',
+                    color: '#718096',
+                    marginTop: '2px'
+                }
+            });
+
+            textContainer.appendChild(labelText);
+            textContainer.appendChild(descText);
+
+            // 点击整个项切换勾选状态
+            item.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                }
+                this.settings[key] = checkbox.checked;
+                item.style.backgroundColor = checkbox.checked ? '#ebf8ff' : '#f7fafc';
+                item.style.borderColor = checkbox.checked ? '#4299e1' : '#e2e8f0';
+            });
+
+            checkbox.addEventListener('change', () => {
+                this.settings[key] = checkbox.checked;
+                item.style.backgroundColor = checkbox.checked ? '#ebf8ff' : '#f7fafc';
+                item.style.borderColor = checkbox.checked ? '#4299e1' : '#e2e8f0';
+            });
+
+            // 初始样式
+            if (checked) {
+                item.style.backgroundColor = '#ebf8ff';
+                item.style.borderColor = '#4299e1';
+            }
+
+            // 悬停效果
+            item.addEventListener('mouseenter', () => {
+                item.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+            item.addEventListener('mouseleave', () => {
+                item.style.boxShadow = 'none';
+            });
+
+            item.appendChild(checkbox);
+            item.appendChild(textContainer);
+
+            return item;
         }
 
         /**
@@ -4078,6 +4278,7 @@
             // 获取导出设置（答案由参数控制，不从设置读取）
             const exportDefaults = this.config.get('exportSettings');
             let exportSettings = {};
+            let contentOptions = {};
             try {
                 const allSettings = await this.dbManager.getAllSettings();
                 exportSettings = {
@@ -4087,9 +4288,64 @@
                     lineHeight: allSettings.exportLineHeight ?? exportDefaults.lineHeight,
                     pageMargin: allSettings.exportPageMargin ?? exportDefaults.pageMargin
                 };
+                // 导出内容选项
+                contentOptions = {
+                    exportMyAnswer: allSettings.exportMyAnswer ?? exportDefaults.exportMyAnswer,
+                    exportCorrectAnswer: allSettings.exportCorrectAnswer ?? exportDefaults.exportCorrectAnswer,
+                    exportScore: allSettings.exportScore ?? exportDefaults.exportScore,
+                    exportAnalysis: allSettings.exportAnalysis ?? exportDefaults.exportAnalysis
+                };
             } catch (e) {
                 exportSettings = { ...exportDefaults };
+                contentOptions = {
+                    exportMyAnswer: exportDefaults.exportMyAnswer,
+                    exportCorrectAnswer: exportDefaults.exportCorrectAnswer,
+                    exportScore: exportDefaults.exportScore,
+                    exportAnalysis: exportDefaults.exportAnalysis
+                };
             }
+
+            // 根据导出内容选项过滤答案HTML
+            const filterAnswerHtml = (answerHTML) => {
+                if (!answerHTML) return '';
+                
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = answerHTML;
+
+                // 如果不导出"我的答案"，移除相关元素
+                if (!contentOptions.exportMyAnswer) {
+                    // 移除包含"我的答案"的span（查找包含stuAnswerContent的父span）
+                    const myAnswerSpans = tempDiv.querySelectorAll('.stuAnswerContent');
+                    myAnswerSpans.forEach(span => {
+                        // 找到包含"我的答案:"标签的父级span
+                        const parentSpan = span.closest('span.colorDeep.marginRight40.fl') || span.parentElement;
+                        if (parentSpan) parentSpan.remove();
+                    });
+                }
+
+                // 如果不导出"正确答案"，移除相关元素
+                if (!contentOptions.exportCorrectAnswer) {
+                    const correctAnswerSpans = tempDiv.querySelectorAll('.rightAnswerContent');
+                    correctAnswerSpans.forEach(span => {
+                        const parentSpan = span.closest('span.colorGreen.marginRight40.fl') || span.parentElement;
+                        if (parentSpan) parentSpan.remove();
+                    });
+                }
+
+                // 如果不导出"本题得分"，移除相关元素
+                if (!contentOptions.exportScore) {
+                    const scoreDiv = tempDiv.querySelector('.mark_score');
+                    if (scoreDiv) scoreDiv.remove();
+                }
+
+                // 如果不导出"答案解析"，移除相关元素
+                if (!contentOptions.exportAnalysis) {
+                    const analysisDiv = tempDiv.querySelector('.analysisDiv');
+                    if (analysisDiv) analysisDiv.remove();
+                }
+
+                return tempDiv.innerHTML;
+            };
 
             // 使用 GM_xmlhttpRequest 下载图片（绕过 CORS 限制）
             const downloadImageAsBase64 = (imgUrl) => {
@@ -4476,12 +4732,17 @@
 
                 // 根据参数决定是否导出答案
                 if (includeAnswer && item.answerHTML) {
-                    const processedAnswerHtml = await processImagesInHtml(cleanHtml(item.answerHTML || ''));
-                    htmlContent += `
+                    // 先过滤答案内容（根据导出内容选项）
+                    const filteredAnswerHtml = filterAnswerHtml(item.answerHTML);
+                    // 只有过滤后仍有内容才显示答案区域
+                    if (filteredAnswerHtml.trim()) {
+                        const processedAnswerHtml = await processImagesInHtml(cleanHtml(filteredAnswerHtml));
+                        htmlContent += `
         <div class="answer-section">
             <div class="answer-label">【答案】</div>
             <div class="answer-content">${processedAnswerHtml}</div>
         </div>`;
+                    }
                 }
 
                 htmlContent += `
