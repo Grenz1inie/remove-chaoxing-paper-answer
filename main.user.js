@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.3
+// @version      2.7.4
 // @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、双按钮导出试题为Word文档（导出试题/导出答案两个按钮，含图片、支持多种题型、可配置样式参数）、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -11,6 +11,7 @@
 // @connect      chaoxing.com
 // @connect      *.chaoxing.com
 // @connect      *
+// @require      https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js
 // @run-at       document-end
 // @license MIT
 // ==/UserScript==
@@ -4553,11 +4554,15 @@
             color: #000;
         }
         
-        /* 题目容器（仅添加分隔线） */
+        /* 题目容器（添加明显分隔线） */
         .question {
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #ddd;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #2d3748;
+            page-break-inside: avoid;
+        }
+        .question:last-child {
+            border-bottom: none;
         }
         
         /* 题目标题（题号和分值） */
@@ -4754,23 +4759,45 @@
 </body>
 </html>`;
 
-            // 添加BOM头确保中文正确显示，使用.doc扩展名（HTML格式的Word文档）
-            const blob = new Blob(['\ufeff' + htmlContent], { 
-                type: 'application/msword'
-            });
-
-            // 生成下载链接
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            
             // 生成文件名（使用文档标题 + 时间戳）
             const now = new Date();
             const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
             const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
             // 清理文件名中的非法字符
             const safeTitle = content.docTitle.replace(/[\\/:*?"<>|]/g, '_').substring(0, 50);
-            link.download = `${safeTitle}_${dateStr}_${timeStr}.doc`;
+
+            let blob;
+            let fileExtension;
+
+            // 尝试使用 html-docx-js 库生成真正的 docx 文件
+            if (typeof htmlDocx !== 'undefined' && htmlDocx.asBlob) {
+                try {
+                    console.log('[导出] 使用 html-docx-js 生成 docx 文件');
+                    blob = htmlDocx.asBlob(htmlContent);
+                    fileExtension = 'docx';
+                    Logger.success('正在生成 docx 文件...');
+                } catch (e) {
+                    console.warn('[导出] html-docx-js 转换失败，回退到 doc 格式:', e);
+                    // 回退到 HTML 格式的 doc 文件
+                    blob = new Blob(['\ufeff' + htmlContent], { 
+                        type: 'application/msword'
+                    });
+                    fileExtension = 'doc';
+                }
+            } else {
+                console.log('[导出] html-docx-js 库不可用，使用 doc 格式');
+                // html-docx-js 库不可用，使用 HTML 格式的 doc 文件
+                blob = new Blob(['\ufeff' + htmlContent], { 
+                    type: 'application/msword'
+                });
+                fileExtension = 'doc';
+            }
+
+            // 生成下载链接
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${safeTitle}_${dateStr}_${timeStr}.${fileExtension}`;
 
             // 触发下载
             document.body.appendChild(link);
