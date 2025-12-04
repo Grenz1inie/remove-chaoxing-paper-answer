@@ -1,307 +1,148 @@
 # 超星学习通高效刷题小助手
 
-提升超星学习通刷题效率的强大工具！支持**答案自由控制**（单个/全局）、**富文本笔记**、**完整样式自定义**、**试题导出为Word文档**，让你在作业练习中更专注、更高效，可直接在控制台执行或安装为油猴脚本使用。
+提升超星学习通刷题效率的强大工具！支持**答案自由控制**（单个/全局）、**富文本笔记**、**完整样式自定义**、**试题导出为Word文档**，让你在作业练习中更专注、更高效。
 
-## ✨ v2.6.5 新特性
+## ✨ v2.7.4 最新特性
 
-### 📄 双按钮导出
-- **导出试题**：青色按钮，导出不含答案的试卷
-- **导出答案**：紫色按钮，导出含答案的完整试卷
-- **一目了然**：无需进入设置面板，直接点击对应按钮即可导出
+### 📄 导出功能增强
+- **真正的 docx 格式**：集成 html-docx-js 库，优先导出为 .docx 文件
+- **智能降级**：库不可用时自动回退到 .doc 格式
+- **更清晰的分割线**：题目之间的分割线更加明显（3px深灰色粗线）
+- **防止分页截断**：打印时题目不会被分页截断
 
-### 🎨 导出样式设置
-- **样式面板**：字体、字号、行高、页边距等参数仍可在导出设置中配置
-- **图片处理**：自动下载并嵌入图片，超宽图片自动等比例缩放
-- **多题型支持**：单选题、多选题、完型填空等多种题型
+### 📋 导出内容可选（v2.7.3）
+- **我的答案**：控制是否导出考生作答结果
+- **正确答案**：控制是否导出正确答案信息
+- **本题得分**：控制是否导出得分信息
+- **答案解析**：控制是否导出答案解析内容
+- 所有选项可在控制面板的导出设置中配置
 
----
-
-## 📦 v2.6.4 功能回顾
-
-### 📄 试题导出功能
-- **一键导出**：将试题导出为 Word 文档（.doc 格式）
-- **多题型支持**：支持单选题、多选题、完型填空等多种题型
-- **图片处理**：自动下载并嵌入图片，超宽图片自动等比例缩放
-- **保留原始样式**：导出内容尽量保留网页原始样式
-
-### 📝 富文本编辑器
-- **16 个格式按钮**：粗体、斜体、下划线、删除线、标题(H1-H3)、有序/无序列表、引用、链接、代码、分隔线、撤销/重做、清除格式
-- **实时工具栏**：编辑时自动显示格式工具栏，支持快捷格式化
-- **选区保持**：插入列表、链接、代码时自动保持选区，操作更流畅
-- **按钮高亮**：自动识别当前格式状态，已应用的格式按钮高亮显示
-
-### 🔄 编辑/预览模式切换
-- **独立切换按钮**：笔记保存按钮左侧新增编辑/预览切换按钮
-- **预览模式**：支持滚动查看格式化后的笔记内容，无需编辑模式
-- **手动切换**：移除自动切换为编辑模式，由用户主动控制
-
-### 🎨 6 按钮样式统一管理
-- **统一风格**：答案、笔记、编辑、保存、全局、控制面板 6 个按钮样式完全统一
-- **悬停动画**：所有按钮支持一致的悬停效果（上移 + 阴影增强）
-- **完整配置**：每个按钮支持 10+ 配置项（位置、尺寸、颜色、悬停色）
-- **样式管理面板**：控制面板新增样式管理标签页，支持实时预览和持久化保存
-- **一键重置**：支持恢复所有按钮的默认样式配置
+### 🔧 界面优化（v2.7.0-v2.7.2）
+- **双按钮导出**：「📄 导出试题」和「📝 导出答案」一目了然
+- **笔记排序增强**：时间排序和字母排序各独立按钮，支持升降序切换
+- **统一浮动操作栏**：所有设置面板底部操作栏样式统一
 
 ---
 
 ## 🖼️ 预览图
 
 <img src="images/1.png" alt="预览1" width="50%">
-<img src="images/2.png" alt="预览1" width="50%">
-<img src="images/3.png" alt="预览1" width="50%">
+<img src="images/2.png" alt="预览2" width="50%">
+<img src="images/3.png" alt="预览3" width="50%">
 
 ---
 
-## 🧭 使用方式一：控制台直接执行
+## 🧩 安装方式
 
-1. 打开超星学习通 **作业页面**（确保页面完全加载完成）  
-2. 打开浏览器开发者工具：  
-   - Windows：按 `F12` 或 `Ctrl+Shift+I`  
-   - Mac：按 `Command+Option+I`  
-   - 或右键页面 → 「检查」  
-3. 切换到「Console」控制台标签页  
-4. 复制以下代码块并粘贴执行：
+> 🌟 每次打开作业页面自动运行，支持答案自由控制、富文本笔记、样式自定义，让刷题学习更高效！
 
-```javascript
-(function() {
-    'use strict';
-    // ===================== 配置区（可自由修改）=====================
-    const config = {
-        btnPosition: {
-            marginLeft: '20px',
-            marginRight: '0px',
-            marginTop: '10px',
-            marginBottom: '0px',
-            verticalAlign: 'middle'
-        },
-        btnStyle: {
-            fontSize: '12px',
-            padding: '3px 10px',
-            borderRadius: '4px',
-            primaryColor: '#4299e1',   // 显示按钮的颜色
-            secondaryColor: '#9f7aea'  // 隐藏按钮的颜色
-        }
-    };
-    // =====================================================================
-
-    setTimeout(() => {
-        const topicNumberContainer = document.querySelector('div.topicNumber');
-        const targetAnswerBlocks = document.querySelectorAll('div.mark_answer');
-
-        if (targetAnswerBlocks.length === 0) {
-            console.log('ℹ️ 未找到 class="mark_answer" 的答案块（可能页面未完全加载，可刷新重试）');
-            return;
-        }
-        if (!topicNumberContainer) {
-            console.log('ℹ️ 未找到 class="topicNumber" 模块，仅启用单个答案块隐藏功能');
-        }
-
-        // 单个按钮样式
-        const singleBtnStyle = `
-            margin-left: ${config.btnPosition.marginLeft};
-            margin-right: ${config.btnPosition.marginRight};
-            margin-top: ${config.btnPosition.marginTop};
-            margin-bottom: ${config.btnPosition.marginBottom};
-            vertical-align: ${config.btnPosition.verticalAlign};
-            padding: 2px 8px;
-            border: none;
-            border-radius: 3px;
-            background: ${config.btnStyle.primaryColor};
-            color: white;
-            font-size: 12px;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: inline-block;
-        `;
-
-        // 全局按钮样式（右上角悬浮）
-        const globalBtnStyle = `
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            border: none;
-            border-radius: ${config.btnStyle.borderRadius};
-            padding: ${config.btnStyle.padding};
-            font-size: ${config.btnStyle.fontSize};
-            color: white;
-            cursor: pointer;
-            transition: background 0.2s;
-            z-index: 9999;
-            background: ${config.btnStyle.primaryColor};
-        `;
-
-        // 初始化：彻底删除所有答案块+添加显示按钮
-        targetAnswerBlocks.forEach(block => {
-            // 存储原始元素（用于恢复）
-            const originalElement = block.outerHTML;
-            const parent = block.parentNode;
-            const nextSibling = block.nextSibling;
-
-            // 彻底删除元素（从DOM中移除，内容自动补位）
-            parent.removeChild(block);
-
-            // 创建显示/隐藏按钮
-            const toggleBtn = document.createElement('button');
-            toggleBtn.innerText = '显示答案';
-            toggleBtn.style = singleBtnStyle;
-            toggleBtn.title = '点击显示当前答案块';
-            toggleBtn.dataset.isHidden = 'true'; // 标记初始状态：已隐藏
-            toggleBtn.dataset.originalElement = originalElement; // 存储原始元素HTML
-
-            // 按钮点击事件（切换显示/隐藏）
-            toggleBtn.addEventListener('click', () => {
-                const isHidden = toggleBtn.dataset.isHidden === 'true';
-                if (isHidden) {
-                    // 显示答案块：恢复原始元素
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = toggleBtn.dataset.originalElement;
-                    const restoredBlock = tempDiv.firstChild;
-                    parent.insertBefore(restoredBlock, nextSibling);
-                    toggleBtn.innerText = '隐藏答案';
-                    toggleBtn.style.background = config.btnStyle.secondaryColor;
-                    toggleBtn.dataset.isHidden = 'false';
-                } else {
-                    // 隐藏答案块：删除元素
-                    const currentBlock = parent.querySelector('div.mark_answer');
-                    if (currentBlock) {
-                        parent.removeChild(currentBlock);
-                        toggleBtn.innerText = '显示答案';
-                        toggleBtn.style.background = config.btnStyle.primaryColor;
-                        toggleBtn.dataset.isHidden = 'true';
-                    }
-                }
-            });
-
-            // 插入按钮到原元素位置
-            if (nextSibling) {
-                parent.insertBefore(toggleBtn, nextSibling);
-            } else {
-                parent.appendChild(toggleBtn);
-            }
-        });
-
-        // 添加全局控制按钮（topicNumber 右上角）
-        if (topicNumberContainer) {
-            // 给容器添加相对定位，确保全局按钮悬浮正确
-            if (getComputedStyle(topicNumberContainer).position === 'static') {
-                topicNumberContainer.style.position = 'relative';
-            }
-
-            const globalToggleBtn = document.createElement('button');
-            globalToggleBtn.innerText = '显示全部答案';
-            globalToggleBtn.style = globalBtnStyle;
-            globalToggleBtn.title = '点击一键显示/隐藏所有答案块';
-            globalToggleBtn.dataset.isAllHidden = 'true'; // 标记初始状态：全部已隐藏
-
-            // 全局按钮点击事件
-            globalToggleBtn.addEventListener('click', () => {
-                const isAllHidden = globalToggleBtn.dataset.isAllHidden === 'true';
-                const allToggleBtns = document.querySelectorAll('button[title="点击显示当前答案块"]');
-
-                // 批量切换所有按钮状态
-                allToggleBtns.forEach(btn => {
-                    const btnIsHidden = btn.dataset.isHidden === 'true';
-                    if (isAllHidden && btnIsHidden) {
-                        btn.click(); // 全部显示：点击所有"显示答案"按钮
-                    } else if (!isAllHidden && !btnIsHidden) {
-                        btn.click(); // 全部隐藏：点击所有"隐藏答案"按钮
-                    }
-                });
-
-                // 更新全局按钮状态
-                globalToggleBtn.innerText = isAllHidden ? '隐藏全部答案' : '显示全部答案';
-                globalToggleBtn.style.background = isAllHidden ? config.btnStyle.secondaryColor : config.btnStyle.primaryColor;
-                globalToggleBtn.dataset.isAllHidden = !isAllHidden;
-            });
-
-            topicNumberContainer.appendChild(globalToggleBtn);
-        }
-
-        // 执行结果提示
-        console.log(`✅ 超星学习通高效刷题小助手启动成功！`);
-        console.log(`- 已为 ${targetAnswerBlocks.length} 个题目添加答案控制按钮，可自由控制显示/隐藏`);
-        console.log(`- ${topicNumberContainer ? '已在右上角添加全局控制按钮' : '未找到 topicNumber 模块，未添加全局按钮'}`);
-    }, 800);
-})();
-```
-
----
-
-## 🧩 使用方式二：安装油猴脚本
-
-> 🌟 推荐方式！每次打开作业页面自动运行，支持答案自由控制、富文本笔记、样式自定义，让刷题学习更高效！
+### 方式一：从 Greasy Fork 安装（推荐）
 
 1. 安装浏览器插件 [Tampermonkey（油猴）](https://www.tampermonkey.net/)  
 2. 点击以下链接安装脚本：  
-   👉 [**超星学习通高效刷题小助手**](https://greasyfork.org/zh-CN/scripts/555192)
-3. 进入超星作业页面，脚本会自动运行，右上角将出现「显示/隐藏全部答案」按钮
+   👉 [**超星学习通高效刷题小助手 - Greasy Fork**](https://greasyfork.org/zh-CN/scripts/555192)
+3. 进入超星作业页面，脚本会自动运行
 
+### 方式二：直接安装脚本
 
+1. 确保已安装 [Tampermonkey](https://www.tampermonkey.net/)
+2. 点击以下链接直接安装：  
+   👉 [**直接安装脚本**](https://update.greasyfork.org/scripts/555192/超星学习通高效刷题小助手.user.js)
+
+---
+
+## 📦 核心功能
+
+### 🎯 答案控制
+- **单个控制**：每道题目独立的显示/隐藏按钮
+- **全局控制**：一键显示/隐藏所有答案
+
+### 📝 富文本笔记
+- **16 个格式按钮**：粗体、斜体、下划线、删除线、标题(H1-H3)、有序/无序列表、引用、链接、代码、分隔线、撤销/重做、清除格式
+- **编辑/预览模式**：支持预览格式化笔记内容
+- **自动保存**：输入停止后自动保存（可配置）
+
+### 📄 试题导出
+- **双按钮导出**：无答案/含答案一键导出
+- **真正的 docx**：优先使用 html-docx-js 生成标准 docx
+- **多题型支持**：单选题、多选题、完型填空等
+- **图片处理**：自动下载嵌入，超宽自动缩放
+- **内容可选**：我的答案、正确答案、得分、解析可独立开关
+
+### 🎨 样式自定义
+- **6 按钮管理**：答案、笔记、编辑、保存、全局、控制面板按钮样式统一管理
+- **完整配置**：位置、尺寸、颜色、悬停效果等 10+ 配置项
+- **持久化存储**：样式配置保存到 IndexedDB
 
 ---
 
 ## 📜 更新日志
 
+### v2.7.4 (2025-12-04)
+- 📄 **docx 格式导出**：集成 html-docx-js 库，支持真正的 .docx 格式导出
+- 🎯 **智能降级**：库不可用时自动回退到 .doc 格式
+- 📏 **分割线增强**：题目分割线改为 3px 深灰色粗线，更加清晰
+- 🖨️ **打印优化**：添加 page-break-inside: avoid 防止题目被分页截断
+
+### v2.7.3 (2025-12-04)
+- ✅ **导出内容选项**：新增 4 个勾选项控制导出内容
+  - 导出"我的答案"
+  - 导出"正确答案"
+  - 导出"本题得分"
+  - 导出"答案解析"
+- 💾 **设置持久化**：导出内容选项保存到 IndexedDB
+
+### v2.7.2 (2025-12-04)
+- 🔧 **修复悬浮栏溢出**：修复底部操作栏导致保存按钮超出窗口的问题
+- 🔄 **按钮位置调整**：交换控制面板和显示全部答案按钮位置
+- 📊 **排序按钮拆分**：时间排序和字母排序各独立按钮，支持升降序
+
+### v2.7.1 (2025-12-03)
+- 📐 **尺寸调整**：缩小侧边栏按钮和浮动操作栏尺寸
+
+### v2.7.0 (2025-12-03)
+- 🎨 **统一浮动操作栏**：所有设置面板底部统一样式
+- 📄 **导出按钮文字优化**：更清晰的导出按钮标识
+
+### v2.6.6 (2025-12-03)
+- 🧹 **导出答案优化**：移除冗余选项内容，只保留答案字母
+
+### v2.6.5 (2025-12-02)
+- 📄 **双按钮导出**：拆分为「导出试题」和「导出答案」两个按钮
+
+### v2.6.4 (2025-12-02)
+- 📄 **试题导出功能**：支持导出为 Word 文档
+- 🖼️ **图片处理**：自动下载嵌入，超宽自动缩放
+
 ### v2.4.0 (2025-11-14)
-- ✨ **富文本编辑器**：升级笔记编辑器为类博客多功能编辑框，支持 16 个格式按钮
-- 🎨 **格式工具栏**：粗体、斜体、下划线、删除线、标题(H1-H3)、有序/无序列表、引用、链接、代码、分隔线、撤销/重做、清除格式
-- 🔍 **编辑/预览模式**：新增模式切换按钮，支持预览格式化笔记内容
-- 🎯 **按钮样式统一**：6 个按钮（答案、笔记、编辑、保存、全局、控制面板）样式完全统一
-- 💫 **悬停动画**：所有按钮统一悬停效果（上移 + 阴影增强），交互体验一致
-- 🎛️ **完整样式管理**：每个按钮支持 10+ 配置项（位置、字体、内边距、圆角、字重、颜色、悬停色）
-- 🖌️ **样式管理面板**：控制面板新增样式管理标签页，支持实时预览和持久化
-- 🔧 **StyleGenerator 集成**：所有按钮接入样式生成器统一管理
-- 📊 **选区保持优化**：插入列表、链接、代码时自动保持选区，避免格式丢失
-- 🌈 **按钮状态高亮**：已应用的格式按钮自动高亮显示当前状态
+- ✨ **富文本编辑器**：16 个格式按钮
+- 🔍 **编辑/预览模式**：支持预览格式化笔记
+- 🎯 **按钮样式统一**：6 个按钮样式完全统一
+- 🖌️ **样式管理面板**：支持实时预览和持久化
 
 ### v2.3.0 (2025-11-13)
-- 📝 **笔记管理增强**：管理笔记改为子菜单形式，支持当前页面/课程/班级/域名四种范围筛选
-- 📊 **智能分组**：课程/班级/域名范围自动按页面分组展示，便于管理
-- 🎨 **样式管理面板**：新增样式管理选项卡，支持自定义所有按钮和编辑器样式
-- 💾 **样式持久化**：自定义样式保存到 IndexedDB，刷新后自动应用
-- ⚙️ **保存按钮配置化**：控制面板的保存按钮完全可配置，与其他按钮样式统一
+- 📝 **笔记管理增强**：支持多范围筛选
+- 🎨 **样式管理面板**：新增样式管理选项卡
+- 💾 **样式持久化**：保存到 IndexedDB
 
 ### v2.2.0 (2025-11-13)
-- ⚙️ **保存按钮配置化**：控制面板的保存按钮完全可配置，与其他按钮样式统一
-
-### v2.2.0 (2025-11-13)
-- 🎛️ **控制面板升级**：管理按钮改名为"控制面板"，采用左侧边栏设计
-- ⚙️ **设置管理**：新增设置功能，支持自动保存开关和延迟时间配置
-- 📝 **笔记管理**：独立的笔记管理标签页，支持批量选择和删除
-- 💾 **数据库升级v3**：新增 settings 存储，配置信息持久化存储
-- 🔧 **默认设置调整**：自动保存功能默认关闭，用户可在控制面板中开启
-- 🎨 **样式优化**：笔记编辑器支持自定义宽度配置
-- 🛠️ **设置持久化**：用户设置保存到 IndexedDB，页面刷新不丢失
-- 💾 **手动保存按钮**：笔记编辑器右侧新增保存按钮，支持手动保存
-- 🎯 **统一保存机制**：控制面板设置页统一保存按钮，避免误操作
-- 🐛 **修复Bug**：修复控制面板按钮显示 [object Object] 的问题
+- 🎛️ **控制面板升级**：左侧边栏设计
+- ⚙️ **设置管理**：自动保存开关和延迟配置
+- 📝 **笔记管理**：批量选择和删除
 
 ### v2.1.0 (2025-11-10)
-- 📝 **笔记功能**：每道题目可独立添加笔记，支持显示/隐藏切换
-- 💾 **IndexedDB 存储**：笔记数据本地持久化，不会丢失
-- 🔄 **自动保存**：输入停止后自动保存笔记（默认10秒）
-- 🎨 **智能高度**：笔记编辑器自动调整高度，最大400px
-- 🗑️ **笔记管理**：支持查看和删除已保存的笔记
-- 🗄️ **数据库v2**：预留附件存储结构，为未来图片等功能做准备
+- 📝 **笔记功能**：独立添加笔记，支持显示/隐藏
+- 💾 **IndexedDB 存储**：笔记数据本地持久化
+- 🔄 **自动保存**：可配置的自动保存
 
 ### v2.0.0 (2025-11-09)
-- 🏗️ **重大重构**：采用现代化面向对象设计，大幅提升代码质量
-- 📦 **模块化架构**：将代码拆分为多个独立模块（Config、Logger、DOMHelper、StyleGenerator 等）
-- 🎯 **单一职责原则**：每个类只负责特定功能，提升代码可维护性
-- 🔧 **增强配置系统**：支持深度合并的配置管理，便于自定义扩展
-- 🛠️ **工具类封装**：DOMHelper 提供统一的 DOM 操作接口
-- 🎨 **样式生成器**：StyleGenerator 统一管理所有样式生成逻辑
-- 📊 **控制器模式**：AnswerBlockController 和 GlobalController 分别管理单个和全局控制
-- 🚀 **异步初始化**：使用 async/await 优化页面加载流程
-- 🐛 **错误处理**：完善的 try-catch 机制和日志系统
-- 📝 **代码可读性**：清晰的命名、注释和代码结构
-- 🔄 **易于扩展**：新增功能只需扩展相应类，无需修改核心逻辑
+- 🏗️ **重大重构**：面向对象设计
+- 📦 **模块化架构**：多个独立模块
+- 🎯 **单一职责原则**：提升可维护性
 
 ### v1.0.1
-- 🧩 新增：油猴脚本支持（Tampermonkey 自动执行）
-- 🔁 优化：删除后页面自动补位，无空白残留
-- 💬 新增：单块恢复+全局控制按钮
-- ⚡ 改进：兼容性增强（支持延迟加载）
+- 🧩 油猴脚本支持
+- 💬 单块恢复+全局控制按钮
 
 ### v1.0.0
-- 测试
+- 🎉 首次发布
