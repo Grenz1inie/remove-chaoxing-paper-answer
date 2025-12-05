@@ -42,7 +42,7 @@
                 // --- 按钮位置配置 ---
                 position: {
                     marginLeft: '0px',       // 按钮左外边距
-                    marginRight: '5px',      // 按钮右外边距（与显示答案按钮的间距）
+                    marginRight: '0px',      // 按钮右外边距（与显示答案按钮的间距）
                     marginTop: '10px',       // 按钮上外边距
                     marginBottom: '0px',     // 按钮下外边距
                     verticalAlign: 'middle'  // 垂直对齐方式
@@ -57,7 +57,7 @@
                     cursor: 'pointer',       // 鼠标样式
                     transition: 'all 0.2s',  // 过渡动画
                     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',  // 阴影效果
-                    minWidth: '54px',        // 最小宽度（确保"已复制"不会擑开其他按钮）
+                    minWidth: '64px',        // 最小宽度（确保"已复制"不会擑开其他按钮）
                     textAlign: 'center'      // 文字居中
                 },
                 // --- 按钮颜色配置 ---
@@ -79,7 +79,7 @@
             answerButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    marginLeft: '10px',      // 按钮左外边距
+                    marginLeft: '5px',      // 按钮左外边距
                     marginRight: '0px',      // 按钮右外边距
                     marginTop: '10px',       // 按钮上外边距
                     marginBottom: '0px',     // 按钮下外边距
