@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.6
-// @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、双按钮导出试题为Word文档（导出试题/导出答案两个按钮，含图片、支持多种题型、可配置样式参数）、样式持久化存储。
+// @version      2.7.8
+// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=chaoxing.com
@@ -39,13 +39,10 @@
 
             // ========== 复制题目按钮配置 ==========
             copyButton: {
-                // --- 按钮位置配置 ---
+                // --- 按钮位置配置（绝对定位到题目右上角） ---
                 position: {
-                    marginLeft: '0px',       // 按钮左外边距
-                    marginRight: '0px',      // 按钮右外边距（与显示答案按钮的间距）
-                    marginTop: '10px',       // 按钮上外边距
-                    marginBottom: '0px',     // 按钮下外边距
-                    verticalAlign: 'middle'  // 垂直对齐方式
+                    top: '0px',              // 距离顶部
+                    right: '0px'             // 距离右侧
                 },
                 // --- 按钮样式配置 ---
                 style: {
@@ -57,7 +54,7 @@
                     cursor: 'pointer',       // 鼠标样式
                     transition: 'all 0.2s',  // 过渡动画
                     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',  // 阴影效果
-                    minWidth: '64px',        // 最小宽度（确保"已复制"不会擑开其他按钮）
+                    minWidth: '70px',        // 最小宽度（确保"已复制"不会撑开其他按钮）
                     textAlign: 'center'      // 文字居中
                 },
                 // --- 按钮颜色配置 ---
@@ -70,8 +67,8 @@
                 },
                 // --- 按钮文字配置 ---
                 text: {
-                    copy: '复制',       // 复制按钮文字
-                    copied: '已复制'   // 复制成功文字
+                    copy: '复制题目',     // 复制按钮文字
+                    copied: '已复制'     // 复制成功文字
                 }
             },
 
@@ -168,17 +165,23 @@
                     fontWeight: '500',       // 字体粗细
                     cursor: 'pointer',       // 鼠标样式
                     transition: 'all 0.2s',  // 过渡动画
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',  // 阴影效果
+                    minWidth: '75px',        // 最小宽度（确保文字变化不会撑开按钮）
+                    textAlign: 'center'      // 文字居中
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
                     background: '#38b2ac',   // 按钮背景色（青色）
                     textColor: 'white',      // 按钮文字颜色
                     hoverBackground: '#319795', // 悬停时背景色
+                    successBackground: '#48bb78', // 保存成功背景色（绿色）
                     hoverOpacity: '0.8'      // 鼠标悬停时的透明度
                 },
                 // --- 按钮文字配置 ---
-                text: '💾 保存'           // 保存按钮文字
+                text: {
+                    save: '💾 保存',        // 保存按钮文字
+                    saved: '✅ 已保存'     // 保存成功文字
+                }
             },
 
             // ========== 编辑模式切换按钮配置 ==========
@@ -3622,7 +3625,28 @@
         // ========== 具体按钮样式获取方法 ==========
 
         getCopyButtonStyle() {
-            return this._getInlineButtonStyle('copyButton', 'background');
+            const position = this.config.get('copyButton.position');
+            const style = this.config.get('copyButton.style');
+            const colors = this.config.get('copyButton.colors');
+            
+            return {
+                position: 'absolute',
+                top: position.top,
+                right: position.right,
+                zIndex: '100',
+                fontSize: style.fontSize,
+                padding: style.padding,
+                borderRadius: style.borderRadius,
+                border: style.border,
+                fontWeight: style.fontWeight,
+                cursor: style.cursor,
+                transition: style.transition,
+                boxShadow: style.boxShadow,
+                minWidth: style.minWidth,
+                textAlign: style.textAlign,
+                background: colors.background,
+                color: colors.textColor
+            };
         }
 
         getAnswerButtonStyle(isHidden = true) {
@@ -3798,7 +3822,7 @@
                 }
             });
 
-            // 创建复制按钮（在显示答案按钮左边）
+            // 创建复制按钮（定位到题目区域右上角）
             this._createCopyButton();
 
             // 创建答案切换按钮
@@ -3838,7 +3862,39 @@
             });
 
             this.copyButton.addEventListener('click', () => this._handleCopy());
-            this.buttonContainer.appendChild(this.copyButton);
+            
+            // 查找题目容器并插入复制按钮到右上角
+            let questionContainer = null;
+            const questionId = this.questionId;
+            
+            if (questionId && questionId.startsWith('question')) {
+                questionContainer = document.getElementById(questionId);
+            }
+            
+            // 如果没找到，尝试从 parent 向上查找
+            if (!questionContainer && this.parent) {
+                let element = this.parent;
+                while (element && element !== document.body) {
+                    if (element.classList && (element.classList.contains('questionLi') || element.classList.contains('mark_item'))) {
+                        questionContainer = element;
+                        break;
+                    }
+                    element = element.parentElement;
+                }
+            }
+            
+            // 将复制按钮插入到题目容器
+            if (questionContainer) {
+                // 确保题目容器有相对定位
+                const currentPosition = window.getComputedStyle(questionContainer).position;
+                if (currentPosition === 'static') {
+                    questionContainer.style.position = 'relative';
+                }
+                questionContainer.appendChild(this.copyButton);
+            } else {
+                // 如果找不到题目容器，则添加到按钮容器中作为备选
+                this.buttonContainer.appendChild(this.copyButton);
+            }
         }
 
         _handleCopy() {
@@ -4033,9 +4089,13 @@
                 if (this.noteEditor.isEditMode) {
                     this.editModeButton.innerText = buttonText.preview;
                     this.editModeButton.style.backgroundColor = colors.previewBackground;
+                    // 编辑模式显示保存按钮
+                    this.saveNoteButton.style.display = 'inline-block';
                 } else {
                     this.editModeButton.innerText = buttonText.edit;
                     this.editModeButton.style.backgroundColor = colors.editBackground;
+                    // 预览模式隐藏保存按钮
+                    this.saveNoteButton.style.display = 'none';
                 }
             });
 
@@ -4044,10 +4104,11 @@
 
         _createSaveNoteButton() {
             const buttonText = this.config.get('saveNoteButton.text');
+            const colors = this.config.get('saveNoteButton.colors');
             const style = this.styleGenerator.getSaveNoteButtonStyle();
             style.display = 'none'; // 初始隐藏
             this.saveNoteButton = DOMHelper.createElement('button', {
-                innerText: buttonText,
+                innerText: buttonText.save,
                 style: style,
                 title: '手动保存当前笔记'
             });
@@ -4058,6 +4119,16 @@
             this.saveNoteButton.addEventListener('click', async () => {
                 await this.noteEditor.save();
                 Logger.success('💾 笔记已保存');
+                
+                // 点击反馈：文字和颜色变化
+                this.saveNoteButton.innerText = buttonText.saved;
+                this.saveNoteButton.style.background = colors.successBackground;
+                
+                // 2秒后恢复原状
+                setTimeout(() => {
+                    this.saveNoteButton.innerText = buttonText.save;
+                    this.saveNoteButton.style.background = colors.background;
+                }, 2000);
             });
             this.buttonContainer.appendChild(this.saveNoteButton);
         }
@@ -4138,10 +4209,15 @@
             this.noteButton.style.background = this.noteEditor.isVisible ? colors.hideBackground : colors.showBackground;
             this.noteButton.dataset.isVisible = String(this.noteEditor.isVisible);
             
-            // 联动控制编辑和保存按钮的显示/隐藏
+            // 联动控制编辑按钮的显示/隐藏
             if (this.noteEditor.isVisible) {
                 this.editModeButton.style.display = 'inline-block';
-                this.saveNoteButton.style.display = 'inline-block';
+                // 保存按钮只在编辑模式下显示
+                if (this.noteEditor.isEditMode) {
+                    this.saveNoteButton.style.display = 'inline-block';
+                } else {
+                    this.saveNoteButton.style.display = 'none';
+                }
             } else {
                 this.editModeButton.style.display = 'none';
                 this.saveNoteButton.style.display = 'none';
