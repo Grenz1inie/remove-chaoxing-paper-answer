@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.4
+// @version      2.7.5
 // @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、双按钮导出试题为Word文档（导出试题/导出答案两个按钮，含图片、支持多种题型、可配置样式参数）、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -14,6 +14,8 @@
 // @require      https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js
 // @run-at       document-end
 // @license MIT
+// @downloadURL https://update.greasyfork.org/scripts/555192/%E8%B6%85%E6%98%9F%E5%AD%A6%E4%B9%A0%E9%80%9A%E9%AB%98%E6%95%88%E5%88%B7%E9%A2%98%E5%B0%8F%E5%8A%A9%E6%89%8B.user.js
+// @updateURL https://update.greasyfork.org/scripts/555192/%E8%B6%85%E6%98%9F%E5%AD%A6%E4%B9%A0%E9%80%9A%E9%AB%98%E6%95%88%E5%88%B7%E9%A2%98%E5%B0%8F%E5%8A%A9%E6%89%8B.meta.js
 // ==/UserScript==
 
 (function() {
@@ -33,6 +35,42 @@
             // ========== 延迟配置 ==========
             delays: {
                 initialization: 800  // 脚本初始化延迟时间（毫秒），确保页面加载完成
+            },
+
+            // ========== 复制题目按钮配置 ==========
+            copyButton: {
+                // --- 按钮位置配置 ---
+                position: {
+                    marginLeft: '10px',      // 按钮左外边距
+                    marginRight: '5px',      // 按钮右外边距
+                    marginTop: '10px',       // 按钮上外边距
+                    marginBottom: '0px',     // 按钮下外边距
+                    verticalAlign: 'middle'  // 垂直对齐方式
+                },
+                // --- 按钮样式配置 ---
+                style: {
+                    fontSize: '12px',        // 字体大小
+                    padding: '4px 10px',     // 内边距
+                    borderRadius: '6px',     // 圆角半径
+                    border: 'none',          // 边框样式
+                    fontWeight: '500',       // 字体粗细
+                    cursor: 'pointer',       // 鼠标样式
+                    transition: 'all 0.2s',  // 过渡动画
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
+                },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    background: '#718096',       // 按钮背景色（灰色）
+                    hoverBackground: '#4a5568',  // 悬停背景色
+                    successBackground: '#48bb78', // 复制成功背景色（绿色）
+                    textColor: 'white',          // 按钮文字颜色
+                    hoverOpacity: '0.8'          // 鼠标悬停时的透明度
+                },
+                // --- 按钮文字配置 ---
+                text: {
+                    copy: '复制',       // 复制按钮文字
+                    copied: '已复制'   // 复制成功文字
+                }
             },
 
             // ========== 单个答案控制按钮配置 ==========
@@ -182,7 +220,7 @@
             globalButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    top: '42px',             // 距离容器顶部的距离（在控制面板按钮下方）
+                    top: '8px',              // 距离容器顶部的距离（在最上方）
                     right: '8px',            // 距离容器右侧的距离
                     zIndex: '9999'           // 层级（确保在最上层）
                 },
@@ -244,7 +282,7 @@
             manageButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    top: '8px',              // 距离容器顶部的距离（在全局按钮上方）
+                    top: '42px',             // 距离容器顶部的距离（在全局按钮下方）
                     right: '8px',            // 距离容器右侧的距离
                     zIndex: '9999'           // 层级（确保在最上层）
                 },
@@ -3571,6 +3609,10 @@
 
         // ========== 具体按钮样式获取方法 ==========
 
+        getCopyButtonStyle() {
+            return this._getInlineButtonStyle('copyButton', 'background');
+        }
+
         getAnswerButtonStyle(isHidden = true) {
             return this._getInlineButtonStyle('answerButton', isHidden ? 'showBackground' : 'hideBackground');
         }
@@ -3744,6 +3786,9 @@
                 }
             });
 
+            // 创建复制按钮（在显示答案按钮左边）
+            this._createCopyButton();
+
             // 创建答案切换按钮
             this._createAnswerToggleButton();
 
@@ -3758,6 +3803,145 @@
 
             // 插入按钮容器
             DOMHelper.insertElement(this.buttonContainer, this.parent, this.nextSibling);
+        }
+
+        _createCopyButton() {
+            const buttonText = this.config.get('copyButton.text');
+            const colors = this.config.get('copyButton.colors');
+            
+            this.copyButton = DOMHelper.createElement('button', {
+                innerText: buttonText.copy,
+                style: this.styleGenerator.getCopyButtonStyle(),
+                title: '复制题目和选项（纯文本）'
+            });
+
+            // 添加悬停效果
+            this.copyButton.addEventListener('mouseenter', () => {
+                this.copyButton.style.background = colors.hoverBackground;
+                this.copyButton.style.transform = 'translateY(-1px)';
+            });
+            this.copyButton.addEventListener('mouseleave', () => {
+                this.copyButton.style.background = colors.background;
+                this.copyButton.style.transform = 'translateY(0)';
+            });
+
+            this.copyButton.addEventListener('click', () => this._handleCopy());
+            this.buttonContainer.appendChild(this.copyButton);
+        }
+
+        _handleCopy() {
+            const buttonText = this.config.get('copyButton.text');
+            const colors = this.config.get('copyButton.colors');
+            
+            // 获取题目容器
+            let questionContainer = null;
+            const questionId = this.questionId;
+            
+            if (questionId && questionId.startsWith('question')) {
+                questionContainer = document.getElementById(questionId);
+            }
+            
+            // 如果没找到，尝试从 parent 向上查找
+            if (!questionContainer && this.parent) {
+                let element = this.parent;
+                while (element && element !== document.body) {
+                    if (element.classList && (element.classList.contains('questionLi') || element.classList.contains('mark_item'))) {
+                        questionContainer = element;
+                        break;
+                    }
+                    element = element.parentElement;
+                }
+            }
+
+            if (!questionContainer) {
+                Logger.error('未找到题目容器');
+                return;
+            }
+
+            // 提取题目文本
+            let copyText = '';
+            
+            // 1. 获取题号和题型（如 "1. (单选题, 3分)"）
+            const markName = questionContainer.querySelector('.mark_name');
+            if (markName) {
+                // 提取题号
+                const firstTextNode = markName.childNodes[0];
+                if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
+                    copyText += firstTextNode.textContent.trim();
+                }
+                
+                // 提取题型和分值
+                const colorShallow = markName.querySelector('.colorShallow');
+                if (colorShallow) {
+                    copyText += ' ' + colorShallow.textContent.trim();
+                }
+                
+                // 提取题干
+                const qtContent = markName.querySelector('.qtContent');
+                if (qtContent) {
+                    copyText += ' ' + qtContent.textContent.trim();
+                }
+                copyText += '\n';
+            }
+            
+            // 2. 获取选项（单选/多选题）
+            const markLetter = questionContainer.querySelector('ul.mark_letter');
+            if (markLetter) {
+                const options = markLetter.querySelectorAll('li');
+                options.forEach(option => {
+                    copyText += option.textContent.trim() + '\n';
+                });
+            }
+            
+            // 3. 获取完型填空/填空题选项
+            const markGestalt = questionContainer.querySelector('div.mark_gestalt');
+            if (markGestalt) {
+                const rows = markGestalt.querySelectorAll('.gestalt_row, dl');
+                rows.forEach(row => {
+                    const dt = row.querySelector('dt');
+                    if (dt) {
+                        copyText += dt.textContent.trim() + '\n';
+                    }
+                    const dds = row.querySelectorAll('dd');
+                    dds.forEach(dd => {
+                        copyText += '  ' + dd.textContent.trim() + '\n';
+                    });
+                });
+            }
+
+            // 复制到剪贴板
+            navigator.clipboard.writeText(copyText.trim()).then(() => {
+                // 复制成功，更新按钮状态
+                this.copyButton.innerText = buttonText.copied;
+                this.copyButton.style.background = colors.successBackground;
+                
+                // 2秒后恢复原状
+                setTimeout(() => {
+                    this.copyButton.innerText = buttonText.copy;
+                    this.copyButton.style.background = colors.background;
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                // 尝试使用传统方法
+                const textarea = document.createElement('textarea');
+                textarea.value = copyText.trim();
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    this.copyButton.innerText = buttonText.copied;
+                    this.copyButton.style.background = colors.successBackground;
+                    setTimeout(() => {
+                        this.copyButton.innerText = buttonText.copy;
+                        this.copyButton.style.background = colors.background;
+                    }, 2000);
+                } catch (e) {
+                    Logger.error('复制失败');
+                }
+                document.body.removeChild(textarea);
+            });
         }
 
         _createAnswerToggleButton() {
@@ -3992,13 +4176,14 @@
             const sidePanelSelector = this.config.get('selectors.sidePanel');
             const fanyaMarkingRight = document.querySelector(sidePanelSelector) || this.container.parentNode;
             
-            // 创建按钮容器，使用固定定位放在 fanyaMarking_right 右边
+            // 检测是否为竖屏模式
+            const isPortrait = () => window.innerHeight > window.innerWidth;
+            
+            // 创建按钮容器，使用固定定位
             this.buttonContainer = DOMHelper.createElement('div', {
                 style: {
                     position: 'fixed',
-                    top: fanyaMarkingRight.style.top || '70px',
                     display: 'flex',
-                    flexDirection: 'column',
                     gap: '8px',
                     zIndex: '9999'
                 }
@@ -4007,20 +4192,42 @@
             // 将按钮容器添加到 body
             document.body.appendChild(this.buttonContainer);
             
-            // 监听滚动事件，保持按钮位置与 fanyaMarking_right 对齐
+            // 更新按钮位置和布局
             const updatePosition = () => {
                 const rect = fanyaMarkingRight.getBoundingClientRect();
-                this.buttonContainer.style.top = rect.top + 'px';
-                // 放在 fanyaMarking_right 右边外部，间隔 10px
-                this.buttonContainer.style.left = (rect.right + 10) + 'px';
+                
+                if (isPortrait()) {
+                    // 竖屏模式：按钮横向排列在侧边栏下方
+                    this.buttonContainer.style.flexDirection = 'row';
+                    this.buttonContainer.style.flexWrap = 'wrap';
+                    this.buttonContainer.style.top = (rect.bottom + 10) + 'px';
+                    this.buttonContainer.style.left = rect.left + 'px';
+                    this.buttonContainer.style.right = 'auto';
+                    this.buttonContainer.style.maxWidth = rect.width + 'px';
+                    this.buttonContainer.style.justifyContent = 'flex-start';
+                } else {
+                    // 横屏模式：按钮纵向排列在侧边栏右边
+                    this.buttonContainer.style.flexDirection = 'column';
+                    this.buttonContainer.style.flexWrap = 'nowrap';
+                    this.buttonContainer.style.top = rect.top + 'px';
+                    this.buttonContainer.style.left = (rect.right + 10) + 'px';
+                    this.buttonContainer.style.right = 'auto';
+                    this.buttonContainer.style.maxWidth = 'none';
+                    this.buttonContainer.style.justifyContent = 'flex-start';
+                }
             };
             
             // 初始更新位置
             setTimeout(updatePosition, 100);
             
-            // 滚动时更新位置
+            // 滚动和窗口变化时更新位置
             window.addEventListener('scroll', updatePosition);
             window.addEventListener('resize', updatePosition);
+            
+            // 监听屏幕方向变化（移动设备）
+            if (window.matchMedia) {
+                window.matchMedia('(orientation: portrait)').addEventListener('change', updatePosition);
+            }
         }
 
         _createGlobalButton() {
@@ -4558,7 +4765,7 @@
         .question {
             margin-bottom: 30px;
             padding-bottom: 20px;
-            border-bottom: 3px solid #2d3748;
+            border-bottom: 2px solid #2d3748;
             page-break-inside: avoid;
         }
         .question:last-child {
