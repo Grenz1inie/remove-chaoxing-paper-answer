@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.5
+// @version      2.7.6
 // @description  一键隐藏超星学习通作业页面中所有答案块,支持单个/全局控制、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理(6个按钮位置/尺寸/颜色自定义)、双按钮导出试题为Word文档（导出试题/导出答案两个按钮，含图片、支持多种题型、可配置样式参数）、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -41,8 +41,8 @@
             copyButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    marginLeft: '10px',      // 按钮左外边距
-                    marginRight: '5px',      // 按钮右外边距
+                    marginLeft: '0px',       // 按钮左外边距
+                    marginRight: '5px',      // 按钮右外边距（与显示答案按钮的间距）
                     marginTop: '10px',       // 按钮上外边距
                     marginBottom: '0px',     // 按钮下外边距
                     verticalAlign: 'middle'  // 垂直对齐方式
@@ -56,7 +56,9 @@
                     fontWeight: '500',       // 字体粗细
                     cursor: 'pointer',       // 鼠标样式
                     transition: 'all 0.2s',  // 过渡动画
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',  // 阴影效果
+                    minWidth: '54px',        // 最小宽度（确保"已复制"不会擑开其他按钮）
+                    textAlign: 'center'      // 文字居中
                 },
                 // --- 按钮颜色配置 ---
                 colors: {
@@ -3561,7 +3563,7 @@
             const style = this.config.get(`${configKey}.style`);
             const colors = this.config.get(`${configKey}.colors`);
 
-            return {
+            const result = {
                 marginLeft: position.marginLeft,
                 marginRight: position.marginRight,
                 marginTop: position.marginTop,
@@ -3579,6 +3581,16 @@
                 boxShadow: style.boxShadow,
                 display: 'inline-block'
             };
+
+            // 可选属性：minWidth 和 textAlign
+            if (style.minWidth) {
+                result.minWidth = style.minWidth;
+            }
+            if (style.textAlign) {
+                result.textAlign = style.textAlign;
+            }
+
+            return result;
         }
 
         /**
@@ -4165,9 +4177,10 @@
 
             // 将按钮放到 fanyaMarking_right 的右侧外部
             this._createButtonContainer();
-            this._createGlobalButton();
-            this._createManageButton();
-            this._createExportButton();
+            // 注意：按钮创建顺序决定显示顺序（上到下/左到右）
+            this._createManageButton();     // 控制面板在最上面
+            this._createGlobalButton();     // 显示全部答案在第二
+            this._createExportButton();     // 导出按钮在下面
             return this.globalButton;
         }
 
