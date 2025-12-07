@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.12
+// @version      2.7.13
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -1531,7 +1531,7 @@
             // 菜单项
             const menuItems = [
                 { id: 'settings', icon: '⚙️', text: '设置' },
-                { id: 'copy-config', icon: '📋', text: '复制配置' },
+                { id: 'copy-config', icon: '📋', text: '复制内容前后缀管理' },
                 { id: 'export', icon: '📄', text: '导出格式管理' },
                 { 
                     id: 'notes', 
@@ -2378,43 +2378,6 @@
         _renderCopyConfigPanel(container) {
             container.innerHTML = '';
 
-            // 说明文本
-            const descSection = DOMHelper.createElement('div', {
-                style: {
-                    backgroundColor: '#edf2f7',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    marginBottom: '20px',
-                    borderLeft: '4px solid #4299e1'
-                }
-            });
-
-            const descTitle = DOMHelper.createElement('div', {
-                innerText: '📋 功能说明',
-                style: {
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#2d3748',
-                    marginBottom: '8px'
-                }
-            });
-
-            const descText = DOMHelper.createElement('div', {
-                innerHTML: '配置复制题目时自动添加的前缀和后缀内容。<br>' +
-                          '• 支持使用 <code>\\n</code> 表示换行符<br>' +
-                          '• 留空则不添加前缀/后缀<br>' +
-                          '• 配置会自动保存到本地',
-                style: {
-                    fontSize: '13px',
-                    color: '#4a5568',
-                    lineHeight: '1.8'
-                }
-            });
-
-            descSection.appendChild(descTitle);
-            descSection.appendChild(descText);
-            container.appendChild(descSection);
-
             // 配置表单区域
             const configSection = DOMHelper.createElement('div', {
                 style: {
@@ -2454,7 +2417,8 @@
                     backgroundColor: 'white',
                     borderRadius: '8px',
                     padding: '24px',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    marginBottom: '20px'
                 }
             });
 
@@ -2521,6 +2485,37 @@
             previewSection.appendChild(previewHint);
             previewSection.appendChild(previewContent);
             container.appendChild(previewSection);
+
+            // 底部操作栏
+            const actionBar = this._createActionBar(
+                async () => {
+                    // 保存配置
+                    try {
+                        await this.dbManager.saveSetting('copyPrefix', this.settings.copyPrefix || '');
+                        await this.dbManager.saveSetting('copySuffix', this.settings.copySuffix || '');
+                        alert('✅ 复制配置已保存！');
+                    } catch (error) {
+                        console.error('保存失败:', error);
+                        alert('❌ 保存失败，请重试');
+                    }
+                },
+                () => {
+                    // 重置配置
+                    if (confirm('确定要重置复制配置吗？')) {
+                        this.settings.copyPrefix = '';
+                        this.settings.copySuffix = '';
+                        this.dbManager.saveSetting('copyPrefix', '');
+                        this.dbManager.saveSetting('copySuffix', '');
+                        this._renderCopyConfigPanel(container);
+                    }
+                },
+                {
+                    saveText: '💾 保存配置',
+                    resetText: '🔄 重置配置'
+                }
+            );
+            
+            container.appendChild(actionBar);
         }
 
         /**
@@ -4323,10 +4318,14 @@
                 return this.dbManager.getSetting('copySuffix', this.config.get('settings.copySuffix')).then(suffix => {
                     let finalText = copyText.trim();
                     if (prefix) {
-                        finalText = prefix + finalText;
+                        // 处理 \n 转义符
+                        const processedPrefix = prefix.replace(/\\n/g, '\n');
+                        finalText = processedPrefix + finalText;
                     }
                     if (suffix) {
-                        finalText = finalText + suffix;
+                        // 处理 \n 转义符
+                        const processedSuffix = suffix.replace(/\\n/g, '\n');
+                        finalText = finalText + processedSuffix;
                     }
                     return finalText;
                 });
@@ -4350,10 +4349,14 @@
                     return this.dbManager.getSetting('copySuffix', this.config.get('settings.copySuffix')).then(suffix => {
                         let finalText = copyText.trim();
                         if (prefix) {
-                            finalText = prefix + finalText;
+                            // 处理 \n 转义符
+                            const processedPrefix = prefix.replace(/\\n/g, '\n');
+                            finalText = processedPrefix + finalText;
                         }
                         if (suffix) {
-                            finalText = finalText + suffix;
+                            // 处理 \n 转义符
+                            const processedSuffix = suffix.replace(/\\n/g, '\n');
+                            finalText = finalText + processedSuffix;
                         }
                         return finalText;
                     });
