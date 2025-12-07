@@ -1363,11 +1363,19 @@
                 if (!('autoSaveDelay' in this.settings)) {
                     this.settings.autoSaveDelay = this.config.get('settings.autoSaveDelay');
                 }
+                if (!('aiPromptPrefix' in this.settings)) {
+                    this.settings.aiPromptPrefix = this.config.get('settings.aiPromptPrefix');
+                }
+                if (!('aiPromptSuffix' in this.settings)) {
+                    this.settings.aiPromptSuffix = this.config.get('settings.aiPromptSuffix');
+                }
             } catch (error) {
                 Logger.error('加载设置失败', error);
                 this.settings = {
                     autoSave: this.config.get('settings.autoSave'),
-                    autoSaveDelay: this.config.get('settings.autoSaveDelay')
+                    autoSaveDelay: this.config.get('settings.autoSaveDelay'),
+                    aiPromptPrefix: this.config.get('settings.aiPromptPrefix'),
+                    aiPromptSuffix: this.config.get('settings.aiPromptSuffix')
                 };
             }
         }
@@ -4643,16 +4651,12 @@
                 GM_setValue('chaoxing_doubao_suffix', aiPromptSuffix);
                 
                 Logger.log('题目已保存，正在打开豆包AI...');
+                console.log('存储的前缀:', aiPromptPrefix);
+                console.log('存储的后缀:', aiPromptSuffix);
                 
-                // 标签页复用逻辑（方案A：检测关闭+聚焦刷新）
-                if (!window.doubaoTabRef || window.doubaoTabRef.closed) {
-                    // 创建新标签页
-                    window.doubaoTabRef = GM_openInTab(doubaoUrl, { active: true, insert: true });
-                } else {
-                    // 复用已有标签页：聚焦并刷新
-                    window.doubaoTabRef.focus();
-                    window.doubaoTabRef.location.reload();
-                }
+                // 打开豆包AI（每次新建标签页，因为GM_openInTab返回的对象不支持标准窗口方法）
+                // 豆包页面会自动检测缓存并读取题目内容
+                GM_openInTab(doubaoUrl, { active: true, insert: true, setParent: true });
             } catch (error) {
                 Logger.error('打开豆包AI失败', error);
             }
@@ -6303,6 +6307,11 @@
                 const aiPrefix = GM_getValue(prefixKey, '');
                 const aiSuffix = GM_getValue(suffixKey, '');
                 
+                console.log('🔍 读取GM存储数据：');
+                console.log('  题目内容:', questionText ? `${questionText.substring(0, 50)}...` : '(空)');
+                console.log('  前缀配置:', aiPrefix || '(空)');
+                console.log('  后缀配置:', aiSuffix || '(空)');
+                
                 if (!questionText) {
                     Logger.warn('未找到待提问的题目内容');
                     // 清除缓存
@@ -6318,8 +6327,11 @@
                 const fullContent = processedPrefix + questionText + processedSuffix;
                 
                 Logger.log('找到待提问题目，准备自动填充和发送...');
-                console.log('题目内容长度:', fullContent.length);
-                console.log('前缀长度:', processedPrefix.length, '后缀长度:', processedSuffix.length);
+                console.log('📊 内容统计：');
+                console.log('  题目内容长度:', questionText.length);
+                console.log('  前缀长度:', processedPrefix.length, '实际内容:', processedPrefix ? `"${processedPrefix}"` : '(空)');
+                console.log('  后缀长度:', processedSuffix.length, '实际内容:', processedSuffix ? `"${processedSuffix}"` : '(空)');
+                console.log('  最终内容长度:', fullContent.length);
                 
                 // 2. 自动等待输入框加载（无固定延迟，元素出现立即执行）
                 const inputElem = await waitForElement('textarea[data-testid="chat_input_input"]');
