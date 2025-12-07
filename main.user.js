@@ -4559,7 +4559,7 @@
             }
         }
 
-        _handleAskDoubao() {
+        async _handleAskDoubao() {
             // 获取题目容器
             let questionContainer = null;
             const questionId = this.questionId;
@@ -4641,9 +4641,22 @@
             const doubaoUrl = this.config.get('askDoubaoButton.doubaoUrl');
             
             try {
-                // 读取前后缀配置
-                const aiPromptPrefix = this.config.get('settings.aiPromptPrefix') || '';
-                const aiPromptSuffix = this.config.get('settings.aiPromptSuffix') || '';
+                // 🔥 关键修复：从 IndexedDB 实时读取用户保存的前后缀配置
+                let aiPromptPrefix = '';
+                let aiPromptSuffix = '';
+                try {
+                    const savedPrefix = await this.dbManager.getSetting('aiPromptPrefix');
+                    const savedSuffix = await this.dbManager.getSetting('aiPromptSuffix');
+                    aiPromptPrefix = savedPrefix || '';
+                    aiPromptSuffix = savedSuffix || '';
+                    console.log('📖 从 IndexedDB 读取配置:');
+                    console.log('  前缀配置:', aiPromptPrefix || '(空)');
+                    console.log('  后缀配置:', aiPromptSuffix || '(空)');
+                } catch (error) {
+                    console.warn('读取配置失败，使用默认值:', error);
+                    aiPromptPrefix = this.config.get('settings.aiPromptPrefix') || '';
+                    aiPromptSuffix = this.config.get('settings.aiPromptSuffix') || '';
+                }
                 
                 // 处理转义符（\n -> 换行符）
                 const processedPrefix = aiPromptPrefix.replace(/\\n/g, '\n');
