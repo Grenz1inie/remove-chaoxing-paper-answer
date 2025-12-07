@@ -4563,7 +4563,7 @@
             
             try {
                 GM_setValue(storageKey, questionText.trim());
-                Logger.info('题目已保存，正在打开豆包AI...');
+                Logger.log('题目已保存，正在打开豆包AI...');
                 
                 // 在新标签页打开豆包AI并自动切换
                 GM_openInTab(doubaoUrl, { active: true, insert: true });
@@ -6162,7 +6162,7 @@
     // 检测当前页面是超星还是豆包
     if (window.location.hostname.includes('doubao.com')) {
         // 豆包AI页面逻辑
-        Logger.info('检测到豆包AI页面，正在初始化自动填充功能...');
+        Logger.log('检测到豆包AI页面，正在初始化自动填充功能...');
         
         // 等待页面加载完成
         setTimeout(() => {
@@ -6175,7 +6175,7 @@
                     return;
                 }
                 
-                Logger.info('找到待提问题目，准备填充...');
+                Logger.log('找到待提问题目，准备填充...');
                 
                 // 查找输入框
                 const inputSelector = 'textarea[data-testid="chat_input_input"]';
