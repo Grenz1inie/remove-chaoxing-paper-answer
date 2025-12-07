@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.13
+// @version      2.7.14
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -2487,8 +2487,9 @@
             container.appendChild(previewSection);
 
             // 底部操作栏
-            const actionBar = this._createActionBar(
-                async () => {
+            const actionBar = this._createFloatingActionBar({
+                saveText: '💾 保存配置',
+                onSave: async () => {
                     // 保存配置
                     try {
                         await this.dbManager.saveSetting('copyPrefix', this.settings.copyPrefix || '');
@@ -2499,7 +2500,8 @@
                         alert('❌ 保存失败，请重试');
                     }
                 },
-                () => {
+                resetText: '🔄 重置配置',
+                onReset: () => {
                     // 重置配置
                     if (confirm('确定要重置复制配置吗？')) {
                         this.settings.copyPrefix = '';
@@ -2508,12 +2510,8 @@
                         this.dbManager.saveSetting('copySuffix', '');
                         this._renderCopyConfigPanel(container);
                     }
-                },
-                {
-                    saveText: '💾 保存配置',
-                    resetText: '🔄 重置配置'
                 }
-            );
+            });
             
             container.appendChild(actionBar);
         }
