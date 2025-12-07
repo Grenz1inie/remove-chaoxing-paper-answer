@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.11
+// @version      2.7.12
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -1531,7 +1531,8 @@
             // 菜单项
             const menuItems = [
                 { id: 'settings', icon: '⚙️', text: '设置' },
-                { id: 'export', icon: '📄', text: '导出设置' },
+                { id: 'copy-config', icon: '📋', text: '复制配置' },
+                { id: 'export', icon: '📄', text: '导出格式管理' },
                 { 
                     id: 'notes', 
                     icon: '📝', 
@@ -1909,6 +1910,9 @@
             if (this.currentTab === 'settings') {
                 headerTitle.innerText = '⚙️ 设置';
                 this._renderSettingsPanel(contentBody);
+            } else if (this.currentTab === 'copy-config') {
+                headerTitle.innerText = '📋 复制内容前后缀管理';
+                this._renderCopyConfigPanel(contentBody);
             } else if (this.currentTab === 'export') {
                 headerTitle.innerText = '📄 导出设置';
                 this._renderExportSettingsPanel(contentBody);
@@ -1960,112 +1964,6 @@
             settingsContainer.appendChild(delaySection);
 
             container.appendChild(settingsContainer);
-
-            // 复制配置区域
-            const copyConfigSection = DOMHelper.createElement('div', {
-                style: {
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    padding: '24px',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    marginBottom: '20px'
-                }
-            });
-
-            const copyConfigTitle = DOMHelper.createElement('div', {
-                innerText: '📋 复制配置',
-                style: {
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: '#2d3748',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                }
-            });
-
-            copyConfigSection.appendChild(copyConfigTitle);
-
-            // 复制前缀设置
-            const prefixSection = this._createTextSettingItem(
-                '复制内容前缀',
-                '复制题目时自动添加到内容前面的文字（如："【题目】"、"问："等）',
-                'copyPrefix',
-                this.settings.copyPrefix || ''
-            );
-
-            copyConfigSection.appendChild(prefixSection);
-
-            // 复制后缀设置
-            const suffixSection = this._createTextSettingItem(
-                '复制内容后缀',
-                '复制题目时自动添加到内容后面的文字（如："\n---"、"\n来源：超星学习通"等）',
-                'copySuffix',
-                this.settings.copySuffix || ''
-            );
-
-            copyConfigSection.appendChild(suffixSection);
-
-            // 示例预览
-            const exampleSection = DOMHelper.createElement('div', {
-                style: {
-                    marginTop: '16px',
-                    padding: '12px',
-                    backgroundColor: '#f7fafc',
-                    borderRadius: '6px',
-                    border: '1px solid #e2e8f0'
-                }
-            });
-
-            const exampleTitle = DOMHelper.createElement('div', {
-                innerText: '💡 效果预览',
-                style: {
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    color: '#4a5568',
-                    marginBottom: '8px'
-                }
-            });
-
-            const exampleContent = DOMHelper.createElement('div', {
-                id: 'copy-config-preview',
-                style: {
-                    fontSize: '12px',
-                    color: '#2d3748',
-                    lineHeight: '1.6',
-                    whiteSpace: 'pre-wrap',
-                    fontFamily: 'monospace'
-                }
-            });
-
-            // 更新预览内容的函数
-            const updatePreview = () => {
-                const prefix = this.settings.copyPrefix || '';
-                const suffix = this.settings.copySuffix || '';
-                const sampleQuestion = '1. (单选题, 3分) 以下哪个是正确的？\nA. 选项A\nB. 选项B\nC. 选项C\nD. 选项D';
-                exampleContent.textContent = prefix + sampleQuestion + suffix;
-            };
-
-            // 初始预览
-            updatePreview();
-
-            // 监听输入变化更新预览
-            const prefixInput = prefixSection.querySelector('input');
-            const suffixInput = suffixSection.querySelector('input');
-            
-            if (prefixInput) {
-                prefixInput.addEventListener('input', updatePreview);
-            }
-            if (suffixInput) {
-                suffixInput.addEventListener('input', updatePreview);
-            }
-
-            exampleSection.appendChild(exampleTitle);
-            exampleSection.appendChild(exampleContent);
-            copyConfigSection.appendChild(exampleSection);
-
-            container.appendChild(copyConfigSection);
 
             // 危险操作区域
             const dangerZone = DOMHelper.createElement('div', {
@@ -2368,6 +2266,261 @@
             item.appendChild(desc);
 
             return item;
+        }
+
+        /**
+         * 创建文本域类型的设置项（支持多行输入）
+         * @param {string} label - 设置项标签
+         * @param {string} description - 设置项描述
+         * @param {string} key - 设置项键名
+         * @param {string} value - 当前值
+         * @returns {HTMLElement} 设置项元素
+         */
+        _createTextareaSettingItem(label, description, key, value) {
+            const item = DOMHelper.createElement('div', {
+                style: {
+                    marginBottom: '24px'
+                }
+            });
+
+            const labelEl = DOMHelper.createElement('label', {
+                innerText: label,
+                style: {
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#2d3748',
+                    marginBottom: '8px'
+                }
+            });
+
+            const textarea = DOMHelper.createElement('textarea', {
+                value: value || '',
+                placeholder: '留空则不添加前缀/后缀。支持 \\n 换行符',
+                rows: 3,
+                style: {
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #cbd5e0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    color: '#2d3748',
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box',
+                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                    lineHeight: '1.5',
+                    resize: 'vertical',
+                    minHeight: '60px'
+                }
+            });
+
+            // 设置初始值
+            textarea.value = value || '';
+
+            // 聚焦效果
+            textarea.addEventListener('focus', () => {
+                textarea.style.borderColor = '#4299e1';
+                textarea.style.outline = 'none';
+                textarea.style.boxShadow = '0 0 0 3px rgba(66, 153, 225, 0.1)';
+            });
+
+            textarea.addEventListener('blur', () => {
+                textarea.style.borderColor = '#cbd5e0';
+                textarea.style.boxShadow = 'none';
+            });
+
+            // 实时保存
+            textarea.addEventListener('input', () => {
+                this.settings[key] = textarea.value;
+            });
+
+            const desc = DOMHelper.createElement('div', {
+                innerHTML: description,
+                style: {
+                    fontSize: '12px',
+                    color: '#718096',
+                    marginTop: '6px',
+                    lineHeight: '1.5'
+                }
+            });
+
+            // 字符计数提示
+            const charCount = DOMHelper.createElement('div', {
+                style: {
+                    fontSize: '11px',
+                    color: '#a0aec0',
+                    marginTop: '4px',
+                    textAlign: 'right'
+                }
+            });
+
+            const updateCharCount = () => {
+                const length = textarea.value.length;
+                const displayValue = textarea.value.replace(/\\n/g, '\n');
+                const actualLength = displayValue.length;
+                charCount.innerText = `${length} 字符 (实际显示: ${actualLength} 字符)`;
+            };
+
+            updateCharCount();
+            textarea.addEventListener('input', updateCharCount);
+
+            item.appendChild(labelEl);
+            item.appendChild(textarea);
+            item.appendChild(desc);
+            item.appendChild(charCount);
+
+            return item;
+        }
+
+        /**
+         * 渲染复制配置面板
+         */
+        _renderCopyConfigPanel(container) {
+            container.innerHTML = '';
+
+            // 说明文本
+            const descSection = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: '#edf2f7',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    marginBottom: '20px',
+                    borderLeft: '4px solid #4299e1'
+                }
+            });
+
+            const descTitle = DOMHelper.createElement('div', {
+                innerText: '📋 功能说明',
+                style: {
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#2d3748',
+                    marginBottom: '8px'
+                }
+            });
+
+            const descText = DOMHelper.createElement('div', {
+                innerHTML: '配置复制题目时自动添加的前缀和后缀内容。<br>' +
+                          '• 支持使用 <code>\\n</code> 表示换行符<br>' +
+                          '• 留空则不添加前缀/后缀<br>' +
+                          '• 配置会自动保存到本地',
+                style: {
+                    fontSize: '13px',
+                    color: '#4a5568',
+                    lineHeight: '1.8'
+                }
+            });
+
+            descSection.appendChild(descTitle);
+            descSection.appendChild(descText);
+            container.appendChild(descSection);
+
+            // 配置表单区域
+            const configSection = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    marginBottom: '20px'
+                }
+            });
+
+            // 复制前缀设置
+            const prefixSection = this._createTextareaSettingItem(
+                '复制内容前缀',
+                '复制题目时自动添加到内容前面的文字。支持 \\n 换行符（如："【题目】\\n"、"问："等）',
+                'copyPrefix',
+                this.settings.copyPrefix || ''
+            );
+
+            configSection.appendChild(prefixSection);
+
+            // 复制后缀设置
+            const suffixSection = this._createTextareaSettingItem(
+                '复制内容后缀',
+                '复制题目时自动添加到内容后面的文字。支持 \\n 换行符（如："\\n---"、"\\n\\n来源：超星学习通"等）',
+                'copySuffix',
+                this.settings.copySuffix || ''
+            );
+
+            configSection.appendChild(suffixSection);
+
+            container.appendChild(configSection);
+
+            // 示例预览区域
+            const previewSection = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }
+            });
+
+            const previewTitle = DOMHelper.createElement('div', {
+                innerText: '💡 实时预览',
+                style: {
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#2d3748',
+                    marginBottom: '16px'
+                }
+            });
+
+            const previewHint = DOMHelper.createElement('div', {
+                innerText: '以下是应用前缀和后缀后的效果：',
+                style: {
+                    fontSize: '13px',
+                    color: '#718096',
+                    marginBottom: '12px'
+                }
+            });
+
+            const previewContent = DOMHelper.createElement('pre', {
+                id: 'copy-config-preview',
+                style: {
+                    fontSize: '13px',
+                    color: '#2d3748',
+                    lineHeight: '1.6',
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                    backgroundColor: '#f7fafc',
+                    padding: '16px',
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0',
+                    margin: '0',
+                    overflow: 'auto',
+                    maxHeight: '300px'
+                }
+            });
+
+            // 更新预览内容的函数（处理 \n 转义）
+            const updatePreview = () => {
+                const prefix = (this.settings.copyPrefix || '').replace(/\\n/g, '\n');
+                const suffix = (this.settings.copySuffix || '').replace(/\\n/g, '\n');
+                const sampleQuestion = '1. (单选题, 3分) 以下哪个是正确的？\nA. 选项A\nB. 选项B\nC. 选项C\nD. 选项D';
+                previewContent.textContent = prefix + sampleQuestion + suffix;
+            };
+
+            // 初始预览
+            updatePreview();
+
+            // 监听输入变化更新预览
+            const prefixTextarea = prefixSection.querySelector('textarea');
+            const suffixTextarea = suffixSection.querySelector('textarea');
+            
+            if (prefixTextarea) {
+                prefixTextarea.addEventListener('input', updatePreview);
+            }
+            if (suffixTextarea) {
+                suffixTextarea.addEventListener('input', updatePreview);
+            }
+
+            previewSection.appendChild(previewTitle);
+            previewSection.appendChild(previewHint);
+            previewSection.appendChild(previewContent);
+            container.appendChild(previewSection);
         }
 
         /**
