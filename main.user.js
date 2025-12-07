@@ -4636,26 +4636,35 @@
                 });
             }
 
-            // 使用 GM_setValue 存储题目内容和配置
+            // 使用 GM_setValue 存储题目内容（拼接好前后缀后存储）
             const storageKey = this.config.get('askDoubaoButton.storageKey');
             const doubaoUrl = this.config.get('askDoubaoButton.doubaoUrl');
             
             try {
-                // 存储题目内容
-                GM_setValue(storageKey, questionText.trim());
-                
-                // 同时存储前后缀配置
+                // 读取前后缀配置
                 const aiPromptPrefix = this.config.get('settings.aiPromptPrefix') || '';
                 const aiPromptSuffix = this.config.get('settings.aiPromptSuffix') || '';
-                GM_setValue('chaoxing_doubao_prefix', aiPromptPrefix);
-                GM_setValue('chaoxing_doubao_suffix', aiPromptSuffix);
+                
+                // 处理转义符（\n -> 换行符）
+                const processedPrefix = aiPromptPrefix.replace(/\\n/g, '\n');
+                const processedSuffix = aiPromptSuffix.replace(/\\n/g, '\n');
+                
+                // 拼接完整内容（前缀 + 题目 + 后缀）
+                const fullContent = processedPrefix + questionText.trim() + processedSuffix;
+                
+                // 存储完整内容到GM缓存
+                GM_setValue(storageKey, fullContent);
                 
                 Logger.log('题目已保存，正在打开豆包AI...');
-                console.log('存储的前缀:', aiPromptPrefix);
-                console.log('存储的后缀:', aiPromptSuffix);
+                console.log('📝 存储的完整内容:');
+                console.log('  前缀:', processedPrefix ? `"${processedPrefix}"` : '(无)');
+                console.log('  题目长度:', questionText.trim().length);
+                console.log('  后缀:', processedSuffix ? `"${processedSuffix}"` : '(无)');
+                console.log('  最终内容长度:', fullContent.length);
                 
-                // 打开豆包AI（每次新建标签页，因为GM_openInTab返回的对象不支持标准窗口方法）
-                // 豆包页面会自动检测缓存并读取题目内容
+                // 打开豆包AI（每次新建标签页，因为GM_openInTab不支持标准窗口方法）
+                // 说明：无法实现真正的标签页复用，因为GM_openInTab返回的对象不支持location/reload/focus
+                // 但豆包页面会持续监听缓存变化，实现"类复用"效果
                 GM_openInTab(doubaoUrl, { active: true, insert: true, setParent: true });
             } catch (error) {
                 Logger.error('打开豆包AI失败', error);
@@ -6294,44 +6303,26 @@
         }
 
         /**
-         * 豆包AI自动发送逻辑
+         * 豆包AI自动发送逻辑（读取完整内容并填充）
          */
         async function autoSendMessage() {
             const storageKey = 'chaoxing_doubao_question';
-            const prefixKey = 'chaoxing_doubao_prefix';
-            const suffixKey = 'chaoxing_doubao_suffix';
             
             try {
-                // 1. 读取题目内容和前后缀配置
-                const questionText = GM_getValue(storageKey, '');
-                const aiPrefix = GM_getValue(prefixKey, '');
-                const aiSuffix = GM_getValue(suffixKey, '');
+                // 读取完整内容（已在超星页面拼接好前后缀）
+                const fullContent = GM_getValue(storageKey, '');
                 
-                console.log('🔍 读取GM存储数据：');
-                console.log('  题目内容:', questionText ? `${questionText.substring(0, 50)}...` : '(空)');
-                console.log('  前缀配置:', aiPrefix || '(空)');
-                console.log('  后缀配置:', aiSuffix || '(空)');
+                console.log('🔍 读取GM存储的完整内容：');
+                console.log('  内容预览:', fullContent ? `${fullContent.substring(0, 100)}...` : '(空)');
+                console.log('  内容长度:', fullContent.length);
                 
-                if (!questionText) {
+                if (!fullContent) {
                     Logger.warn('未找到待提问的题目内容');
-                    // 清除缓存
                     GM_setValue(storageKey, '');
-                    GM_setValue(prefixKey, '');
-                    GM_setValue(suffixKey, '');
                     return;
                 }
                 
-                // 应用前后缀（处理 \n 转义符）
-                const processedPrefix = aiPrefix ? aiPrefix.replace(/\\n/g, '\n') : '';
-                const processedSuffix = aiSuffix ? aiSuffix.replace(/\\n/g, '\n') : '';
-                const fullContent = processedPrefix + questionText + processedSuffix;
-                
                 Logger.log('找到待提问题目，准备自动填充和发送...');
-                console.log('📊 内容统计：');
-                console.log('  题目内容长度:', questionText.length);
-                console.log('  前缀长度:', processedPrefix.length, '实际内容:', processedPrefix ? `"${processedPrefix}"` : '(空)');
-                console.log('  后缀长度:', processedSuffix.length, '实际内容:', processedSuffix ? `"${processedSuffix}"` : '(空)');
-                console.log('  最终内容长度:', fullContent.length);
                 
                 // 2. 自动等待输入框加载（无固定延迟，元素出现立即执行）
                 const inputElem = await waitForElement('textarea[data-testid="chat_input_input"]');
@@ -6385,8 +6376,30 @@
             }
         }
 
+        /**
+         * 持续监听缓存变化（实现"类复用"效果）
+         * 说明：由于GM_openInTab不支持标准窗口方法，无法真正复用同一标签页
+         * 但可以通过持续监听实现：用户保持豆包页面打开，每次点击"问豆包"按钮时自动刷新内容
+         */
+        function startCacheListener() {
+            const storageKey = 'chaoxing_doubao_question';
+            let lastContent = '';
+            
+            setInterval(() => {
+                const currentContent = GM_getValue(storageKey, '');
+                if (currentContent && currentContent !== lastContent) {
+                    lastContent = currentContent;
+                    Logger.log('🔄 检测到新题目，自动填充...');
+                    autoSendMessage();
+                }
+            }, 500); // 每500ms检查一次缓存
+        }
+
         // 启动豆包AI自动发送（无需固定延迟，自动识别加载）
         autoSendMessage();
+        // 启动持续监听（实现"类复用"）
+        startCacheListener();
+        Logger.log('✅ 豆包AI自动填充功能已启动（支持持续监听新题目）');
         
     } else {
         // ===================== 超星学习通页面逻辑 =====================
