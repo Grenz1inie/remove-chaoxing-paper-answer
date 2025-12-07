@@ -326,7 +326,8 @@
                 copyPrefix: '',                         // 复制内容前缀（默认无）
                 copySuffix: '',                         // 复制内容后缀（默认无）
                 aiPromptPrefix: '',                     // AI提问前缀提示词（默认无）
-                aiPromptSuffix: ''                      // AI提问后缀提示词（默认无）
+                aiPromptSuffix: '',                     // AI提问后缀提示词（默认无）
+                aiChatId: ''                            // 豆包会话ID（默认无，留空则每次新建）
             },
 
             // ========== 控制面板按钮配置 ==========
@@ -1369,13 +1370,17 @@
                 if (!('aiPromptSuffix' in this.settings)) {
                     this.settings.aiPromptSuffix = this.config.get('settings.aiPromptSuffix');
                 }
+                if (!('aiChatId' in this.settings)) {
+                    this.settings.aiChatId = this.config.get('settings.aiChatId');
+                }
             } catch (error) {
                 Logger.error('加载设置失败', error);
                 this.settings = {
                     autoSave: this.config.get('settings.autoSave'),
                     autoSaveDelay: this.config.get('settings.autoSaveDelay'),
                     aiPromptPrefix: this.config.get('settings.aiPromptPrefix'),
-                    aiPromptSuffix: this.config.get('settings.aiPromptSuffix')
+                    aiPromptSuffix: this.config.get('settings.aiPromptSuffix'),
+                    aiChatId: this.config.get('settings.aiChatId')
                 };
             }
         }
@@ -2557,37 +2562,130 @@
          * 渲染AI提问管理面板
          */
         _renderAIPromptPanel(container) {
-            this._renderPrefixSuffixPanel(container, {
-                title: '🤖 AI提问管理',
-                prefixKey: 'aiPromptPrefix',
-                suffixKey: 'aiPromptSuffix',
-                prefixLabel: 'AI提问前缀',
-                suffixLabel: 'AI提问后缀',
-                prefixDesc: '点击"问豆包"按钮时，自动添加到题目前面的提示词。支持 \\n 换行符（如："请帮我解答这道题目：\\n"、"【来自超星学习通】\\n\\n"等）',
-                suffixDesc: '点击"问豆包"按钮时，自动添加到题目后面的提示词。支持 \\n 换行符（如："\\n\\n请给出详细解释"、"\\n---\\n需要步骤讲解"等）',
-                sampleQuestion: '1. (单选题, 3分) 以下哪个是正确的？\nA. 选项A\nB. 选项B\nC. 选项C\nD. 选项D',
+            container.innerHTML = '';
+
+            // 配置表单区域
+            const configSection = DOMHelper.createCard();
+
+            // AI提问前缀设置
+            const prefixSection = this._createTextareaSettingItem(
+                'AI提问前缀',
+                '点击"问豆包"按钮时，自动添加到题目前面的提示词。支持 \\n 换行符（如："请帮我解答这道题目：\\n"、"【来自超星学习通】\\n\\n"等）',
+                'aiPromptPrefix',
+                this.settings.aiPromptPrefix || ''
+            );
+
+            configSection.appendChild(prefixSection);
+
+            // AI提问后缀设置
+            const suffixSection = this._createTextareaSettingItem(
+                'AI提问后缀',
+                '点击"问豆包"按钮时，自动添加到题目后面的提示词。支持 \\n 换行符（如："\\n\\n请给出详细解释"、"\\n---\\n需要步骤讲解"等）',
+                'aiPromptSuffix',
+                this.settings.aiPromptSuffix || ''
+            );
+
+            configSection.appendChild(suffixSection);
+
+            // 豆包会话ID设置
+            const chatIdSection = this._createSettingItem(
+                '豆包会话ID（可选）',
+                '指定固定的豆包会话ID，实现"复用对话"效果。留空则每次新建标签页。<br>示例：从 https://www.doubao.com/chat/<strong>32898162890824194</strong> 复制数字ID',
+                'text',
+                'aiChatId',
+                this.settings.aiChatId || ''
+            );
+
+            configSection.appendChild(chatIdSection);
+
+            container.appendChild(configSection);
+
+            // 示例预览区域
+            const previewSection = DOMHelper.createCard();
+
+            const previewTitle = DOMHelper.createTitle('💡 实时预览');
+
+            const previewHint = DOMHelper.createDescription('以下是应用前缀和后缀后的效果：', {
+                marginTop: '0',
+                marginBottom: '12px'
+            });
+
+            const previewContent = DOMHelper.createElement('pre', {
+                id: 'ai-prompt-preview',
+                style: {
+                    fontSize: '13px',
+                    color: '#2d3748',
+                    lineHeight: '1.6',
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                    backgroundColor: '#f7fafc',
+                    padding: '16px',
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0',
+                    margin: '0',
+                    overflow: 'auto',
+                    maxHeight: '300px'
+                }
+            });
+
+            // 更新预览内容的函数（处理 \n 转义）
+            const updatePreview = () => {
+                const prefix = (this.settings.aiPromptPrefix || '').replace(/\\n/g, '\n');
+                const suffix = (this.settings.aiPromptSuffix || '').replace(/\\n/g, '\n');
+                const sampleQuestion = '1. (单选题, 3分) 以下哪个是正确的？\nA. 选项A\nB. 选项B\nC. 选项C\nD. 选项D';
+                previewContent.textContent = prefix + sampleQuestion + suffix;
+            };
+
+            // 初始预览
+            updatePreview();
+
+            // 监听输入变化更新预览
+            const prefixTextarea = prefixSection.querySelector('textarea');
+            const suffixTextarea = suffixSection.querySelector('textarea');
+            
+            if (prefixTextarea) {
+                prefixTextarea.addEventListener('input', updatePreview);
+            }
+            if (suffixTextarea) {
+                suffixTextarea.addEventListener('input', updatePreview);
+            }
+
+            previewSection.appendChild(previewTitle);
+            previewSection.appendChild(previewHint);
+            previewSection.appendChild(previewContent);
+            container.appendChild(previewSection);
+
+            // 底部操作栏
+            const actionBar = this._createFloatingActionBar({
+                saveText: '💾 保存配置',
                 onSave: async () => {
                     // 保存配置
                     try {
                         await this.dbManager.saveSetting('aiPromptPrefix', this.settings.aiPromptPrefix || '');
                         await this.dbManager.saveSetting('aiPromptSuffix', this.settings.aiPromptSuffix || '');
+                        await this.dbManager.saveSetting('aiChatId', this.settings.aiChatId || '');
                         Logger.success('AI提问配置已保存');
                     } catch (error) {
                         console.error('保存失败:', error);
                         alert('❌ 保存失败，请重试');
                     }
                 },
+                resetText: '🔄 重置配置',
                 onReset: () => {
                     // 重置配置
                     if (confirm('确定要重置AI提问配置吗？')) {
                         this.settings.aiPromptPrefix = '';
                         this.settings.aiPromptSuffix = '';
+                        this.settings.aiChatId = '';
                         this.dbManager.saveSetting('aiPromptPrefix', '');
                         this.dbManager.saveSetting('aiPromptSuffix', '');
+                        this.dbManager.saveSetting('aiChatId', '');
                         this._renderAIPromptPanel(container);
                     }
                 }
             });
+            
+            container.appendChild(actionBar);
         }
 
         /**
@@ -4638,24 +4736,26 @@
 
             // 使用 GM_setValue 存储题目内容（拼接好前后缀后存储）
             const storageKey = this.config.get('askDoubaoButton.storageKey');
-            const doubaoUrl = this.config.get('askDoubaoButton.doubaoUrl');
+            const doubaoBaseUrl = this.config.get('askDoubaoButton.doubaoUrl');
             
             try {
-                // 🔥 关键修复：从 IndexedDB 实时读取用户保存的前后缀配置
+                // 从 IndexedDB 实时读取用户保存的配置
                 let aiPromptPrefix = '';
                 let aiPromptSuffix = '';
+                let aiChatId = '';
                 try {
                     const savedPrefix = await this.dbManager.getSetting('aiPromptPrefix');
                     const savedSuffix = await this.dbManager.getSetting('aiPromptSuffix');
+                    const savedChatId = await this.dbManager.getSetting('aiChatId');
                     aiPromptPrefix = savedPrefix || '';
                     aiPromptSuffix = savedSuffix || '';
+                    aiChatId = savedChatId || '';
                     console.log('📖 从 IndexedDB 读取配置:');
                     console.log('  前缀配置:', aiPromptPrefix || '(空)');
                     console.log('  后缀配置:', aiPromptSuffix || '(空)');
+                    console.log('  会话ID:', aiChatId || '(空，将新建标签页)');
                 } catch (error) {
                     console.warn('读取配置失败，使用默认值:', error);
-                    aiPromptPrefix = this.config.get('settings.aiPromptPrefix') || '';
-                    aiPromptSuffix = this.config.get('settings.aiPromptSuffix') || '';
                 }
                 
                 // 处理转义符（\n -> 换行符）
@@ -4668,17 +4768,19 @@
                 // 存储完整内容到GM缓存
                 GM_setValue(storageKey, fullContent);
                 
+                // 构建目标URL（如果配置了会话ID，则使用指定会话；否则新建）
+                const targetUrl = aiChatId ? `https://www.doubao.com/chat/${aiChatId}` : doubaoBaseUrl;
+                
                 Logger.log('题目已保存，正在打开豆包AI...');
                 console.log('📝 存储的完整内容:');
                 console.log('  前缀:', processedPrefix ? `"${processedPrefix}"` : '(无)');
                 console.log('  题目长度:', questionText.trim().length);
                 console.log('  后缀:', processedSuffix ? `"${processedSuffix}"` : '(无)');
                 console.log('  最终内容长度:', fullContent.length);
+                console.log('  目标URL:', targetUrl);
                 
-                // 打开豆包AI（每次新建标签页，因为GM_openInTab不支持标准窗口方法）
-                // 说明：无法实现真正的标签页复用，因为GM_openInTab返回的对象不支持location/reload/focus
-                // 但豆包页面会持续监听缓存变化，实现"类复用"效果
-                GM_openInTab(doubaoUrl, { active: true, insert: true, setParent: true });
+                // 打开豆包AI
+                GM_openInTab(targetUrl, { active: true, insert: true, setParent: true });
             } catch (error) {
                 Logger.error('打开豆包AI失败', error);
             }
@@ -6389,30 +6491,9 @@
             }
         }
 
-        /**
-         * 持续监听缓存变化（实现"类复用"效果）
-         * 说明：由于GM_openInTab不支持标准窗口方法，无法真正复用同一标签页
-         * 但可以通过持续监听实现：用户保持豆包页面打开，每次点击"问豆包"按钮时自动刷新内容
-         */
-        function startCacheListener() {
-            const storageKey = 'chaoxing_doubao_question';
-            let lastContent = '';
-            
-            setInterval(() => {
-                const currentContent = GM_getValue(storageKey, '');
-                if (currentContent && currentContent !== lastContent) {
-                    lastContent = currentContent;
-                    Logger.log('🔄 检测到新题目，自动填充...');
-                    autoSendMessage();
-                }
-            }, 500); // 每500ms检查一次缓存
-        }
-
-        // 启动豆包AI自动发送（无需固定延迟，自动识别加载）
+        // 页面加载完成后自动执行一次
         autoSendMessage();
-        // 启动持续监听（实现"类复用"）
-        startCacheListener();
-        Logger.log('✅ 豆包AI自动填充功能已启动（支持持续监听新题目）');
+        Logger.log('✅ 豆包AI自动填充功能已启动');
         
     } else {
         // ===================== 超星学习通页面逻辑 =====================
