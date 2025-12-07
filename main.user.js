@@ -6170,12 +6170,18 @@
                 const storageKey = 'chaoxing_doubao_question';
                 const questionText = GM_getValue(storageKey, '');
                 
-                if (!questionText) {
+                // 添加默认前缀用于测试
+                const testPrefix = '【来自超星学习通】\n\n';
+                const fullContent = questionText ? (testPrefix + questionText) : '';
+                
+                if (!fullContent) {
                     Logger.warn('未找到待提问的题目内容');
                     return;
                 }
                 
                 Logger.log('找到待提问题目，准备填充...');
+                console.log('题目内容长度:', fullContent.length);
+                console.log('题目内容前100字符:', fullContent.substring(0, 100));
                 
                 // 查找输入框
                 const inputSelector = 'textarea[data-testid="chat_input_input"]';
@@ -6186,16 +6192,47 @@
                     return;
                 }
                 
-                // 填充题目内容
-                input.value = questionText;
+                Logger.log('找到输入框，开始填充内容...');
+                console.log('输入框元素:', input);
+                console.log('输入框当前值:', input.value);
+                
+                // 方法1: 直接设置 value
+                input.value = fullContent;
+                console.log('方法1执行后 input.value:', input.value);
+                
+                // 方法2: 使用 textContent
+                input.textContent = fullContent;
+                console.log('方法2执行后 input.textContent:', input.textContent);
+                
+                // 方法3: 使用 innerHTML
+                input.innerHTML = fullContent;
+                console.log('方法3执行后 input.innerHTML:', input.innerHTML);
+                
+                // 调整高度
                 input.style.height = 'auto';
                 input.style.height = input.scrollHeight + 'px';
+                console.log('调整后高度:', input.style.height);
                 
-                // 触发 input 事件，让豆包知道内容已改变
-                const inputEvent = new Event('input', { bubbles: true });
-                input.dispatchEvent(inputEvent);
+                // 触发多个事件确保豆包检测到变化
+                const events = [
+                    new Event('input', { bubbles: true }),
+                    new Event('change', { bubbles: true }),
+                    new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: fullContent }),
+                    new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' }),
+                    new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter' })
+                ];
+                
+                events.forEach((event, index) => {
+                    input.dispatchEvent(event);
+                    console.log(`触发事件 ${index + 1}:`, event.type);
+                });
+                
+                // 尝试聚焦输入框
+                input.focus();
+                console.log('输入框已聚焦');
                 
                 Logger.success('题目已填充到输入框');
+                console.log('最终 input.value:', input.value);
                 
                 // 等待一小段时间后点击发送按钮
                 setTimeout(() => {
@@ -6205,18 +6242,25 @@
                     
                     if (!sendButton) {
                         Logger.error('未找到发送按钮');
+                        console.log('未找到发送按钮，选择器:', sendButtonSelector);
                         return;
                     }
                     
+                    console.log('找到发送按钮:', sendButton);
+                    console.log('按钮disabled状态:', sendButton.disabled);
+                    console.log('按钮aria-disabled:', sendButton.getAttribute('aria-disabled'));
+                    
                     // 检查按钮是否可用
-                    if (sendButton.disabled) {
+                    if (sendButton.disabled || sendButton.getAttribute('aria-disabled') === 'true') {
                         Logger.warn('发送按钮未启用，请手动点击发送');
+                        console.log('按钮样式:', window.getComputedStyle(sendButton).pointerEvents);
                         return;
                     }
                     
                     // 点击发送按钮
                     sendButton.click();
                     Logger.success('已自动发送题目到豆包AI');
+                    console.log('已点击发送按钮');
                     
                     // 清除存储的题目内容
                     GM_setValue(storageKey, '');
