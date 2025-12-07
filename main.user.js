@@ -1,15 +1,21 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.16
-// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
+// @version      3.8.0
+// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
+// @match        https://www.doubao.com/chat/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=chaoxing.com
 // @grant        GM_xmlhttpRequest
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_openInTab
 // @connect      p.ananas.chaoxing.com
 // @connect      chaoxing.com
 // @connect      *.chaoxing.com
+// @connect      doubao.com
+// @connect      *.doubao.com
 // @connect      *
 // @require      https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js
 // @run-at       document-end
@@ -70,6 +76,42 @@
                     copy: '复制题目',     // 复制按钮文字
                     copied: '已复制'     // 复制成功文字
                 }
+            },
+
+            // ========== 问豆包AI按钮配置 ==========
+            askDoubaoButton: {
+                // --- 按钮位置配置（绝对定位到复制按钮下方） ---
+                position: {
+                    top: '36px',             // 距离顶部（复制按钮高度 + 间距）
+                    right: '0px'             // 距离右侧
+                },
+                // --- 按钮样式配置 ---
+                style: {
+                    fontSize: '12px',        // 字体大小
+                    padding: '4px 10px',     // 内边距
+                    borderRadius: '6px',     // 圆角半径
+                    border: 'none',          // 边框样式
+                    fontWeight: '500',       // 字体粗细
+                    cursor: 'pointer',       // 鼠标样式
+                    transition: 'all 0.2s',  // 过渡动画
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',  // 阴影效果
+                    minWidth: '70px',        // 最小宽度
+                    textAlign: 'center'      // 文字居中
+                },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    background: '#667eea',       // 按钮背景色（紫色/豆包品牌色）
+                    hoverBackground: '#5a67d8',  // 悬停背景色
+                    textColor: 'white',          // 按钮文字颜色
+                    hoverOpacity: '0.8'          // 鼠标悬停时的透明度
+                },
+                // --- 按钮文字配置 ---
+                text: {
+                    ask: '🤖 问豆包'     // 问豆包按钮文字
+                },
+                // --- 豆包AI配置 ---
+                doubaoUrl: 'https://www.doubao.com/chat/',  // 豆包AI网址
+                storageKey: 'chaoxing_doubao_question'      // GM存储键名
             },
 
             // ========== 单个答案控制按钮配置 ==========
@@ -4106,6 +4148,31 @@
             };
         }
 
+        getAskDoubaoButtonStyle() {
+            const position = this.config.get('askDoubaoButton.position');
+            const style = this.config.get('askDoubaoButton.style');
+            const colors = this.config.get('askDoubaoButton.colors');
+            
+            return {
+                position: 'absolute',
+                top: position.top,
+                right: position.right,
+                zIndex: '100',
+                fontSize: style.fontSize,
+                padding: style.padding,
+                borderRadius: style.borderRadius,
+                border: style.border,
+                fontWeight: style.fontWeight,
+                cursor: style.cursor,
+                transition: style.transition,
+                boxShadow: style.boxShadow,
+                minWidth: style.minWidth,
+                textAlign: style.textAlign,
+                background: colors.background,
+                color: colors.textColor
+            };
+        }
+
         getAnswerButtonStyle(isHidden = true) {
             return this._getInlineButtonStyle('answerButton', isHidden ? 'showBackground' : 'hideBackground');
         }
@@ -4282,6 +4349,9 @@
             // 创建复制按钮（定位到题目区域右上角）
             this._createCopyButton();
 
+            // 创建问豆包按钮（定位到复制按钮下方）
+            this._createAskDoubaoButton();
+
             // 创建答案切换按钮
             this._createAnswerToggleButton();
 
@@ -4351,6 +4421,154 @@
             } else {
                 // 如果找不到题目容器，则添加到按钮容器中作为备选
                 this.buttonContainer.appendChild(this.copyButton);
+            }
+        }
+
+        _createAskDoubaoButton() {
+            const buttonText = this.config.get('askDoubaoButton.text');
+            const colors = this.config.get('askDoubaoButton.colors');
+            
+            this.askDoubaoButton = DOMHelper.createElement('button', {
+                innerText: buttonText.ask,
+                style: this.styleGenerator.getAskDoubaoButtonStyle(),
+                title: '向豆包AI提问当前题目'
+            });
+
+            // 添加悬停效果
+            this.askDoubaoButton.addEventListener('mouseenter', () => {
+                this.askDoubaoButton.style.background = colors.hoverBackground;
+                this.askDoubaoButton.style.transform = 'translateY(-1px)';
+            });
+            this.askDoubaoButton.addEventListener('mouseleave', () => {
+                this.askDoubaoButton.style.background = colors.background;
+                this.askDoubaoButton.style.transform = 'translateY(0)';
+            });
+
+            this.askDoubaoButton.addEventListener('click', () => this._handleAskDoubao());
+            
+            // 查找题目容器并插入问豆包按钮到右上角（复制按钮下方）
+            let questionContainer = null;
+            const questionId = this.questionId;
+            
+            if (questionId && questionId.startsWith('question')) {
+                questionContainer = document.getElementById(questionId);
+            }
+            
+            // 如果没找到，尝试从 parent 向上查找
+            if (!questionContainer && this.parent) {
+                let element = this.parent;
+                while (element && element !== document.body) {
+                    if (element.classList && (element.classList.contains('questionLi') || element.classList.contains('mark_item'))) {
+                        questionContainer = element;
+                        break;
+                    }
+                    element = element.parentElement;
+                }
+            }
+            
+            // 将问豆包按钮插入到题目容器
+            if (questionContainer) {
+                // 确保题目容器有相对定位
+                const currentPosition = window.getComputedStyle(questionContainer).position;
+                if (currentPosition === 'static') {
+                    questionContainer.style.position = 'relative';
+                }
+                questionContainer.appendChild(this.askDoubaoButton);
+            } else {
+                // 如果找不到题目容器，则添加到按钮容器中作为备选
+                this.buttonContainer.appendChild(this.askDoubaoButton);
+            }
+        }
+
+        _handleAskDoubao() {
+            // 获取题目容器
+            let questionContainer = null;
+            const questionId = this.questionId;
+            
+            if (questionId && questionId.startsWith('question')) {
+                questionContainer = document.getElementById(questionId);
+            }
+            
+            // 如果没找到，尝试从 parent 向上查找
+            if (!questionContainer && this.parent) {
+                let element = this.parent;
+                while (element && element !== document.body) {
+                    if (element.classList && (element.classList.contains('questionLi') || element.classList.contains('mark_item'))) {
+                        questionContainer = element;
+                        break;
+                    }
+                    element = element.parentElement;
+                }
+            }
+
+            if (!questionContainer) {
+                Logger.error('未找到题目容器');
+                return;
+            }
+
+            // 提取题目文本
+            let questionText = '';
+            
+            // 1. 获取题号和题型（如 "1. (单选题, 3分)"）
+            const markName = questionContainer.querySelector('.mark_name');
+            if (markName) {
+                // 提取题号
+                const firstTextNode = markName.childNodes[0];
+                if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
+                    questionText += firstTextNode.textContent.trim();
+                }
+                
+                // 提取题型和分值
+                const colorShallow = markName.querySelector('.colorShallow');
+                if (colorShallow) {
+                    questionText += ' ' + colorShallow.textContent.trim();
+                }
+                
+                // 提取题干
+                const qtContent = markName.querySelector('.qtContent');
+                if (qtContent) {
+                    questionText += '\n' + qtContent.textContent.trim();
+                }
+                questionText += '\n\n';
+            }
+            
+            // 2. 获取选项（单选/多选题）
+            const markLetter = questionContainer.querySelector('ul.mark_letter');
+            if (markLetter) {
+                const options = markLetter.querySelectorAll('li');
+                options.forEach(option => {
+                    questionText += option.textContent.trim() + '\n';
+                });
+            }
+            
+            // 3. 获取完型填空/填空题选项
+            const markGestalt = questionContainer.querySelector('div.mark_gestalt');
+            if (markGestalt) {
+                const rows = markGestalt.querySelectorAll('.gestalt_row, dl');
+                rows.forEach(row => {
+                    const dt = row.querySelector('dt');
+                    if (dt) {
+                        questionText += dt.textContent.trim() + '\n';
+                    }
+                    const dds = row.querySelectorAll('dd');
+                    dds.forEach(dd => {
+                        questionText += '  ' + dd.textContent.trim() + '\n';
+                    });
+                });
+            }
+
+            // 使用 GM_setValue 存储题目内容
+            const storageKey = this.config.get('askDoubaoButton.storageKey');
+            const doubaoUrl = this.config.get('askDoubaoButton.doubaoUrl');
+            
+            try {
+                GM_setValue(storageKey, questionText.trim());
+                Logger.info('题目已保存，正在打开豆包AI...');
+                
+                // 在新标签页打开豆包AI并自动切换
+                GM_openInTab(doubaoUrl, { active: true, insert: true });
+            } catch (error) {
+                Logger.error('打开豆包AI失败', error);
             }
         }
 
@@ -5941,6 +6159,77 @@
     }
 
     // ===================== 启动应用 =====================
-    const app = new ChaoxingAnswerHider();
-    app.initialize();
+    // 检测当前页面是超星还是豆包
+    if (window.location.hostname.includes('doubao.com')) {
+        // 豆包AI页面逻辑
+        Logger.info('检测到豆包AI页面，正在初始化自动填充功能...');
+        
+        // 等待页面加载完成
+        setTimeout(() => {
+            try {
+                const storageKey = 'chaoxing_doubao_question';
+                const questionText = GM_getValue(storageKey, '');
+                
+                if (!questionText) {
+                    Logger.warn('未找到待提问的题目内容');
+                    return;
+                }
+                
+                Logger.info('找到待提问题目，准备填充...');
+                
+                // 查找输入框
+                const inputSelector = 'textarea[data-testid="chat_input_input"]';
+                const input = document.querySelector(inputSelector);
+                
+                if (!input) {
+                    Logger.error('未找到豆包输入框，请检查页面是否加载完成');
+                    return;
+                }
+                
+                // 填充题目内容
+                input.value = questionText;
+                input.style.height = 'auto';
+                input.style.height = input.scrollHeight + 'px';
+                
+                // 触发 input 事件，让豆包知道内容已改变
+                const inputEvent = new Event('input', { bubbles: true });
+                input.dispatchEvent(inputEvent);
+                
+                Logger.success('题目已填充到输入框');
+                
+                // 等待一小段时间后点击发送按钮
+                setTimeout(() => {
+                    // 查找发送按钮
+                    const sendButtonSelector = 'button[data-testid="chat_input_send_button"]';
+                    const sendButton = document.querySelector(sendButtonSelector);
+                    
+                    if (!sendButton) {
+                        Logger.error('未找到发送按钮');
+                        return;
+                    }
+                    
+                    // 检查按钮是否可用
+                    if (sendButton.disabled) {
+                        Logger.warn('发送按钮未启用，请手动点击发送');
+                        return;
+                    }
+                    
+                    // 点击发送按钮
+                    sendButton.click();
+                    Logger.success('已自动发送题目到豆包AI');
+                    
+                    // 清除存储的题目内容
+                    GM_setValue(storageKey, '');
+                }, 500);
+                
+            } catch (error) {
+                Logger.error('豆包AI自动填充失败', error);
+            }
+        }, 2000); // 等待2秒确保页面完全加载
+        
+    } else {
+        // 超星学习通页面逻辑
+        const app = new ChaoxingAnswerHider();
+        app.initialize();
+    }
 })();
