@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.8.0
+// @version      3.8.1
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -324,7 +324,9 @@
                 autoSave: false,                        // 是否开启自动保存（默认关闭）
                 autoSaveDelay: 5000,                    // 自动保存延迟时间（毫秒）
                 copyPrefix: '',                         // 复制内容前缀（默认无）
-                copySuffix: ''                          // 复制内容后缀（默认无）
+                copySuffix: '',                         // 复制内容后缀（默认无）
+                aiPromptPrefix: '',                     // AI提问前缀提示词（默认无）
+                aiPromptSuffix: ''                      // AI提问后缀提示词（默认无）
             },
 
             // ========== 控制面板按钮配置 ==========
@@ -1574,6 +1576,7 @@
             const menuItems = [
                 { id: 'settings', icon: '⚙️', text: '设置' },
                 { id: 'copy-config', icon: '📋', text: '复制内容前后缀管理' },
+                { id: 'ai-prompt', icon: '🤖', text: 'AI提问管理' },
                 { id: 'export', icon: '📄', text: '导出格式管理' },
                 { 
                     id: 'notes', 
@@ -1958,6 +1961,9 @@
             } else if (this.currentTab === 'copy-config') {
                 headerTitle.innerText = '📋 复制内容前后缀管理';
                 this._renderCopyConfigPanel(contentBody);
+            } else if (this.currentTab === 'ai-prompt') {
+                headerTitle.innerText = '🤖 AI提问管理';
+                this._renderAIPromptPanel(contentBody);
             } else if (this.currentTab === 'export') {
                 headerTitle.innerText = '📄 导出设置';
                 this._renderExportSettingsPanel(contentBody);
@@ -2397,30 +2403,41 @@
         }
 
         /**
-         * 渲染复制配置面板
+         * 通用的前后缀配置面板渲染方法（支持复制配置和AI提问管理复用）
+         * @param {Object} options - 配置选项
+         * @param {string} options.title - 面板标题
+         * @param {string} options.prefixKey - 前缀配置键名
+         * @param {string} options.suffixKey - 后缀配置键名
+         * @param {string} options.prefixLabel - 前缀输入框标签
+         * @param {string} options.suffixLabel - 后缀输入框标签
+         * @param {string} options.prefixDesc - 前缀输入框描述
+         * @param {string} options.suffixDesc - 后缀输入框描述
+         * @param {string} options.sampleQuestion - 预览示例题目
+         * @param {Function} options.onSave - 保存回调函数
+         * @param {Function} options.onReset - 重置回调函数
          */
-        _renderCopyConfigPanel(container) {
+        _renderPrefixSuffixPanel(container, options) {
             container.innerHTML = '';
 
             // 配置表单区域
             const configSection = DOMHelper.createCard();
 
-            // 复制前缀设置
+            // 前缀设置
             const prefixSection = this._createTextareaSettingItem(
-                '复制内容前缀',
-                '复制题目时自动添加到内容前面的文字。支持 \\n 换行符（如："【题目】\\n"、"问："等）',
-                'copyPrefix',
-                this.settings.copyPrefix || ''
+                options.prefixLabel,
+                options.prefixDesc,
+                options.prefixKey,
+                this.settings[options.prefixKey] || ''
             );
 
             configSection.appendChild(prefixSection);
 
-            // 复制后缀设置
+            // 后缀设置
             const suffixSection = this._createTextareaSettingItem(
-                '复制内容后缀',
-                '复制题目时自动添加到内容后面的文字。支持 \\n 换行符（如："\\n---"、"\\n\\n来源：超星学习通"等）',
-                'copySuffix',
-                this.settings.copySuffix || ''
+                options.suffixLabel,
+                options.suffixDesc,
+                options.suffixKey,
+                this.settings[options.suffixKey] || ''
             );
 
             configSection.appendChild(suffixSection);
@@ -2438,7 +2455,7 @@
             });
 
             const previewContent = DOMHelper.createElement('pre', {
-                id: 'copy-config-preview',
+                id: `${options.prefixKey}-preview`,
                 style: {
                     fontSize: '13px',
                     color: '#2d3748',
@@ -2457,10 +2474,9 @@
 
             // 更新预览内容的函数（处理 \n 转义）
             const updatePreview = () => {
-                const prefix = (this.settings.copyPrefix || '').replace(/\\n/g, '\n');
-                const suffix = (this.settings.copySuffix || '').replace(/\\n/g, '\n');
-                const sampleQuestion = '1. (单选题, 3分) 以下哪个是正确的？\nA. 选项A\nB. 选项B\nC. 选项C\nD. 选项D';
-                previewContent.textContent = prefix + sampleQuestion + suffix;
+                const prefix = (this.settings[options.prefixKey] || '').replace(/\\n/g, '\n');
+                const suffix = (this.settings[options.suffixKey] || '').replace(/\\n/g, '\n');
+                previewContent.textContent = prefix + options.sampleQuestion + suffix;
             };
 
             // 初始预览
@@ -2485,6 +2501,27 @@
             // 底部操作栏
             const actionBar = this._createFloatingActionBar({
                 saveText: '💾 保存配置',
+                onSave: options.onSave,
+                resetText: '🔄 重置配置',
+                onReset: options.onReset
+            });
+            
+            container.appendChild(actionBar);
+        }
+
+        /**
+         * 渲染复制配置面板
+         */
+        _renderCopyConfigPanel(container) {
+            this._renderPrefixSuffixPanel(container, {
+                title: '📋 复制内容前后缀管理',
+                prefixKey: 'copyPrefix',
+                suffixKey: 'copySuffix',
+                prefixLabel: '复制内容前缀',
+                suffixLabel: '复制内容后缀',
+                prefixDesc: '复制题目时自动添加到内容前面的文字。支持 \\n 换行符（如："【题目】\\n"、"问："等）',
+                suffixDesc: '复制题目时自动添加到内容后面的文字。支持 \\n 换行符（如："\\n---"、"\\n\\n来源：超星学习通"等）',
+                sampleQuestion: '1. (单选题, 3分) 以下哪个是正确的？\nA. 选项A\nB. 选项B\nC. 选项C\nD. 选项D',
                 onSave: async () => {
                     // 保存配置
                     try {
@@ -2495,7 +2532,6 @@
                         alert('❌ 保存失败，请重试');
                     }
                 },
-                resetText: '🔄 重置配置',
                 onReset: () => {
                     // 重置配置
                     if (confirm('确定要重置复制配置吗？')) {
@@ -2507,8 +2543,43 @@
                     }
                 }
             });
-            
-            container.appendChild(actionBar);
+        }
+
+        /**
+         * 渲染AI提问管理面板
+         */
+        _renderAIPromptPanel(container) {
+            this._renderPrefixSuffixPanel(container, {
+                title: '🤖 AI提问管理',
+                prefixKey: 'aiPromptPrefix',
+                suffixKey: 'aiPromptSuffix',
+                prefixLabel: 'AI提问前缀',
+                suffixLabel: 'AI提问后缀',
+                prefixDesc: '点击"问豆包"按钮时，自动添加到题目前面的提示词。支持 \\n 换行符（如："请帮我解答这道题目：\\n"、"【来自超星学习通】\\n\\n"等）',
+                suffixDesc: '点击"问豆包"按钮时，自动添加到题目后面的提示词。支持 \\n 换行符（如："\\n\\n请给出详细解释"、"\\n---\\n需要步骤讲解"等）',
+                sampleQuestion: '1. (单选题, 3分) 以下哪个是正确的？\nA. 选项A\nB. 选项B\nC. 选项C\nD. 选项D',
+                onSave: async () => {
+                    // 保存配置
+                    try {
+                        await this.dbManager.saveSetting('aiPromptPrefix', this.settings.aiPromptPrefix || '');
+                        await this.dbManager.saveSetting('aiPromptSuffix', this.settings.aiPromptSuffix || '');
+                        Logger.success('AI提问配置已保存');
+                    } catch (error) {
+                        console.error('保存失败:', error);
+                        alert('❌ 保存失败，请重试');
+                    }
+                },
+                onReset: () => {
+                    // 重置配置
+                    if (confirm('确定要重置AI提问配置吗？')) {
+                        this.settings.aiPromptPrefix = '';
+                        this.settings.aiPromptSuffix = '';
+                        this.dbManager.saveSetting('aiPromptPrefix', '');
+                        this.dbManager.saveSetting('aiPromptSuffix', '');
+                        this._renderAIPromptPanel(container);
+                    }
+                }
+            });
         }
 
         /**
@@ -4557,16 +4628,31 @@
                 });
             }
 
-            // 使用 GM_setValue 存储题目内容
+            // 使用 GM_setValue 存储题目内容和配置
             const storageKey = this.config.get('askDoubaoButton.storageKey');
             const doubaoUrl = this.config.get('askDoubaoButton.doubaoUrl');
             
             try {
+                // 存储题目内容
                 GM_setValue(storageKey, questionText.trim());
+                
+                // 同时存储前后缀配置
+                const aiPromptPrefix = this.config.get('settings.aiPromptPrefix') || '';
+                const aiPromptSuffix = this.config.get('settings.aiPromptSuffix') || '';
+                GM_setValue('chaoxing_doubao_prefix', aiPromptPrefix);
+                GM_setValue('chaoxing_doubao_suffix', aiPromptSuffix);
+                
                 Logger.log('题目已保存，正在打开豆包AI...');
                 
-                // 在新标签页打开豆包AI并自动切换
-                GM_openInTab(doubaoUrl, { active: true, insert: true });
+                // 标签页复用逻辑（方案A：检测关闭+聚焦刷新）
+                if (!window.doubaoTabRef || window.doubaoTabRef.closed) {
+                    // 创建新标签页
+                    window.doubaoTabRef = GM_openInTab(doubaoUrl, { active: true, insert: true });
+                } else {
+                    // 复用已有标签页：聚焦并刷新
+                    window.doubaoTabRef.focus();
+                    window.doubaoTabRef.location.reload();
+                }
             } catch (error) {
                 Logger.error('打开豆包AI失败', error);
             }
@@ -6208,23 +6294,32 @@
          */
         async function autoSendMessage() {
             const storageKey = 'chaoxing_doubao_question';
+            const prefixKey = 'chaoxing_doubao_prefix';
+            const suffixKey = 'chaoxing_doubao_suffix';
             
             try {
-                // 1. 读取题目内容
+                // 1. 读取题目内容和前后缀配置
                 const questionText = GM_getValue(storageKey, '');
+                const aiPrefix = GM_getValue(prefixKey, '');
+                const aiSuffix = GM_getValue(suffixKey, '');
                 
                 if (!questionText) {
                     Logger.warn('未找到待提问的题目内容');
                     // 清除缓存
                     GM_setValue(storageKey, '');
+                    GM_setValue(prefixKey, '');
+                    GM_setValue(suffixKey, '');
                     return;
                 }
                 
-                const testPrefix = '【来自超星学习通】\n\n';
-                const fullContent = testPrefix + questionText;
+                // 应用前后缀（处理 \n 转义符）
+                const processedPrefix = aiPrefix ? aiPrefix.replace(/\\n/g, '\n') : '';
+                const processedSuffix = aiSuffix ? aiSuffix.replace(/\\n/g, '\n') : '';
+                const fullContent = processedPrefix + questionText + processedSuffix;
                 
                 Logger.log('找到待提问题目，准备自动填充和发送...');
                 console.log('题目内容长度:', fullContent.length);
+                console.log('前缀长度:', processedPrefix.length, '后缀长度:', processedSuffix.length);
                 
                 // 2. 自动等待输入框加载（无固定延迟，元素出现立即执行）
                 const inputElem = await waitForElement('textarea[data-testid="chat_input_input"]');
