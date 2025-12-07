@@ -6161,118 +6161,128 @@
     // ===================== 启动应用 =====================
     // 检测当前页面是超星还是豆包
     if (window.location.hostname.includes('doubao.com')) {
-        // 豆包AI页面逻辑
+        // ===================== 豆包AI页面逻辑 =====================
         Logger.log('检测到豆包AI页面，正在初始化自动填充功能...');
         
-        // 等待页面加载完成
-        setTimeout(() => {
+        /**
+         * 等待指定元素加载完成（MutationObserver 自动监听）
+         * @param {string} selector - 元素选择器
+         * @param {number} timeout - 超时时间（默认10秒）
+         * @returns {Promise<HTMLElement>} 加载完成的元素
+         */
+        function waitForElement(selector, timeout = 10000) {
+            return new Promise((resolve, reject) => {
+                // 先检查元素是否已存在
+                const existingElem = document.querySelector(selector);
+                if (existingElem) {
+                    resolve(existingElem);
+                    return;
+                }
+
+                // 监听DOM变化，自动识别元素加载
+                const observer = new MutationObserver((mutations) => {
+                    const elem = document.querySelector(selector);
+                    if (elem) {
+                        observer.disconnect(); // 找到元素后停止监听
+                        resolve(elem);
+                    }
+                });
+
+                // 监听整个文档的DOM变化（包含子节点新增/移除）
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                    attributes: false
+                });
+
+                // 超时兜底（避免无限等待）
+                setTimeout(() => {
+                    observer.disconnect();
+                    reject(new Error(`超时未找到元素：${selector}`));
+                }, timeout);
+            });
+        }
+
+        /**
+         * 豆包AI自动发送逻辑
+         */
+        async function autoSendMessage() {
+            const storageKey = 'chaoxing_doubao_question';
+            
             try {
-                const storageKey = 'chaoxing_doubao_question';
+                // 1. 读取题目内容
                 const questionText = GM_getValue(storageKey, '');
                 
-                // 添加默认前缀用于测试
-                const testPrefix = '【来自超星学习通】\n\n';
-                const fullContent = questionText ? (testPrefix + questionText) : '';
-                
-                if (!fullContent) {
+                if (!questionText) {
                     Logger.warn('未找到待提问的题目内容');
+                    // 清除缓存
+                    GM_setValue(storageKey, '');
                     return;
                 }
                 
-                Logger.log('找到待提问题目，准备填充...');
+                const testPrefix = '【来自超星学习通】\n\n';
+                const fullContent = testPrefix + questionText;
+                
+                Logger.log('找到待提问题目，准备自动填充和发送...');
                 console.log('题目内容长度:', fullContent.length);
-                console.log('题目内容前100字符:', fullContent.substring(0, 100));
                 
-                // 查找输入框
-                const inputSelector = 'textarea[data-testid="chat_input_input"]';
-                const input = document.querySelector(inputSelector);
+                // 2. 自动等待输入框加载（无固定延迟，元素出现立即执行）
+                const inputElem = await waitForElement('textarea[data-testid="chat_input_input"]');
+                Logger.log('找到输入框，准备填充内容...');
                 
-                if (!input) {
-                    Logger.error('未找到豆包输入框，请检查页面是否加载完成');
-                    return;
-                }
+                // 3. 自动等待发送按钮加载
+                const sendBtn = await waitForElement('button[data-testid="chat_input_send_button"]');
+                Logger.log('找到发送按钮');
+
+                // 4. 模拟人工聚焦+初始输入（解锁发送逻辑）
+                inputElem.click();
+                inputElem.focus();
                 
-                Logger.log('找到输入框，开始填充内容...');
-                console.log('输入框元素:', input);
-                console.log('输入框当前值:', input.value);
-                
-                // 方法1: 直接设置 value
-                input.value = fullContent;
-                console.log('方法1执行后 input.value:', input.value);
-                
-                // 方法2: 使用 textContent
-                input.textContent = fullContent;
-                console.log('方法2执行后 input.textContent:', input.textContent);
-                
-                // 方法3: 使用 innerHTML
-                input.innerHTML = fullContent;
-                console.log('方法3执行后 input.innerHTML:', input.innerHTML);
-                
-                // 调整高度
-                input.style.height = 'auto';
-                input.style.height = input.scrollHeight + 'px';
-                console.log('调整后高度:', input.style.height);
-                
-                // 触发多个事件确保豆包检测到变化
-                const events = [
-                    new Event('input', { bubbles: true }),
-                    new Event('change', { bubbles: true }),
-                    new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: fullContent }),
-                    new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' }),
-                    new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter' })
-                ];
-                
-                events.forEach((event, index) => {
-                    input.dispatchEvent(event);
-                    console.log(`触发事件 ${index + 1}:`, event.type);
-                });
-                
-                // 尝试聚焦输入框
-                input.focus();
-                console.log('输入框已聚焦');
+                // 输入空字符触发初始状态（模拟手动输入），再清空
+                document.execCommand('insertText', false, ' ');
+                inputElem.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+                inputElem.select();
+                document.execCommand('backspace');
+
+                // 5. 输入目标内容
+                document.execCommand('insertText', false, fullContent);
+                inputElem.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
                 
                 Logger.success('题目已填充到输入框');
-                console.log('最终 input.value:', input.value);
+                console.log('输入框内容:', inputElem.value.substring(0, 100) + '...');
+
+                // 6. 解锁并点击发送按钮
+                sendBtn.removeAttribute('disabled');
+                sendBtn.setAttribute('aria-disabled', 'false');
+                sendBtn.style.pointerEvents = 'auto';
                 
-                // 等待一小段时间后点击发送按钮
-                setTimeout(() => {
-                    // 查找发送按钮
-                    const sendButtonSelector = 'button[data-testid="chat_input_send_button"]';
-                    const sendButton = document.querySelector(sendButtonSelector);
-                    
-                    if (!sendButton) {
-                        Logger.error('未找到发送按钮');
-                        console.log('未找到发送按钮，选择器:', sendButtonSelector);
-                        return;
-                    }
-                    
-                    console.log('找到发送按钮:', sendButton);
-                    console.log('按钮disabled状态:', sendButton.disabled);
-                    console.log('按钮aria-disabled:', sendButton.getAttribute('aria-disabled'));
-                    
-                    // 检查按钮是否可用
-                    if (sendButton.disabled || sendButton.getAttribute('aria-disabled') === 'true') {
-                        Logger.warn('发送按钮未启用，请手动点击发送');
-                        console.log('按钮样式:', window.getComputedStyle(sendButton).pointerEvents);
-                        return;
-                    }
-                    
-                    // 点击发送按钮
-                    sendButton.click();
-                    Logger.success('已自动发送题目到豆包AI');
-                    console.log('已点击发送按钮');
-                    
-                    // 清除存储的题目内容
-                    GM_setValue(storageKey, '');
-                }, 500);
+                const rect = sendBtn.getBoundingClientRect();
+                sendBtn.dispatchEvent(new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: rect.x + rect.width / 2,  // 点击按钮中心（更精准）
+                    clientY: rect.y + rect.height / 2,
+                    isTrusted: true
+                }));
+                
+                Logger.success('已自动发送题目到豆包AI');
+                console.log('已点击发送按钮');
                 
             } catch (error) {
                 Logger.error('豆包AI自动填充失败', error);
+                console.error('详细错误:', error.message);
+            } finally {
+                // 无论成功失败，都清除缓存（防止泄露）
+                GM_setValue(storageKey, '');
+                console.log('已清除本地缓存');
             }
-        }, 2000); // 等待2秒确保页面完全加载
+        }
+
+        // 启动豆包AI自动发送（无需固定延迟，自动识别加载）
+        autoSendMessage();
         
     } else {
-        // 超星学习通页面逻辑
+        // ===================== 超星学习通页面逻辑 =====================
         const app = new ChaoxingAnswerHider();
         app.initialize();
     }
