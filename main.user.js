@@ -2588,10 +2588,9 @@
             configSection.appendChild(suffixSection);
 
             // 豆包会话ID设置
-            const chatIdSection = this._createSettingItem(
+            const chatIdSection = this._createTextSettingItem(
                 '豆包会话ID（可选）',
-                '指定固定的豆包会话ID，实现"复用对话"效果。留空则每次新建标签页。<br>示例：从 https://www.doubao.com/chat/<strong>32898162890824194</strong> 复制数字ID',
-                'text',
+                '指定固定的豆包会话ID，实现"复用对话"效果。留空则每次新建标签页。示例：从 https://www.doubao.com/chat/32898162890824194 复制数字ID',
                 'aiChatId',
                 this.settings.aiChatId || ''
             );
