@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.10
-// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
+// @version      2.7.11
+// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=chaoxing.com
@@ -280,7 +280,9 @@
             // ========== 用户设置默认值 ==========
             settings: {
                 autoSave: false,                        // 是否开启自动保存（默认关闭）
-                autoSaveDelay: 5000                     // 自动保存延迟时间（毫秒）
+                autoSaveDelay: 5000,                    // 自动保存延迟时间（毫秒）
+                copyPrefix: '',                         // 复制内容前缀（默认无）
+                copySuffix: ''                          // 复制内容后缀（默认无）
             },
 
             // ========== 控制面板按钮配置 ==========
@@ -1959,6 +1961,112 @@
 
             container.appendChild(settingsContainer);
 
+            // 复制配置区域
+            const copyConfigSection = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    marginBottom: '20px'
+                }
+            });
+
+            const copyConfigTitle = DOMHelper.createElement('div', {
+                innerText: '📋 复制配置',
+                style: {
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#2d3748',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                }
+            });
+
+            copyConfigSection.appendChild(copyConfigTitle);
+
+            // 复制前缀设置
+            const prefixSection = this._createTextSettingItem(
+                '复制内容前缀',
+                '复制题目时自动添加到内容前面的文字（如："【题目】"、"问："等）',
+                'copyPrefix',
+                this.settings.copyPrefix || ''
+            );
+
+            copyConfigSection.appendChild(prefixSection);
+
+            // 复制后缀设置
+            const suffixSection = this._createTextSettingItem(
+                '复制内容后缀',
+                '复制题目时自动添加到内容后面的文字（如："\n---"、"\n来源：超星学习通"等）',
+                'copySuffix',
+                this.settings.copySuffix || ''
+            );
+
+            copyConfigSection.appendChild(suffixSection);
+
+            // 示例预览
+            const exampleSection = DOMHelper.createElement('div', {
+                style: {
+                    marginTop: '16px',
+                    padding: '12px',
+                    backgroundColor: '#f7fafc',
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0'
+                }
+            });
+
+            const exampleTitle = DOMHelper.createElement('div', {
+                innerText: '💡 效果预览',
+                style: {
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: '#4a5568',
+                    marginBottom: '8px'
+                }
+            });
+
+            const exampleContent = DOMHelper.createElement('div', {
+                id: 'copy-config-preview',
+                style: {
+                    fontSize: '12px',
+                    color: '#2d3748',
+                    lineHeight: '1.6',
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'monospace'
+                }
+            });
+
+            // 更新预览内容的函数
+            const updatePreview = () => {
+                const prefix = this.settings.copyPrefix || '';
+                const suffix = this.settings.copySuffix || '';
+                const sampleQuestion = '1. (单选题, 3分) 以下哪个是正确的？\nA. 选项A\nB. 选项B\nC. 选项C\nD. 选项D';
+                exampleContent.textContent = prefix + sampleQuestion + suffix;
+            };
+
+            // 初始预览
+            updatePreview();
+
+            // 监听输入变化更新预览
+            const prefixInput = prefixSection.querySelector('input');
+            const suffixInput = suffixSection.querySelector('input');
+            
+            if (prefixInput) {
+                prefixInput.addEventListener('input', updatePreview);
+            }
+            if (suffixInput) {
+                suffixInput.addEventListener('input', updatePreview);
+            }
+
+            exampleSection.appendChild(exampleTitle);
+            exampleSection.appendChild(exampleContent);
+            copyConfigSection.appendChild(exampleSection);
+
+            container.appendChild(copyConfigSection);
+
             // 危险操作区域
             const dangerZone = DOMHelper.createElement('div', {
                 style: {
@@ -2181,6 +2289,82 @@
             });
 
             item.appendChild(labelEl);
+            item.appendChild(desc);
+
+            return item;
+        }
+
+        /**
+         * 创建文本输入类型的设置项
+         * @param {string} label - 设置项标签
+         * @param {string} description - 设置项描述
+         * @param {string} key - 设置项键名
+         * @param {string} value - 当前值
+         * @returns {HTMLElement} 设置项元素
+         */
+        _createTextSettingItem(label, description, key, value) {
+            const item = DOMHelper.createElement('div', {
+                style: {
+                    marginBottom: '20px'
+                }
+            });
+
+            const labelEl = DOMHelper.createElement('label', {
+                innerText: label,
+                style: {
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#2d3748',
+                    marginBottom: '8px'
+                }
+            });
+
+            const input = DOMHelper.createElement('input', {
+                type: 'text',
+                value: value || '',
+                placeholder: '留空则不添加前缀/后缀',
+                style: {
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #cbd5e0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    color: '#2d3748',
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
+                }
+            });
+
+            // 聚焦效果
+            input.addEventListener('focus', () => {
+                input.style.borderColor = '#4299e1';
+                input.style.outline = 'none';
+                input.style.boxShadow = '0 0 0 3px rgba(66, 153, 225, 0.1)';
+            });
+
+            input.addEventListener('blur', () => {
+                input.style.borderColor = '#cbd5e0';
+                input.style.boxShadow = 'none';
+            });
+
+            // 实时保存
+            input.addEventListener('input', () => {
+                this.settings[key] = input.value;
+            });
+
+            const desc = DOMHelper.createElement('div', {
+                innerText: description,
+                style: {
+                    fontSize: '12px',
+                    color: '#718096',
+                    marginTop: '6px',
+                    lineHeight: '1.5'
+                }
+            });
+
+            item.appendChild(labelEl);
+            item.appendChild(input);
             item.appendChild(desc);
 
             return item;
@@ -3981,8 +4165,22 @@
                 });
             }
 
-            // 复制到剪贴板
-            navigator.clipboard.writeText(copyText.trim()).then(() => {
+            // 应用前缀和后缀配置
+            this.dbManager.getSetting('copyPrefix', this.config.get('settings.copyPrefix')).then(prefix => {
+                return this.dbManager.getSetting('copySuffix', this.config.get('settings.copySuffix')).then(suffix => {
+                    let finalText = copyText.trim();
+                    if (prefix) {
+                        finalText = prefix + finalText;
+                    }
+                    if (suffix) {
+                        finalText = finalText + suffix;
+                    }
+                    return finalText;
+                });
+            }).then(finalText => {
+                // 复制到剪贴板
+                return navigator.clipboard.writeText(finalText);
+            }).then(() => {
                 // 复制成功，更新按钮状态
                 this.copyButton.innerText = buttonText.copied;
                 this.copyButton.style.background = colors.successBackground;
@@ -3995,8 +4193,20 @@
             }).catch(err => {
                 console.error('复制失败:', err);
                 // 尝试使用传统方法
-                const textarea = document.createElement('textarea');
-                textarea.value = copyText.trim();
+                this.dbManager.getSetting('copyPrefix', this.config.get('settings.copyPrefix')).then(prefix => {
+                    return this.dbManager.getSetting('copySuffix', this.config.get('settings.copySuffix')).then(suffix => {
+                        let finalText = copyText.trim();
+                        if (prefix) {
+                            finalText = prefix + finalText;
+                        }
+                        if (suffix) {
+                            finalText = finalText + suffix;
+                        }
+                        return finalText;
+                    });
+                }).then(finalText => {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = finalText;
                 textarea.style.position = 'fixed';
                 textarea.style.opacity = '0';
                 document.body.appendChild(textarea);
@@ -4009,10 +4219,11 @@
                         this.copyButton.innerText = buttonText.copy;
                         this.copyButton.style.background = colors.background;
                     }, 2000);
-                } catch (e) {
-                    Logger.error('复制失败');
-                }
-                document.body.removeChild(textarea);
+                    } catch (e) {
+                        Logger.error('复制失败');
+                    }
+                    document.body.removeChild(textarea);
+                });
             });
         }
 
