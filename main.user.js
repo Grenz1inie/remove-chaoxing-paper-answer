@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.15
-// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
-// @author       You
+// @version      2.7.16
+// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
+// @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=chaoxing.com
 // @grant        GM_xmlhttpRequest
@@ -1772,7 +1772,7 @@
             
             const buttonConfig = this.config.get('panelSaveButton');
             
-            // 创建悬浮操作栏容器
+            // 创建固定下边栏容器
             const actionBar = DOMHelper.createElement('div', {
                 className: 'floating-action-bar',
                 style: {
@@ -1780,7 +1780,7 @@
                     bottom: '0',
                     left: '0',
                     right: '0',
-                    padding: '12px 20px',
+                    padding: '12px 24px',
                     backgroundColor: 'white',
                     borderTop: '1px solid #e2e8f0',
                     display: 'flex',
@@ -1788,7 +1788,10 @@
                     alignItems: 'center',
                     boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.06)',
                     zIndex: '100',
-                    marginTop: '16px'
+                    marginTop: '0',
+                    marginLeft: '-24px',
+                    marginRight: '-24px',
+                    marginBottom: '-24px'
                 }
             });
 
@@ -4351,7 +4354,7 @@
             }
         }
 
-        _handleCopy() {
+        async _handleCopy() {
             const buttonText = this.config.get('copyButton.text');
             const colors = this.config.get('copyButton.colors');
             
@@ -4380,125 +4383,260 @@
                 return;
             }
 
-            // 提取题目文本
-            let copyText = '';
-            
-            // 1. 获取题号和题型（如 "1. (单选题, 3分)"）
-            const markName = questionContainer.querySelector('.mark_name');
-            if (markName) {
-                // 提取题号
-                const firstTextNode = markName.childNodes[0];
-                if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
-                    copyText += firstTextNode.textContent.trim();
-                }
+            try {
+                // 克隆题目容器以避免修改原DOM
+                const containerClone = questionContainer.cloneNode(true);
                 
-                // 提取题型和分值
-                const colorShallow = markName.querySelector('.colorShallow');
-                if (colorShallow) {
-                    copyText += ' ' + colorShallow.textContent.trim();
-                }
+                // 移除不需要的元素
+                const elementsToRemove = containerClone.querySelectorAll('.mark_answer, button, [contenteditable], .aiAssistant');
+                elementsToRemove.forEach(el => el.remove());
                 
-                // 提取题干
-                const qtContent = markName.querySelector('.qtContent');
-                if (qtContent) {
-                    copyText += ' ' + qtContent.textContent.trim();
-                }
-                copyText += '\n';
-            }
-            
-            // 2. 获取选项（单选/多选题）
-            const markLetter = questionContainer.querySelector('ul.mark_letter');
-            if (markLetter) {
-                const options = markLetter.querySelectorAll('li');
-                options.forEach(option => {
-                    copyText += option.textContent.trim() + '\n';
-                });
-            }
-            
-            // 3. 获取完型填空/填空题选项
-            const markGestalt = questionContainer.querySelector('div.mark_gestalt');
-            if (markGestalt) {
-                const rows = markGestalt.querySelectorAll('.gestalt_row, dl');
-                rows.forEach(row => {
-                    const dt = row.querySelector('dt');
-                    if (dt) {
-                        copyText += dt.textContent.trim() + '\n';
+                // 移除脚本添加的容器
+                const scriptContainers = containerClone.querySelectorAll('div[style*="display: inline-block"], div[style*="display: none"]');
+                scriptContainers.forEach(el => el.remove());
+                
+                // 提取纯文本内容
+                let copyText = '';
+                
+                // 1. 获取题号和题型
+                const markName = containerClone.querySelector('.mark_name');
+                if (markName) {
+                    const firstTextNode = markName.childNodes[0];
+                    if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
+                        copyText += firstTextNode.textContent.trim();
                     }
-                    const dds = row.querySelectorAll('dd');
-                    dds.forEach(dd => {
-                        copyText += '  ' + dd.textContent.trim() + '\n';
+                    
+                    const colorShallow = markName.querySelector('.colorShallow');
+                    if (colorShallow) {
+                        copyText += ' ' + colorShallow.textContent.trim();
+                    }
+                    
+                    const qtContent = markName.querySelector('.qtContent');
+                    if (qtContent) {
+                        copyText += ' ' + qtContent.textContent.trim();
+                    }
+                    copyText += '\n';
+                }
+                
+                // 2. 获取选项
+                const markLetter = containerClone.querySelector('ul.mark_letter');
+                if (markLetter) {
+                    const options = markLetter.querySelectorAll('li');
+                    options.forEach(option => {
+                        copyText += option.textContent.trim() + '\n';
                     });
-                });
-            }
-
-            // 应用前缀和后缀配置
-            this.dbManager.getSetting('copyPrefix', this.config.get('settings.copyPrefix')).then(prefix => {
-                return this.dbManager.getSetting('copySuffix', this.config.get('settings.copySuffix')).then(suffix => {
-                    let finalText = copyText.trim();
-                    if (prefix) {
-                        // 处理 \n 转义符
-                        const processedPrefix = prefix.replace(/\\n/g, '\n');
-                        finalText = processedPrefix + finalText;
-                    }
-                    if (suffix) {
-                        // 处理 \n 转义符
-                        const processedSuffix = suffix.replace(/\\n/g, '\n');
-                        finalText = finalText + processedSuffix;
-                    }
-                    return finalText;
-                });
-            }).then(finalText => {
-                // 复制到剪贴板
-                return navigator.clipboard.writeText(finalText);
-            }).then(() => {
-                // 复制成功，更新按钮状态
-                this.copyButton.innerText = buttonText.copied;
-                this.copyButton.style.background = colors.successBackground;
+                }
                 
-                // 2秒后恢复原状
-                setTimeout(() => {
-                    this.copyButton.innerText = buttonText.copy;
-                    this.copyButton.style.background = colors.background;
-                }, 2000);
-            }).catch(err => {
-                console.error('复制失败:', err);
-                // 尝试使用传统方法
-                this.dbManager.getSetting('copyPrefix', this.config.get('settings.copyPrefix')).then(prefix => {
-                    return this.dbManager.getSetting('copySuffix', this.config.get('settings.copySuffix')).then(suffix => {
-                        let finalText = copyText.trim();
-                        if (prefix) {
-                            // 处理 \n 转义符
-                            const processedPrefix = prefix.replace(/\\n/g, '\n');
-                            finalText = processedPrefix + finalText;
+                // 3. 获取完型填空/填空题选项
+                const markGestalt = containerClone.querySelector('div.mark_gestalt');
+                if (markGestalt) {
+                    const rows = markGestalt.querySelectorAll('.gestalt_row, dl');
+                    rows.forEach(row => {
+                        const dt = row.querySelector('dt');
+                        if (dt) {
+                            copyText += dt.textContent.trim() + '\n';
                         }
-                        if (suffix) {
-                            // 处理 \n 转义符
-                            const processedSuffix = suffix.replace(/\\n/g, '\n');
-                            finalText = finalText + processedSuffix;
-                        }
-                        return finalText;
+                        const dds = row.querySelectorAll('dd');
+                        dds.forEach(dd => {
+                            copyText += '  ' + dd.textContent.trim() + '\n';
+                        });
                     });
-                }).then(finalText => {
-                    const textarea = document.createElement('textarea');
-                    textarea.value = finalText;
-                textarea.style.position = 'fixed';
-                textarea.style.opacity = '0';
-                document.body.appendChild(textarea);
-                textarea.select();
-                try {
-                    document.execCommand('copy');
+                }
+                
+                // 构建HTML内容（包含图片）
+                let htmlContent = '<div style="font-family: Arial, sans-serif; font-size: 14px;">';
+                
+                // 添加题号和题型
+                if (markName) {
+                    const firstTextNode = questionContainer.querySelector('.mark_name')?.childNodes[0];
+                    if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
+                        htmlContent += '<p><strong>' + firstTextNode.textContent.trim();
+                    }
+                    
+                    const colorShallow = questionContainer.querySelector('.colorShallow');
+                    if (colorShallow) {
+                        htmlContent += ' ' + colorShallow.textContent.trim();
+                    }
+                    htmlContent += '</strong></p>';
+                    
+                    // 添加题干（包含图片）
+                    const qtContent = questionContainer.querySelector('.qtContent');
+                    if (qtContent) {
+                        const qtClone = qtContent.cloneNode(true);
+                        // 处理图片：保留原始URL
+                        const images = qtClone.querySelectorAll('img');
+                        images.forEach(img => {
+                            if (img.src) {
+                                img.style.maxWidth = '100%';
+                                img.style.height = 'auto';
+                            }
+                        });
+                        htmlContent += '<p>' + qtClone.innerHTML + '</p>';
+                    }
+                }
+                
+                // 添加选项（包含可能的图片）
+                const originalMarkLetter = questionContainer.querySelector('ul.mark_letter');
+                if (originalMarkLetter) {
+                    const letterClone = originalMarkLetter.cloneNode(true);
+                    const images = letterClone.querySelectorAll('img');
+                    images.forEach(img => {
+                        if (img.src) {
+                            img.style.maxWidth = '100%';
+                            img.style.height = 'auto';
+                        }
+                    });
+                    htmlContent += letterClone.outerHTML;
+                }
+                
+                // 添加完型填空/填空题选项
+                const originalMarkGestalt = questionContainer.querySelector('div.mark_gestalt');
+                if (originalMarkGestalt) {
+                    const gestaltClone = originalMarkGestalt.cloneNode(true);
+                    const images = gestaltClone.querySelectorAll('img');
+                    images.forEach(img => {
+                        if (img.src) {
+                            img.style.maxWidth = '100%';
+                            img.style.height = 'auto';
+                        }
+                    });
+                    htmlContent += gestaltClone.outerHTML;
+                }
+                
+                htmlContent += '</div>';
+                
+                // 获取配置的前缀和后缀
+                const prefix = await this.dbManager.getSetting('copyPrefix', this.config.get('settings.copyPrefix'));
+                const suffix = await this.dbManager.getSetting('copySuffix', this.config.get('settings.copySuffix'));
+                
+                // 处理前缀和后缀
+                let finalText = copyText.trim();
+                let finalHtml = htmlContent;
+                
+                if (prefix) {
+                    const processedPrefix = prefix.replace(/\\n/g, '\n');
+                    finalText = processedPrefix + finalText;
+                    finalHtml = '<p>' + processedPrefix.replace(/\n/g, '<br>') + '</p>' + finalHtml;
+                }
+                if (suffix) {
+                    const processedSuffix = suffix.replace(/\\n/g, '\n');
+                    finalText = finalText + processedSuffix;
+                    finalHtml = finalHtml + '<p>' + processedSuffix.replace(/\n/g, '<br>') + '</p>';
+                }
+                
+                // 尝试使用现代剪贴板API复制（支持HTML和图片）
+                if (navigator.clipboard && navigator.clipboard.write) {
+                    const htmlBlob = new Blob([finalHtml], { type: 'text/html' });
+                    const textBlob = new Blob([finalText], { type: 'text/plain' });
+                    
+                    const clipboardItem = new ClipboardItem({
+                        'text/html': htmlBlob,
+                        'text/plain': textBlob
+                    });
+                    
+                    await navigator.clipboard.write([clipboardItem]);
+                    
+                    // 复制成功
                     this.copyButton.innerText = buttonText.copied;
                     this.copyButton.style.background = colors.successBackground;
+                    
                     setTimeout(() => {
                         this.copyButton.innerText = buttonText.copy;
                         this.copyButton.style.background = colors.background;
                     }, 2000);
-                    } catch (e) {
-                        Logger.error('复制失败');
+                } else {
+                    // 降级到纯文本复制
+                    await navigator.clipboard.writeText(finalText);
+                    
+                    this.copyButton.innerText = buttonText.copied;
+                    this.copyButton.style.background = colors.successBackground;
+                    
+                    setTimeout(() => {
+                        this.copyButton.innerText = buttonText.copy;
+                        this.copyButton.style.background = colors.background;
+                    }, 2000);
+                }
+                
+            } catch (err) {
+                console.error('复制失败:', err);
+                
+                // 最后的降级方案：使用传统方法复制纯文本
+                try {
+                    let copyText = '';
+                    const markName = questionContainer.querySelector('.mark_name');
+                    if (markName) {
+                        const firstTextNode = markName.childNodes[0];
+                        if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
+                            copyText += firstTextNode.textContent.trim();
+                        }
+                        const colorShallow = markName.querySelector('.colorShallow');
+                        if (colorShallow) {
+                            copyText += ' ' + colorShallow.textContent.trim();
+                        }
+                        const qtContent = markName.querySelector('.qtContent');
+                        if (qtContent) {
+                            copyText += ' ' + qtContent.textContent.trim();
+                        }
+                        copyText += '\n';
                     }
+                    
+                    const markLetter = questionContainer.querySelector('ul.mark_letter');
+                    if (markLetter) {
+                        const options = markLetter.querySelectorAll('li');
+                        options.forEach(option => {
+                            copyText += option.textContent.trim() + '\n';
+                        });
+                    }
+                    
+                    const markGestalt = questionContainer.querySelector('div.mark_gestalt');
+                    if (markGestalt) {
+                        const rows = markGestalt.querySelectorAll('.gestalt_row, dl');
+                        rows.forEach(row => {
+                            const dt = row.querySelector('dt');
+                            if (dt) {
+                                copyText += dt.textContent.trim() + '\n';
+                            }
+                            const dds = row.querySelectorAll('dd');
+                            dds.forEach(dd => {
+                                copyText += '  ' + dd.textContent.trim() + '\n';
+                            });
+                        });
+                    }
+                    
+                    const prefix = await this.dbManager.getSetting('copyPrefix', this.config.get('settings.copyPrefix'));
+                    const suffix = await this.dbManager.getSetting('copySuffix', this.config.get('settings.copySuffix'));
+                    
+                    let finalText = copyText.trim();
+                    if (prefix) {
+                        const processedPrefix = prefix.replace(/\\n/g, '\n');
+                        finalText = processedPrefix + finalText;
+                    }
+                    if (suffix) {
+                        const processedSuffix = suffix.replace(/\\n/g, '\n');
+                        finalText = finalText + processedSuffix;
+                    }
+                    
+                    const textarea = document.createElement('textarea');
+                    textarea.value = finalText;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    
+                    document.execCommand('copy');
                     document.body.removeChild(textarea);
-                });
-            });
+                    
+                    this.copyButton.innerText = buttonText.copied;
+                    this.copyButton.style.background = colors.successBackground;
+                    
+                    setTimeout(() => {
+                        this.copyButton.innerText = buttonText.copy;
+                        this.copyButton.style.background = colors.background;
+                    }, 2000);
+                } catch (e) {
+                    Logger.error('复制失败', e);
+                }
+            }
         }
 
         _createAnswerToggleButton() {
