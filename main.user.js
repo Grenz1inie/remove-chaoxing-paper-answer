@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.8
+// @version      2.7.9
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -76,7 +76,7 @@
             answerButton: {
                 // --- 按钮位置配置 ---
                 position: {
-                    marginLeft: '5px',      // 按钮左外边距
+                    marginLeft: '10px',      // 按钮左外边距
                     marginRight: '0px',      // 按钮右外边距
                     marginTop: '10px',       // 按钮上外边距
                     marginBottom: '0px',     // 按钮下外边距
@@ -555,7 +555,9 @@
                 request.onsuccess = () => resolve(data);
                 request.onerror = () => reject(request.error);
             });
-        }        async getNote(workKey, questionId) {
+        }
+
+        async getNote(workKey, questionId) {
             if (!this.db) await this.init();
 
             return new Promise((resolve, reject) => {
@@ -571,7 +573,9 @@
                 request.onsuccess = () => resolve(request.result?.content || '');
                 request.onerror = () => reject(request.error);
             });
-        }        async getAllNotes(workKey) {
+        }
+
+        async getAllNotes(workKey) {
             if (!this.db) await this.init();
 
             return new Promise((resolve, reject) => {
@@ -4268,20 +4272,45 @@
             // 检测是否为竖屏模式
             const isPortrait = () => window.innerHeight > window.innerWidth;
             
+            // 按钮最小宽度配置（用于空间检测）
+            const BUTTON_MIN_WIDTH = 140;  // 单个按钮的最小宽度（含padding和margin）
+            const BUTTON_GAP = 8;          // 按钮间距
+            const SIDE_MARGIN = 10;        // 侧边距
+            const REQUIRED_SPACE = BUTTON_MIN_WIDTH + SIDE_MARGIN * 2; // 所需最小空间
+            
             // 创建按钮容器，使用固定定位
             this.buttonContainer = DOMHelper.createElement('div', {
                 style: {
                     position: 'fixed',
                     display: 'flex',
-                    gap: '8px',
-                    zIndex: '9999'
+                    gap: BUTTON_GAP + 'px',
+                    zIndex: '9999',
+                    transition: 'all 0.3s ease' // 添加平滑过渡效果
                 }
             });
             
             // 将按钮容器添加到 body
             document.body.appendChild(this.buttonContainer);
             
-            // 更新按钮位置和布局
+            /**
+             * 检测右侧是否有足够空间显示按钮
+             * @returns {boolean} true表示有足够空间，false表示空间不足
+             */
+            const hasEnoughRightSpace = (rect) => {
+                const windowWidth = window.innerWidth;
+                const rightEdge = rect.right;
+                const availableSpace = windowWidth - rightEdge;
+                return availableSpace >= REQUIRED_SPACE;
+            };
+            
+            /**
+             * 更新按钮位置和布局
+             * 智能布局逻辑：
+             * 1. 竖屏模式：始终在下方横向排列
+             * 2. 横屏模式：
+             *    - 右侧空间充足：在右侧纵向排列
+             *    - 右侧空间不足：在下方纵向排列（从上到下）
+             */
             const updatePosition = () => {
                 const rect = fanyaMarkingRight.getBoundingClientRect();
                 
@@ -4289,33 +4318,58 @@
                     // 竖屏模式：按钮横向排列在侧边栏下方
                     this.buttonContainer.style.flexDirection = 'row';
                     this.buttonContainer.style.flexWrap = 'wrap';
-                    this.buttonContainer.style.top = (rect.bottom + 10) + 'px';
+                    this.buttonContainer.style.top = (rect.bottom + SIDE_MARGIN) + 'px';
                     this.buttonContainer.style.left = rect.left + 'px';
                     this.buttonContainer.style.right = 'auto';
                     this.buttonContainer.style.maxWidth = rect.width + 'px';
                     this.buttonContainer.style.justifyContent = 'flex-start';
+                    this.buttonContainer.style.alignItems = 'flex-start';
                 } else {
-                    // 横屏模式：按钮纵向排列在侧边栏右边
-                    this.buttonContainer.style.flexDirection = 'column';
-                    this.buttonContainer.style.flexWrap = 'nowrap';
-                    this.buttonContainer.style.top = rect.top + 'px';
-                    this.buttonContainer.style.left = (rect.right + 10) + 'px';
-                    this.buttonContainer.style.right = 'auto';
-                    this.buttonContainer.style.maxWidth = 'none';
-                    this.buttonContainer.style.justifyContent = 'flex-start';
+                    // 横屏模式：根据右侧空间决定布局
+                    const hasSpace = hasEnoughRightSpace(rect);
+                    
+                    if (hasSpace) {
+                        // 右侧空间充足：按钮纵向排列在侧边栏右边
+                        this.buttonContainer.style.flexDirection = 'column';
+                        this.buttonContainer.style.flexWrap = 'nowrap';
+                        this.buttonContainer.style.top = rect.top + 'px';
+                        this.buttonContainer.style.left = (rect.right + SIDE_MARGIN) + 'px';
+                        this.buttonContainer.style.right = 'auto';
+                        this.buttonContainer.style.maxWidth = 'none';
+                        this.buttonContainer.style.justifyContent = 'flex-start';
+                        this.buttonContainer.style.alignItems = 'stretch';
+                    } else {
+                        // 右侧空间不足：按钮纵向排列在侧边栏下方（从上到下）
+                        this.buttonContainer.style.flexDirection = 'column';
+                        this.buttonContainer.style.flexWrap = 'nowrap';
+                        this.buttonContainer.style.top = (rect.bottom + SIDE_MARGIN) + 'px';
+                        this.buttonContainer.style.left = rect.left + 'px';
+                        this.buttonContainer.style.right = 'auto';
+                        this.buttonContainer.style.maxWidth = rect.width + 'px';
+                        this.buttonContainer.style.justifyContent = 'flex-start';
+                        this.buttonContainer.style.alignItems = 'flex-start';
+                    }
                 }
             };
             
-            // 初始更新位置
+            // 初始更新位置（延迟确保DOM完全渲染）
             setTimeout(updatePosition, 100);
             
             // 滚动和窗口变化时更新位置
-            window.addEventListener('scroll', updatePosition);
+            window.addEventListener('scroll', updatePosition, { passive: true });
             window.addEventListener('resize', updatePosition);
             
             // 监听屏幕方向变化（移动设备）
             if (window.matchMedia) {
                 window.matchMedia('(orientation: portrait)').addEventListener('change', updatePosition);
+            }
+            
+            // 使用 ResizeObserver 监听侧边栏大小变化（更精确的响应式）
+            if (typeof ResizeObserver !== 'undefined') {
+                const resizeObserver = new ResizeObserver(() => {
+                    updatePosition();
+                });
+                resizeObserver.observe(fanyaMarkingRight);
             }
         }
 
