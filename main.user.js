@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.9
+// @version      2.7.10
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -4273,10 +4273,11 @@
             const isPortrait = () => window.innerHeight > window.innerWidth;
             
             // 按钮最小宽度配置（用于空间检测）
-            const BUTTON_MIN_WIDTH = 140;  // 单个按钮的最小宽度（含padding和margin）
+            const BUTTON_MIN_WIDTH = 140;  // 单个按钮的最小宽度
             const BUTTON_GAP = 8;          // 按钮间距
             const SIDE_MARGIN = 10;        // 侧边距
-            const REQUIRED_SPACE = BUTTON_MIN_WIDTH + SIDE_MARGIN * 2; // 所需最小空间
+            const SAFETY_MARGIN = 20;      // 安全边距（防止按钮贴边或被截断）
+            const REQUIRED_SPACE = BUTTON_MIN_WIDTH + SIDE_MARGIN * 2 + SAFETY_MARGIN; // 所需最小空间
             
             // 创建按钮容器，使用固定定位
             this.buttonContainer = DOMHelper.createElement('div', {
@@ -4294,12 +4295,23 @@
             
             /**
              * 检测右侧是否有足够空间显示按钮
+             * @param {DOMRect} rect - 侧边栏的位置信息
              * @returns {boolean} true表示有足够空间，false表示空间不足
              */
             const hasEnoughRightSpace = (rect) => {
                 const windowWidth = window.innerWidth;
                 const rightEdge = rect.right;
                 const availableSpace = windowWidth - rightEdge;
+                
+                // 调试日志
+                console.log('[按钮布局检测]', {
+                    窗口宽度: windowWidth,
+                    侧边栏右边缘: rightEdge,
+                    可用空间: availableSpace,
+                    所需空间: REQUIRED_SPACE,
+                    是否充足: availableSpace >= REQUIRED_SPACE
+                });
+                
                 return availableSpace >= REQUIRED_SPACE;
             };
             
@@ -4324,6 +4336,8 @@
                     this.buttonContainer.style.maxWidth = rect.width + 'px';
                     this.buttonContainer.style.justifyContent = 'flex-start';
                     this.buttonContainer.style.alignItems = 'flex-start';
+                    
+                    console.log('[按钮布局] 竖屏模式：下方横向排列');
                 } else {
                     // 横屏模式：根据右侧空间决定布局
                     const hasSpace = hasEnoughRightSpace(rect);
@@ -4338,8 +4352,11 @@
                         this.buttonContainer.style.maxWidth = 'none';
                         this.buttonContainer.style.justifyContent = 'flex-start';
                         this.buttonContainer.style.alignItems = 'stretch';
+                        
+                        console.log('[按钮布局] 横屏模式：右侧空间充足，右侧纵向排列');
                     } else {
                         // 右侧空间不足：按钮纵向排列在侧边栏下方（从上到下）
+                        // 关键修复：确保纵向排列，不换行
                         this.buttonContainer.style.flexDirection = 'column';
                         this.buttonContainer.style.flexWrap = 'nowrap';
                         this.buttonContainer.style.top = (rect.bottom + SIDE_MARGIN) + 'px';
@@ -4347,7 +4364,9 @@
                         this.buttonContainer.style.right = 'auto';
                         this.buttonContainer.style.maxWidth = rect.width + 'px';
                         this.buttonContainer.style.justifyContent = 'flex-start';
-                        this.buttonContainer.style.alignItems = 'flex-start';
+                        this.buttonContainer.style.alignItems = 'stretch'; // 修改为 stretch 使按钮占满宽度
+                        
+                        console.log('[按钮布局] 横屏模式：右侧空间不足，下方纵向排列');
                     }
                 }
             };
