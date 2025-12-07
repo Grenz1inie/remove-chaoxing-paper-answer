@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      2.7.14
+// @version      2.7.15
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       You
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -1931,15 +1931,7 @@
         _renderSettingsPanel(container) {
             container.innerHTML = '';
 
-            const settingsContainer = DOMHelper.createElement('div', {
-                style: {
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    padding: '24px',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    marginBottom: '20px'
-                }
-            });
+            const settingsContainer = DOMHelper.createCard();
 
             // 自动保存开关
             const autoSaveSection = this._createSettingItem(
@@ -1966,25 +1958,12 @@
             container.appendChild(settingsContainer);
 
             // 危险操作区域
-            const dangerZone = DOMHelper.createElement('div', {
-                style: {
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    padding: '24px',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    marginBottom: '20px',
-                    border: '2px solid #feb2b2'
-                }
+            const dangerZone = DOMHelper.createCard({
+                border: '2px solid #feb2b2'
             });
 
-            const dangerTitle = DOMHelper.createElement('div', {
-                innerText: '⚠️ 危险操作',
-                style: {
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: '#c53030',
-                    marginBottom: '16px'
-                }
+            const dangerTitle = DOMHelper.createTitle('⚠️ 危险操作', {
+                color: '#c53030'
             });
 
             const clearDbSection = DOMHelper.createElement('div', {
@@ -2379,15 +2358,7 @@
             container.innerHTML = '';
 
             // 配置表单区域
-            const configSection = DOMHelper.createElement('div', {
-                style: {
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    padding: '24px',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    marginBottom: '20px'
-                }
-            });
+            const configSection = DOMHelper.createCard();
 
             // 复制前缀设置
             const prefixSection = this._createTextareaSettingItem(
@@ -2412,33 +2383,13 @@
             container.appendChild(configSection);
 
             // 示例预览区域
-            const previewSection = DOMHelper.createElement('div', {
-                style: {
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    padding: '24px',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    marginBottom: '20px'
-                }
-            });
+            const previewSection = DOMHelper.createCard();
 
-            const previewTitle = DOMHelper.createElement('div', {
-                innerText: '💡 实时预览',
-                style: {
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: '#2d3748',
-                    marginBottom: '16px'
-                }
-            });
+            const previewTitle = DOMHelper.createTitle('💡 实时预览');
 
-            const previewHint = DOMHelper.createElement('div', {
-                innerText: '以下是应用前缀和后缀后的效果：',
-                style: {
-                    fontSize: '13px',
-                    color: '#718096',
-                    marginBottom: '12px'
-                }
+            const previewHint = DOMHelper.createDescription('以下是应用前缀和后缀后的效果：', {
+                marginTop: '0',
+                marginBottom: '12px'
             });
 
             const previewContent = DOMHelper.createElement('pre', {
@@ -2494,7 +2445,6 @@
                     try {
                         await this.dbManager.saveSetting('copyPrefix', this.settings.copyPrefix || '');
                         await this.dbManager.saveSetting('copySuffix', this.settings.copySuffix || '');
-                        alert('✅ 复制配置已保存！');
                     } catch (error) {
                         console.error('保存失败:', error);
                         alert('❌ 保存失败，请重试');
@@ -2570,26 +2520,16 @@
                 }
             });
 
-            const contentTitle = DOMHelper.createElement('div', {
-                innerText: '📋 导出内容选项',
-                style: {
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: '#2d3748',
-                    marginBottom: '20px',
-                    paddingBottom: '10px',
-                    borderBottom: '2px solid #4299e1'
-                }
+            const contentTitle = DOMHelper.createTitle('📋 导出内容选项', {
+                marginBottom: '20px',
+                paddingBottom: '10px',
+                borderBottom: '2px solid #4299e1'
             });
             contentContainer.appendChild(contentTitle);
 
-            const contentDesc = DOMHelper.createElement('div', {
-                innerText: '选择导出含答案时包含哪些内容（导出无答案时此选项不生效）',
-                style: {
-                    fontSize: '13px',
-                    color: '#718096',
-                    marginBottom: '16px'
-                }
+            const contentDesc = DOMHelper.createDescription('选择导出含答案时包含哪些内容（导出无答案时此选项不生效）', {
+                marginTop: '0',
+                marginBottom: '16px'
             });
             contentContainer.appendChild(contentDesc);
 
@@ -3748,38 +3688,24 @@
          * 创建样式配置区块
          */
         _createStyleSection(category, savedStyles) {
-            const section = DOMHelper.createElement('div', {
-                style: {
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    padding: '20px',
-                    marginBottom: '20px',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-                }
+            const section = DOMHelper.createCard({
+                padding: '20px'
             });
 
-            const title = DOMHelper.createElement('h3', {
-                innerText: category.title,
-                style: {
-                    margin: '0 0 16px 0',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: '#2d3748',
-                    borderBottom: '2px solid #4299e1',
-                    paddingBottom: '8px'
-                }
+            const title = DOMHelper.createTitle(category.title, {
+                tag: 'h3',
+                margin: '0 0 16px 0',
+                fontWeight: '600',
+                borderBottom: '2px solid #4299e1',
+                paddingBottom: '8px'
             });
 
             section.appendChild(title);
 
             category.fields.forEach(field => {
-                const fieldGroup = DOMHelper.createElement('div', {
-                    style: {
-                        marginBottom: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                    }
+                const fieldGroup = DOMHelper.createFlexContainer({
+                    justify: 'space-between',
+                    marginBottom: '16px'
                 });
 
                 const label = DOMHelper.createElement('label', {
@@ -3878,6 +3804,200 @@
             if (getComputedStyle(element).position === 'static') {
                 element.style.position = 'relative';
             }
+        }
+
+        // ========== 通用 UI 组件工厂方法 ==========
+
+        /**
+         * 创建带圆角阴影的容器
+         * @param {Object} options - 配置选项
+         * @returns {HTMLElement}
+         */
+        static createCard(options = {}) {
+            const {
+                padding = '24px',
+                marginBottom = '20px',
+                backgroundColor = 'white',
+                borderRadius = '8px',
+                boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)',
+                ...otherStyles
+            } = options;
+
+            return this.createElement('div', {
+                style: {
+                    backgroundColor,
+                    borderRadius,
+                    padding,
+                    boxShadow,
+                    marginBottom,
+                    ...otherStyles
+                }
+            });
+        }
+
+        /**
+         * 创建标题元素
+         * @param {string} text - 标题文本
+         * @param {Object} options - 配置选项
+         * @returns {HTMLElement}
+         */
+        static createTitle(text, options = {}) {
+            const {
+                tag = 'div',
+                fontSize = '16px',
+                fontWeight = 'bold',
+                color = '#2d3748',
+                marginBottom = '16px',
+                ...otherStyles
+            } = options;
+
+            return this.createElement(tag, {
+                innerText: text,
+                style: {
+                    fontSize,
+                    fontWeight,
+                    color,
+                    marginBottom,
+                    ...otherStyles
+                }
+            });
+        }
+
+        /**
+         * 创建描述文本元素
+         * @param {string} text - 描述文本
+         * @param {Object} options - 配置选项
+         * @returns {HTMLElement}
+         */
+        static createDescription(text, options = {}) {
+            const {
+                fontSize = '13px',
+                color = '#718096',
+                marginTop = '6px',
+                lineHeight = '1.5',
+                ...otherStyles
+            } = options;
+
+            return this.createElement('div', {
+                innerText: text,
+                style: {
+                    fontSize,
+                    color,
+                    marginTop,
+                    lineHeight,
+                    ...otherStyles
+                }
+            });
+        }
+
+        /**
+         * 创建按钮元素
+         * @param {string} text - 按钮文本
+         * @param {Function} onClick - 点击回调
+         * @param {Object} options - 配置选项
+         * @returns {HTMLElement}
+         */
+        static createButton(text, onClick, options = {}) {
+            const {
+                padding = '8px 16px',
+                fontSize = '13px',
+                fontWeight = '500',
+                borderRadius = '6px',
+                border = 'none',
+                backgroundColor = '#4299e1',
+                color = 'white',
+                cursor = 'pointer',
+                transition = 'all 0.2s',
+                ...otherStyles
+            } = options;
+
+            const button = this.createElement('button', {
+                innerText: text,
+                style: {
+                    padding,
+                    fontSize,
+                    fontWeight,
+                    borderRadius,
+                    border,
+                    backgroundColor,
+                    color,
+                    cursor,
+                    transition,
+                    ...otherStyles
+                }
+            });
+
+            if (onClick) {
+                button.addEventListener('click', onClick);
+            }
+
+            return button;
+        }
+
+        /**
+         * 创建带悬停效果的按钮
+         * @param {string} text - 按钮文本
+         * @param {Function} onClick - 点击回调
+         * @param {Object} options - 配置选项
+         * @returns {HTMLElement}
+         */
+        static createHoverButton(text, onClick, options = {}) {
+            const {
+                hoverBg,
+                normalBg,
+                hoverTransform = 'translateY(-1px)',
+                hoverShadow = '0 4px 8px rgba(0, 0, 0, 0.15)',
+                normalShadow = '0 2px 4px rgba(0, 0, 0, 0.1)',
+                ...otherOptions
+            } = options;
+
+            const button = this.createButton(text, onClick, {
+                ...otherOptions,
+                boxShadow: normalShadow
+            });
+
+            // 添加悬停效果
+            if (hoverBg || normalBg) {
+                button.addEventListener('mouseenter', () => {
+                    if (hoverBg) button.style.backgroundColor = hoverBg;
+                    button.style.transform = hoverTransform;
+                    button.style.boxShadow = hoverShadow;
+                });
+
+                button.addEventListener('mouseleave', () => {
+                    if (normalBg) button.style.backgroundColor = normalBg;
+                    button.style.transform = 'translateY(0)';
+                    button.style.boxShadow = normalShadow;
+                });
+            }
+
+            return button;
+        }
+
+        /**
+         * 创建 flex 容器
+         * @param {Object} options - 配置选项
+         * @returns {HTMLElement}
+         */
+        static createFlexContainer(options = {}) {
+            const {
+                direction = 'row',
+                justify = 'flex-start',
+                align = 'center',
+                gap = '8px',
+                ...otherStyles
+            } = options;
+
+            return this.createElement('div', {
+                style: {
+                    display: 'flex',
+                    flexDirection: direction,
+                    justifyContent: justify,
+                    alignItems: align,
+                    gap,
+                    ...otherStyles
+                }
+            });
         }
     }
 
