@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.9.0
-// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+自动会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
+// @version      3.8.2
+// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
 // @match        https://www.doubao.com/chat/*
@@ -11,8 +11,6 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_openInTab
-// @grant        GM_addValueChangeListener
-// @grant        GM_removeValueChangeListener
 // @connect      p.ananas.chaoxing.com
 // @connect      chaoxing.com
 // @connect      *.chaoxing.com
@@ -4754,7 +4752,7 @@
                     console.log('📖 从 IndexedDB 读取配置:');
                     console.log('  前缀配置:', aiPromptPrefix || '(空)');
                     console.log('  后缀配置:', aiPromptSuffix || '(空)');
-                    console.log('  会话ID:', aiChatId || '(空，将新建标签页并自动保存分配的ID)');
+                    console.log('  会话ID:', aiChatId || '(空)');
                 } catch (error) {
                     console.warn('读取配置失败，使用默认值:', error);
                 }
@@ -4779,36 +4777,6 @@
                 console.log('  后缀:', processedSuffix ? `"${processedSuffix}"` : '(无)');
                 console.log('  最终内容长度:', fullContent.length);
                 console.log('  目标URL:', targetUrl);
-                
-                // 如果未配置会话ID，标记"等待自动保存"
-                if (!aiChatId) {
-                    GM_setValue('doubao_auto_save_id', true);
-                    console.log('🔄 未配置会话ID，将自动保存网站分配的ID');
-                    
-                    // 监听豆包页面保存的ID（30秒超时）
-                    const listenerId = GM_addValueChangeListener('doubao_save_chat_id', 
-                        async (key, oldValue, newValue, remote) => {
-                            if (remote && newValue) {
-                                // 保存到 IndexedDB
-                                await this.dbManager.saveSetting('aiChatId', newValue);
-                                Logger.success(`✅ 已自动保存会话ID: ${newValue}`);
-                                console.log('💾 会话ID已持久化到 IndexedDB');
-                                GM_removeValueChangeListener(listenerId);
-                                GM_setValue('doubao_auto_save_id', false);
-                            }
-                        }
-                    );
-                    
-                    // 30秒后自动清理监听器
-                    setTimeout(() => {
-                        try {
-                            GM_removeValueChangeListener(listenerId);
-                            GM_setValue('doubao_auto_save_id', false);
-                        } catch (e) {
-                            // 忽略清理错误
-                        }
-                    }, 30000);
-                }
                 
                 // 打开豆包AI（浏览器可能自动聚焦已有的同URL标签页）
                 GM_openInTab(targetUrl, { 
@@ -6414,63 +6382,6 @@
         Logger.log('检测到豆包AI页面，正在初始化自动填充功能...');
         
         /**
-         * 从URL中提取会话ID
-         * @param {string} url - URL地址
-         * @returns {string|null} 会话ID或null
-         */
-        function extractChatIdFromUrl(url) {
-            const match = url.match(/\/chat\/(\d+)/);
-            return match ? match[1] : null;
-        }
-
-        /**
-         * 保存当前会话ID
-         * @param {string} chatId - 会话ID
-         */
-        function saveChatId(chatId) {
-            if (!chatId) return;
-            
-            console.log('🔍 豆包页面检测到会话ID:', chatId);
-            
-            // 始终保存最新的会话ID
-            GM_setValue('doubao_latest_chat_id', chatId);
-            
-            // 检查是否需要自动保存到超星页面
-            const needAutoSave = GM_getValue('doubao_auto_save_id', false);
-            if (needAutoSave) {
-                console.log('✅ 检测到自动保存标志，触发保存机制');
-                GM_setValue('doubao_save_chat_id', chatId);
-                GM_setValue('doubao_auto_save_id', false); // 清除标志
-                Logger.success(`已自动保存分配的会话ID: ${chatId}`);
-            } else {
-                console.log('ℹ️ 无需自动保存(已有配置或非首次)');
-            }
-        }
-
-        /**
-         * 初始化URL监听器
-         */
-        function initUrlListener() {
-            // 页面加载时立即提取并保存当前会话ID
-            const currentChatId = extractChatIdFromUrl(window.location.href);
-            if (currentChatId) {
-                console.log('🚀 页面加载完成，提取当前会话ID:', currentChatId);
-                saveChatId(currentChatId);
-            }
-
-            // 监听URL变化(豆包页面切换会话时)
-            window.onurlchange = () => {
-                const newChatId = extractChatIdFromUrl(window.location.href);
-                if (newChatId) {
-                    console.log('🔄 URL变化，检测到新会话ID:', newChatId);
-                    saveChatId(newChatId);
-                }
-            };
-            
-            Logger.log('✅ 会话ID监听器已启动');
-        }
-
-        /**
          * 等待指定元素加载完成（MutationObserver 自动监听）
          * @param {string} selector - 元素选择器
          * @param {number} timeout - 超时时间（默认10秒）
@@ -6583,9 +6494,8 @@
             }
         }
 
-        // 页面加载完成后自动执行
-        initUrlListener();  // 启动会话ID监听器
-        autoSendMessage();  // 执行自动填充逻辑
+        // 页面加载完成后自动执行一次
+        autoSendMessage();
         Logger.log('✅ 豆包AI自动填充功能已启动');
         
     } else {
