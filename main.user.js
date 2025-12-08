@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.8.3
+// @version      3.8.4
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -2261,10 +2261,16 @@
                 }
             });
 
+            // 根据key动态设置placeholder
+            let placeholder = '留空则不添加前缀/后缀';
+            if (key === 'aiChatId') {
+                placeholder = '留空则每次新建标签页，示例：32898162890824194';
+            }
+
             const input = DOMHelper.createElement('input', {
                 type: 'text',
                 value: value || '',
-                placeholder: '留空则不添加前缀/后缀',
+                placeholder: placeholder,
                 style: {
                     width: '100%',
                     padding: '8px 12px',
@@ -2527,7 +2533,7 @@
          */
         _renderCopyConfigPanel(container) {
             this._renderPrefixSuffixPanel(container, {
-                title: '📋 复制内容前后缀管理',
+                title: '📋 复制内容管理',
                 prefixKey: 'copyPrefix',
                 suffixKey: 'copySuffix',
                 prefixLabel: '复制内容前缀',
@@ -2569,7 +2575,7 @@
 
             // AI提问前缀设置
             const prefixSection = this._createTextareaSettingItem(
-                'AI提问前缀',
+                '前缀提示词',
                 '点击"问豆包"按钮时，自动添加到题目前面的提示词。支持 \\n 换行符（如："请帮我解答这道题目：\\n"、"【来自超星学习通】\\n\\n"等）',
                 'aiPromptPrefix',
                 this.settings.aiPromptPrefix || ''
@@ -2579,7 +2585,7 @@
 
             // AI提问后缀设置
             const suffixSection = this._createTextareaSettingItem(
-                'AI提问后缀',
+                '后缀提示词',
                 '点击"问豆包"按钮时，自动添加到题目后面的提示词。支持 \\n 换行符（如："\\n\\n请给出详细解释"、"\\n---\\n需要步骤讲解"等）',
                 'aiPromptSuffix',
                 this.settings.aiPromptSuffix || ''
@@ -2589,7 +2595,7 @@
 
             // 豆包会话ID设置
             const chatIdSection = this._createTextSettingItem(
-                '豆包会话ID（可选）',
+                '会话ID（可选）',
                 '配置固定的豆包会话ID，每次打开同一个会话（浏览器可能自动聚焦已有标签页）。留空则每次新建标签页。示例：从 https://www.doubao.com/chat/32898162890824194 提取数字ID：32898162890824194',
                 'aiChatId',
                 this.settings.aiChatId || ''
@@ -4470,12 +4476,13 @@
 
     // ===================== 答案块控制器 =====================
     class AnswerBlockController {
-        constructor(block, config, styleGenerator, dbManager, workKey) {
+        constructor(block, config, styleGenerator, dbManager, workKey, appInstance) {
             this.block = block;
             this.config = config;
             this.styleGenerator = styleGenerator;
             this.dbManager = dbManager;
             this.workKey = workKey;
+            this.appInstance = appInstance; // 保存应用实例引用，用于访问doubaoTabRef
             this.parent = block.parentNode;
             this.nextSibling = block.nextSibling;
             this.originalHTML = block.outerHTML;
@@ -4784,12 +4791,30 @@
                 console.log('  最终内容长度:', fullContent.length);
                 console.log('  目标URL:', targetUrl);
                 
-                // 打开豆包AI（浏览器可能自动聚焦已有的同URL标签页）
-                GM_openInTab(targetUrl, { 
+                // 关闭旧的豆包AI标签页（如果存在）
+                if (this.appInstance && this.appInstance.doubaoTabRef) {
+                    try {
+                        this.appInstance.doubaoTabRef.close();
+                        console.log('✅ 已关闭旧的豆包AI标签页');
+                    } catch (error) {
+                        // 静默失败，可能已被用户手动关闭
+                        console.log('ℹ️ 旧标签页已不存在或已关闭');
+                    }
+                    this.appInstance.doubaoTabRef = null;
+                }
+                
+                // 打开豆包AI并保存引用
+                const tabRef = GM_openInTab(targetUrl, { 
                     active: true,      // 激活标签页
                     insert: true,      // 插入到当前标签页旁边
                     setParent: true    // 设置父子关系
                 });
+                
+                // 保存引用到应用实例
+                if (this.appInstance) {
+                    this.appInstance.doubaoTabRef = tabRef;
+                    console.log('✅ 已保存新标签页引用');
+                }
             } catch (error) {
                 Logger.error('打开豆包AI失败', error);
             }
@@ -6282,6 +6307,7 @@
             this.answerControllers = [];
             this.globalController = null;
             this.workKey = URLParser.getWorkKey();
+            this.doubaoTabRef = null; // 存储豆包AI标签页的引用
         }
 
         async initialize() {
@@ -6354,7 +6380,8 @@
                     this.config,
                     this.styleGenerator,
                     this.dbManager,
-                    this.workKey
+                    this.workKey,
+                    this  // 传递应用实例引用
                 );
                 await controller.initialize();
                 this.answerControllers.push(controller);
