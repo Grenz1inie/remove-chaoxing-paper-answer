@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         超星学习通期末周复习小助手
+// @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
 // @version      3.8.4.2
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
@@ -6460,25 +6460,6 @@
         async function autoSendMessage() {
             const storageKey = 'chaoxing_doubao_question';
 
-            // 通用触发按钮逻辑（替换原来的 click/MouseEvent）
-            function triggerButton(btn) {
-                if (!btn) return;
-
-                btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-                btn.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
-
-                btn.dispatchEvent(new TouchEvent("touchstart", {
-                    bubbles: true,
-                    touches: []
-                }));
-                btn.dispatchEvent(new TouchEvent("touchend", {
-                    bubbles: true,
-                    touches: []
-                }));
-
-                btn.click();
-            }
-
             try {
                 // 读取内容
                 const fullContent = GM_getValue(storageKey, '');
@@ -6498,8 +6479,8 @@
                 const inputElem = await waitForElement('textarea[data-testid="chat_input_input"]');
                 Logger.log('找到输入框，准备填充内容...');
 
-                // 等待发送按钮
-                const sendBtn = await waitForElement('button[data-testid="chat_input_send_button"]');
+                // 等待发送按钮（确保页面完全加载）
+                await waitForElement('button[data-testid="chat_input_send_button"]');
                 Logger.log('找到发送按钮');
 
                 // 聚焦输入框
@@ -6519,16 +6500,27 @@
                 Logger.success('题目已填充到输入框');
                 console.log('输入框内容:', inputElem.value.substring(0, 100) + '...');
 
-                // 解锁发送按钮
-                sendBtn.removeAttribute('disabled');
-                sendBtn.setAttribute('aria-disabled', 'false');
-                sendBtn.style.pointerEvents = 'auto';
+                // 🔥 使用 Enter 键发送（兼容桌面端和移动端）
+                inputElem.dispatchEvent(new KeyboardEvent('keydown', {
+                    bubbles: true,
+                    cancelable: true,
+                    key: 'Enter',
+                    code: 'Enter',
+                    which: 13,
+                    keyCode: 13
+                }));
 
-                // 🔥 替换后的强制触发逻辑（不动其他部分）
-                triggerButton(sendBtn);
+                inputElem.dispatchEvent(new KeyboardEvent('keyup', {
+                    bubbles: true,
+                    cancelable: true,
+                    key: 'Enter',
+                    code: 'Enter',
+                    which: 13,
+                    keyCode: 13
+                }));
 
-                Logger.success('已自动发送题目到豆包AI');
-                console.log('已点击发送按钮');
+                Logger.success('已自动发送题目到豆包AI（模拟Enter键）');
+                console.log('已模拟按下 Enter 键发送');
 
             } catch (error) {
                 Logger.error('豆包AI自动填充失败', error);
