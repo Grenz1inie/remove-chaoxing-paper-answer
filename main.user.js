@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.8.2
+// @version      3.8.3
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -2590,7 +2590,7 @@
             // 豆包会话ID设置
             const chatIdSection = this._createTextSettingItem(
                 '豆包会话ID（可选）',
-                '指定固定的豆包会话ID，实现"复用对话"效果。留空则每次新建标签页。示例：从 https://www.doubao.com/chat/32898162890824194 复制数字ID',
+                '配置固定的豆包会话ID，每次打开同一个会话（浏览器可能自动聚焦已有标签页）。留空则每次新建标签页。示例：从 https://www.doubao.com/chat/32898162890824194 提取数字ID：32898162890824194',
                 'aiChatId',
                 this.settings.aiChatId || ''
             );
@@ -4389,14 +4389,20 @@
         addHoverEffect(button, options) {
             const { getHoverBg, getNormalBg } = options;
             
+            // 缓存进入时的背景色，确保离开时恢复到正确的颜色
+            let cachedBgColor = null;
+            
             button.addEventListener('mouseenter', () => {
+                // 进入时缓存当前背景色（而不是调用getNormalBg，因为状态可能在hover期间改变）
+                cachedBgColor = button.style.backgroundColor || getNormalBg();
                 button.style.backgroundColor = getHoverBg();
                 button.style.transform = 'translateY(-1px)';
                 button.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
             });
 
             button.addEventListener('mouseleave', () => {
-                button.style.backgroundColor = getNormalBg();
+                // 恢复到进入时缓存的背景色
+                button.style.backgroundColor = cachedBgColor || getNormalBg();
                 button.style.transform = 'translateY(0)';
                 button.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             });
