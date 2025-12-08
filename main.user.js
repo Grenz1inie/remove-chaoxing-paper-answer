@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         超星学习通高效刷题小助手
+// @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
 // @version      3.8.4
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
@@ -24,7 +24,7 @@
 // @updateURL https://update.greasyfork.org/scripts/555192/%E8%B6%85%E6%98%9F%E5%AD%A6%E4%B9%A0%E9%80%9A%E9%AB%98%E6%95%88%E5%88%B7%E9%A2%98%E5%B0%8F%E5%8A%A9%E6%89%8B.meta.js
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
     // ===================== 配置管理模块 =====================
@@ -468,8 +468,8 @@
             const result = { ...target };
             for (const key in source) {
                 // 排除函数和数组，只对普通对象进行深度合并
-                if (source[key] instanceof Object && 
-                    !(source[key] instanceof Function) && 
+                if (source[key] instanceof Object &&
+                    !(source[key] instanceof Function) &&
                     !Array.isArray(source[key]) &&
                     key in target &&
                     target[key] instanceof Object &&
@@ -540,7 +540,7 @@
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
                     const oldVersion = event.oldVersion;
-                    
+
                     // 创建或升级笔记存储
                     if (!db.objectStoreNames.contains(this.config.get('database.stores.notes'))) {
                         const notesStore = db.createObjectStore(
@@ -551,7 +551,7 @@
                         notesStore.createIndex('questionId', 'questionId', { unique: false });
                         notesStore.createIndex('timestamp', 'timestamp', { unique: false });
                     }
-                    
+
                     // v2: 创建附件存储（为未来图片等附件做准备）
                     if (oldVersion < 2 && !db.objectStoreNames.contains(this.config.get('database.stores.attachments'))) {
                         const attachmentsStore = db.createObjectStore(
@@ -584,7 +584,7 @@
                     'readwrite'
                 );
                 const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
-                
+
                 const id = `${workKey}_${questionId}`;
                 const data = {
                     id,
@@ -613,7 +613,7 @@
                     'readonly'
                 );
                 const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
-                
+
                 const id = `${workKey}_${questionId}`;
                 const request = objectStore.get(id);
 
@@ -667,7 +667,7 @@
                     'readwrite'
                 );
                 const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
-                
+
                 const id = `${workKey}_${questionId}`;
                 const request = objectStore.delete(id);
 
@@ -689,7 +689,7 @@
                     'readwrite'
                 );
                 const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
-                
+
                 let completedCount = 0;
                 const totalCount = noteIds.length;
 
@@ -756,7 +756,7 @@
                     'readwrite'
                 );
                 const objectStore = transaction.objectStore(this.config.get('database.stores.settings'));
-                
+
                 const data = { key, value, updatedAt: Date.now() };
                 const request = objectStore.put(data);
 
@@ -989,7 +989,7 @@
             // 处理快捷键
             this.editor.addEventListener('keydown', (e) => {
                 if (e.ctrlKey || e.metaKey) {
-                    switch(e.key.toLowerCase()) {
+                    switch (e.key.toLowerCase()) {
                         case 'b':
                             e.preventDefault();
                             this._execCommand('bold');
@@ -1076,8 +1076,8 @@
                     });
 
                     button.addEventListener('mouseenter', () => {
-                        const isActive = button.style.backgroundColor === 'rgb(66, 153, 225)' || 
-                                       button.style.backgroundColor === '#4299e1';
+                        const isActive = button.style.backgroundColor === 'rgb(66, 153, 225)' ||
+                            button.style.backgroundColor === '#4299e1';
                         if (!isActive) {
                             button.style.backgroundColor = '#e2e8f0';
                         }
@@ -1092,14 +1092,14 @@
 
                     button.addEventListener('mousedown', (e) => {
                         e.preventDefault();
-                        
+
                         // 保存当前选区
                         const selection = window.getSelection();
                         let savedRange = null;
                         if (selection.rangeCount > 0) {
                             savedRange = selection.getRangeAt(0);
                         }
-                        
+
                         if (btn.prompt) {
                             // 处理链接插入
                             const url = prompt('请输入链接地址:');
@@ -1133,7 +1133,7 @@
                             }
                             this._execCommand(btn.command);
                         }
-                        
+
                         // 确保编辑器获得焦点
                         setTimeout(() => {
                             this.editor.focus();
@@ -1173,7 +1173,7 @@
         _updateToolbarState() {
             // 更新可切换状态的按钮
             const commands = ['bold', 'italic', 'underline', 'strikeThrough', 'insertUnorderedList', 'insertOrderedList'];
-            
+
             commands.forEach(command => {
                 const button = this.toolbarButtons.get(command);
                 if (button) {
@@ -1201,17 +1201,17 @@
             if (selectedText) {
                 const code = document.createElement('code');
                 code.textContent = selectedText;
-                
+
                 try {
                     range.deleteContents();
                     range.insertNode(code);
-                    
+
                     // 恢复光标位置到代码块之后
                     range.setStartAfter(code);
                     range.setEndAfter(code);
                     selection.removeAllRanges();
                     selection.addRange(range);
-                    
+
                     this.editor.focus();
                 } catch (error) {
                     Logger.error('插入代码失败', error);
@@ -1220,7 +1220,7 @@
                 // 如果没有选中文本，在光标位置插入代码标记
                 const code = document.createElement('code');
                 code.textContent = '代码';
-                
+
                 try {
                     range.insertNode(code);
                     range.setStartAfter(code);
@@ -1238,11 +1238,11 @@
             // 基本的 HTML 清理，防止 XSS
             const div = document.createElement('div');
             div.innerHTML = html;
-            
+
             // 移除危险的标签和属性
             const scripts = div.querySelectorAll('script, iframe, object, embed');
             scripts.forEach(el => el.remove());
-            
+
             return div.innerHTML;
         }
 
@@ -1294,7 +1294,7 @@
 
         toggleEditMode() {
             this.isEditMode = !this.isEditMode;
-            
+
             if (this.isEditMode) {
                 // 切换到编辑模式
                 this.editor.contentEditable = 'true';
@@ -1333,7 +1333,7 @@
             this.notesMenuExpanded = false; // 管理笔记子菜单是否展开
             this.notesSortBy = 'time'; // 'time' 或 'alpha' (字母序)
             this.notesSortOrder = 'desc'; // 'asc' 升序 或 'desc' 降序
-            
+
             // 解析 workKey 获取 courseId, classId, workId
             const parts = workKey.split('_');
             this.courseId = parts[0] || '';
@@ -1391,7 +1391,7 @@
         async _loadNotes() {
             try {
                 const allNotes = await this.dbManager.getAllDomainNotes();
-                
+
                 switch (this.notesScope) {
                     case 'current':
                         // 当前页面：完全匹配 workKey
@@ -1418,7 +1418,7 @@
                     default:
                         this.notesList = allNotes.filter(note => note.workKey === this.workKey);
                 }
-                
+
                 this.notesList.sort((a, b) => b.timestamp - a.timestamp);
             } catch (error) {
                 Logger.error('加载笔记失败', error);
@@ -1588,12 +1588,12 @@
             // 菜单项
             const menuItems = [
                 { id: 'settings', icon: '⚙️', text: '设置' },
-                { id: 'copy-config', icon: '📋', text: '复制内容前后缀管理' },
+                { id: 'copy-config', icon: '📋', text: '复制内容管理' },
                 { id: 'ai-prompt', icon: '🤖', text: 'AI提问管理' },
                 { id: 'export', icon: '📄', text: '导出格式管理' },
-                { 
-                    id: 'notes', 
-                    icon: '📝', 
+                {
+                    id: 'notes',
+                    icon: '📝',
                     text: '笔记管理',
                     hasSubmenu: true,
                     submenu: [
@@ -1618,7 +1618,7 @@
          */
         _createMenuItem(item) {
             const container = DOMHelper.createElement('div');
-            
+
             // 主菜单项
             const menuItem = DOMHelper.createElement('div', {
                 dataset: { tab: item.id },
@@ -1729,7 +1729,7 @@
          */
         _createSubMenuItem(subItem) {
             const isActive = this.currentTab === 'notes' && this.notesScope === subItem.scope;
-            
+
             const subMenuItem = DOMHelper.createElement('div', {
                 dataset: { scope: subItem.scope },
                 style: {
@@ -1821,15 +1821,15 @@
          * @returns {HTMLElement} 操作栏元素
          */
         _createFloatingActionBar(options) {
-            const { 
-                saveText = '💾 保存设置', 
-                onSave, 
-                onReset = null, 
-                resetText = '🔄 重置为默认' 
+            const {
+                saveText = '💾 保存设置',
+                onSave,
+                onReset = null,
+                resetText = '🔄 重置为默认'
             } = options;
-            
+
             const buttonConfig = this.config.get('panelSaveButton');
-            
+
             // 创建固定下边栏容器
             const actionBar = DOMHelper.createElement('div', {
                 className: 'floating-action-bar',
@@ -1924,29 +1924,29 @@
                 try {
                     saveButton.disabled = true;
                     saveButton.innerText = '⏳ 保存中...';
-                    
+
                     await onSave();
-                    
+
                     // 显示成功状态
                     saveButton.dataset.success = 'true';
                     saveButton.innerText = buttonConfig.text.success;
                     saveButton.style.backgroundColor = buttonConfig.colors.successBackground;
-                    
+
                     setTimeout(() => {
                         delete saveButton.dataset.success;
                         saveButton.innerText = saveText;
                         saveButton.style.backgroundColor = buttonConfig.colors.background;
                         saveButton.disabled = false;
                     }, 2000);
-                    
+
                 } catch (error) {
                     Logger.error('保存失败', error);
-                    
+
                     // 显示错误状态
                     saveButton.dataset.error = 'true';
                     saveButton.innerText = buttonConfig.text.error;
                     saveButton.style.backgroundColor = buttonConfig.colors.errorBackground;
-                    
+
                     setTimeout(() => {
                         delete saveButton.dataset.error;
                         saveButton.innerText = saveText;
@@ -1957,7 +1957,7 @@
             });
 
             actionBar.appendChild(saveButton);
-            
+
             return actionBar;
         }
 
@@ -2504,7 +2504,7 @@
             // 监听输入变化更新预览
             const prefixTextarea = prefixSection.querySelector('textarea');
             const suffixTextarea = suffixSection.querySelector('textarea');
-            
+
             if (prefixTextarea) {
                 prefixTextarea.addEventListener('input', updatePreview);
             }
@@ -2524,7 +2524,7 @@
                 resetText: '🔄 重置配置',
                 onReset: options.onReset
             });
-            
+
             container.appendChild(actionBar);
         }
 
@@ -2647,7 +2647,7 @@
             // 监听输入变化更新预览
             const prefixTextarea = prefixSection.querySelector('textarea');
             const suffixTextarea = suffixSection.querySelector('textarea');
-            
+
             if (prefixTextarea) {
                 prefixTextarea.addEventListener('input', updatePreview);
             }
@@ -2689,7 +2689,7 @@
                     }
                 }
             });
-            
+
             container.appendChild(actionBar);
         }
 
@@ -3202,7 +3202,7 @@
 
             // 时间排序按钮
             const timeSortBtn = DOMHelper.createElement('button', {
-                innerText: this.notesSortBy === 'time' 
+                innerText: this.notesSortBy === 'time'
                     ? (this.notesSortOrder === 'desc' ? '🕒 时间 ↓' : '🕒 时间 ↑')
                     : '🕒 时间',
                 style: {
@@ -3243,7 +3243,7 @@
 
             // 字母排序按钮
             const alphaSortBtn = DOMHelper.createElement('button', {
-                innerText: this.notesSortBy === 'alpha' 
+                innerText: this.notesSortBy === 'alpha'
                     ? (this.notesSortOrder === 'asc' ? '🔤 字母 ↑' : '🔤 字母 ↓')
                     : '🔤 字母',
                 style: {
@@ -3873,7 +3873,7 @@
                 saveText: '💾 保存样式设置',
                 onSave: async () => {
                     const customStyles = {};
-                    
+
                     // 收集所有表单数据
                     styleCategories.forEach(category => {
                         category.fields.forEach(field => {
@@ -3955,7 +3955,7 @@
                     }
                     currentValue = value;
                 }
-                
+
                 if (!currentValue) {
                     const pathParts = field.path.split('.');
                     let value = this.config.get(category.key);
@@ -4235,7 +4235,7 @@
         }
 
         // ========== 通用按钮样式生成方法 ==========
-        
+
         /**
          * 生成内联按钮样式（答案、笔记、保存、编辑等按钮）
          * @param {string} configKey - 配置键名（如 'answerButton', 'noteButton'）
@@ -4309,7 +4309,7 @@
             const position = this.config.get('copyButton.position');
             const style = this.config.get('copyButton.style');
             const colors = this.config.get('copyButton.colors');
-            
+
             return {
                 position: 'absolute',
                 top: position.top,
@@ -4334,7 +4334,7 @@
             const position = this.config.get('askDoubaoButton.position');
             const style = this.config.get('askDoubaoButton.style');
             const colors = this.config.get('askDoubaoButton.colors');
-            
+
             return {
                 position: 'absolute',
                 top: position.top,
@@ -4394,10 +4394,10 @@
          */
         addHoverEffect(button, options) {
             const { getHoverBg, getNormalBg } = options;
-            
+
             // 缓存进入时的背景色，确保离开时恢复到正确的颜色
             let cachedBgColor = null;
-            
+
             button.addEventListener('mouseenter', () => {
                 // 进入时缓存当前背景色（而不是调用getNormalBg，因为状态可能在hover期间改变）
                 cachedBgColor = button.style.backgroundColor || getNormalBg();
@@ -4426,7 +4426,7 @@
          */
         addToggleHoverEffect(button, configKey, getState, trueHoverKey, falseHoverKey, trueBgKey, falseBgKey) {
             const colors = this.config.get(`${configKey}.colors`);
-            
+
             this.addHoverEffect(button, {
                 getHoverBg: () => getState() ? colors[trueHoverKey] : colors[falseHoverKey],
                 getNormalBg: () => getState() ? colors[trueBgKey] : colors[falseBgKey]
@@ -4440,7 +4440,7 @@
          */
         addSimpleHoverEffect(button, configKey) {
             const colors = this.config.get(`${configKey}.colors`);
-            
+
             this.addHoverEffect(button, {
                 getHoverBg: () => colors.hoverBackground,
                 getNormalBg: () => colors.background
@@ -4560,7 +4560,7 @@
         _createCopyButton() {
             const buttonText = this.config.get('copyButton.text');
             const colors = this.config.get('copyButton.colors');
-            
+
             this.copyButton = DOMHelper.createElement('button', {
                 innerText: buttonText.copy,
                 style: this.styleGenerator.getCopyButtonStyle(),
@@ -4578,15 +4578,15 @@
             });
 
             this.copyButton.addEventListener('click', () => this._handleCopy());
-            
+
             // 查找题目容器并插入复制按钮到右上角
             let questionContainer = null;
             const questionId = this.questionId;
-            
+
             if (questionId && questionId.startsWith('question')) {
                 questionContainer = document.getElementById(questionId);
             }
-            
+
             // 如果没找到，尝试从 parent 向上查找
             if (!questionContainer && this.parent) {
                 let element = this.parent;
@@ -4598,7 +4598,7 @@
                     element = element.parentElement;
                 }
             }
-            
+
             // 将复制按钮插入到题目容器
             if (questionContainer) {
                 // 确保题目容器有相对定位
@@ -4616,7 +4616,7 @@
         _createAskDoubaoButton() {
             const buttonText = this.config.get('askDoubaoButton.text');
             const colors = this.config.get('askDoubaoButton.colors');
-            
+
             this.askDoubaoButton = DOMHelper.createElement('button', {
                 innerText: buttonText.ask,
                 style: this.styleGenerator.getAskDoubaoButtonStyle(),
@@ -4634,15 +4634,15 @@
             });
 
             this.askDoubaoButton.addEventListener('click', () => this._handleAskDoubao());
-            
+
             // 查找题目容器并插入问豆包按钮到右上角（复制按钮下方）
             let questionContainer = null;
             const questionId = this.questionId;
-            
+
             if (questionId && questionId.startsWith('question')) {
                 questionContainer = document.getElementById(questionId);
             }
-            
+
             // 如果没找到，尝试从 parent 向上查找
             if (!questionContainer && this.parent) {
                 let element = this.parent;
@@ -4654,7 +4654,7 @@
                     element = element.parentElement;
                 }
             }
-            
+
             // 将问豆包按钮插入到题目容器
             if (questionContainer) {
                 // 确保题目容器有相对定位
@@ -4673,11 +4673,11 @@
             // 获取题目容器
             let questionContainer = null;
             const questionId = this.questionId;
-            
+
             if (questionId && questionId.startsWith('question')) {
                 questionContainer = document.getElementById(questionId);
             }
-            
+
             // 如果没找到，尝试从 parent 向上查找
             if (!questionContainer && this.parent) {
                 let element = this.parent;
@@ -4697,7 +4697,7 @@
 
             // 提取题目文本
             let questionText = '';
-            
+
             // 1. 获取题号和题型（如 "1. (单选题, 3分)"）
             const markName = questionContainer.querySelector('.mark_name');
             if (markName) {
@@ -4706,13 +4706,13 @@
                 if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
                     questionText += firstTextNode.textContent.trim();
                 }
-                
+
                 // 提取题型和分值
                 const colorShallow = markName.querySelector('.colorShallow');
                 if (colorShallow) {
                     questionText += ' ' + colorShallow.textContent.trim();
                 }
-                
+
                 // 提取题干
                 const qtContent = markName.querySelector('.qtContent');
                 if (qtContent) {
@@ -4720,7 +4720,7 @@
                 }
                 questionText += '\n\n';
             }
-            
+
             // 2. 获取选项（单选/多选题）
             const markLetter = questionContainer.querySelector('ul.mark_letter');
             if (markLetter) {
@@ -4729,7 +4729,7 @@
                     questionText += option.textContent.trim() + '\n';
                 });
             }
-            
+
             // 3. 获取完型填空/填空题选项
             const markGestalt = questionContainer.querySelector('div.mark_gestalt');
             if (markGestalt) {
@@ -4749,7 +4749,7 @@
             // 使用 GM_setValue 存储题目内容（拼接好前后缀后存储）
             const storageKey = this.config.get('askDoubaoButton.storageKey');
             const doubaoBaseUrl = this.config.get('askDoubaoButton.doubaoUrl');
-            
+
             try {
                 // 从 IndexedDB 实时读取用户保存的配置
                 let aiPromptPrefix = '';
@@ -4769,20 +4769,20 @@
                 } catch (error) {
                     console.warn('读取配置失败，使用默认值:', error);
                 }
-                
+
                 // 处理转义符（\n -> 换行符）
                 const processedPrefix = aiPromptPrefix.replace(/\\n/g, '\n');
                 const processedSuffix = aiPromptSuffix.replace(/\\n/g, '\n');
-                
+
                 // 拼接完整内容（前缀 + 题目 + 后缀）
                 const fullContent = processedPrefix + questionText.trim() + processedSuffix;
-                
+
                 // 存储完整内容到GM缓存
                 GM_setValue(storageKey, fullContent);
-                
+
                 // 构建目标URL
                 const targetUrl = aiChatId ? `https://www.doubao.com/chat/${aiChatId}` : doubaoBaseUrl;
-                
+
                 Logger.log('题目已保存，正在打开豆包AI...');
                 console.log('📝 存储的完整内容:');
                 console.log('  前缀:', processedPrefix ? `"${processedPrefix}"` : '(无)');
@@ -4790,7 +4790,7 @@
                 console.log('  后缀:', processedSuffix ? `"${processedSuffix}"` : '(无)');
                 console.log('  最终内容长度:', fullContent.length);
                 console.log('  目标URL:', targetUrl);
-                
+
                 // 关闭旧的豆包AI标签页（如果存在）
                 if (this.appInstance && this.appInstance.doubaoTabRef) {
                     try {
@@ -4802,14 +4802,14 @@
                     }
                     this.appInstance.doubaoTabRef = null;
                 }
-                
+
                 // 打开豆包AI并保存引用
-                const tabRef = GM_openInTab(targetUrl, { 
+                const tabRef = GM_openInTab(targetUrl, {
                     active: true,      // 激活标签页
                     insert: true,      // 插入到当前标签页旁边
                     setParent: true    // 设置父子关系
                 });
-                
+
                 // 保存引用到应用实例
                 if (this.appInstance) {
                     this.appInstance.doubaoTabRef = tabRef;
@@ -4823,15 +4823,15 @@
         async _handleCopy() {
             const buttonText = this.config.get('copyButton.text');
             const colors = this.config.get('copyButton.colors');
-            
+
             // 获取题目容器
             let questionContainer = null;
             const questionId = this.questionId;
-            
+
             if (questionId && questionId.startsWith('question')) {
                 questionContainer = document.getElementById(questionId);
             }
-            
+
             // 如果没找到，尝试从 parent 向上查找
             if (!questionContainer && this.parent) {
                 let element = this.parent;
@@ -4852,18 +4852,18 @@
             try {
                 // 克隆题目容器以避免修改原DOM
                 const containerClone = questionContainer.cloneNode(true);
-                
+
                 // 移除不需要的元素
                 const elementsToRemove = containerClone.querySelectorAll('.mark_answer, button, [contenteditable], .aiAssistant');
                 elementsToRemove.forEach(el => el.remove());
-                
+
                 // 移除脚本添加的容器
                 const scriptContainers = containerClone.querySelectorAll('div[style*="display: inline-block"], div[style*="display: none"]');
                 scriptContainers.forEach(el => el.remove());
-                
+
                 // 提取纯文本内容
                 let copyText = '';
-                
+
                 // 1. 获取题号和题型
                 const markName = containerClone.querySelector('.mark_name');
                 if (markName) {
@@ -4871,19 +4871,19 @@
                     if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
                         copyText += firstTextNode.textContent.trim();
                     }
-                    
+
                     const colorShallow = markName.querySelector('.colorShallow');
                     if (colorShallow) {
                         copyText += ' ' + colorShallow.textContent.trim();
                     }
-                    
+
                     const qtContent = markName.querySelector('.qtContent');
                     if (qtContent) {
                         copyText += ' ' + qtContent.textContent.trim();
                     }
                     copyText += '\n';
                 }
-                
+
                 // 2. 获取选项
                 const markLetter = containerClone.querySelector('ul.mark_letter');
                 if (markLetter) {
@@ -4892,7 +4892,7 @@
                         copyText += option.textContent.trim() + '\n';
                     });
                 }
-                
+
                 // 3. 获取完型填空/填空题选项
                 const markGestalt = containerClone.querySelector('div.mark_gestalt');
                 if (markGestalt) {
@@ -4908,23 +4908,23 @@
                         });
                     });
                 }
-                
+
                 // 构建HTML内容（包含图片）
                 let htmlContent = '<div style="font-family: Arial, sans-serif; font-size: 14px;">';
-                
+
                 // 添加题号和题型
                 if (markName) {
                     const firstTextNode = questionContainer.querySelector('.mark_name')?.childNodes[0];
                     if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
                         htmlContent += '<p><strong>' + firstTextNode.textContent.trim();
                     }
-                    
+
                     const colorShallow = questionContainer.querySelector('.colorShallow');
                     if (colorShallow) {
                         htmlContent += ' ' + colorShallow.textContent.trim();
                     }
                     htmlContent += '</strong></p>';
-                    
+
                     // 添加题干（包含图片）
                     const qtContent = questionContainer.querySelector('.qtContent');
                     if (qtContent) {
@@ -4940,7 +4940,7 @@
                         htmlContent += '<p>' + qtClone.innerHTML + '</p>';
                     }
                 }
-                
+
                 // 添加选项（包含可能的图片）
                 const originalMarkLetter = questionContainer.querySelector('ul.mark_letter');
                 if (originalMarkLetter) {
@@ -4954,7 +4954,7 @@
                     });
                     htmlContent += letterClone.outerHTML;
                 }
-                
+
                 // 添加完型填空/填空题选项
                 const originalMarkGestalt = questionContainer.querySelector('div.mark_gestalt');
                 if (originalMarkGestalt) {
@@ -4968,17 +4968,17 @@
                     });
                     htmlContent += gestaltClone.outerHTML;
                 }
-                
+
                 htmlContent += '</div>';
-                
+
                 // 获取配置的前缀和后缀
                 const prefix = await this.dbManager.getSetting('copyPrefix', this.config.get('settings.copyPrefix'));
                 const suffix = await this.dbManager.getSetting('copySuffix', this.config.get('settings.copySuffix'));
-                
+
                 // 处理前缀和后缀
                 let finalText = copyText.trim();
                 let finalHtml = htmlContent;
-                
+
                 if (prefix) {
                     const processedPrefix = prefix.replace(/\\n/g, '\n');
                     finalText = processedPrefix + finalText;
@@ -4989,23 +4989,23 @@
                     finalText = finalText + processedSuffix;
                     finalHtml = finalHtml + '<p>' + processedSuffix.replace(/\n/g, '<br>') + '</p>';
                 }
-                
+
                 // 尝试使用现代剪贴板API复制（支持HTML和图片）
                 if (navigator.clipboard && navigator.clipboard.write) {
                     const htmlBlob = new Blob([finalHtml], { type: 'text/html' });
                     const textBlob = new Blob([finalText], { type: 'text/plain' });
-                    
+
                     const clipboardItem = new ClipboardItem({
                         'text/html': htmlBlob,
                         'text/plain': textBlob
                     });
-                    
+
                     await navigator.clipboard.write([clipboardItem]);
-                    
+
                     // 复制成功
                     this.copyButton.innerText = buttonText.copied;
                     this.copyButton.style.background = colors.successBackground;
-                    
+
                     setTimeout(() => {
                         this.copyButton.innerText = buttonText.copy;
                         this.copyButton.style.background = colors.background;
@@ -5013,19 +5013,19 @@
                 } else {
                     // 降级到纯文本复制
                     await navigator.clipboard.writeText(finalText);
-                    
+
                     this.copyButton.innerText = buttonText.copied;
                     this.copyButton.style.background = colors.successBackground;
-                    
+
                     setTimeout(() => {
                         this.copyButton.innerText = buttonText.copy;
                         this.copyButton.style.background = colors.background;
                     }, 2000);
                 }
-                
+
             } catch (err) {
                 console.error('复制失败:', err);
-                
+
                 // 最后的降级方案：使用传统方法复制纯文本
                 try {
                     let copyText = '';
@@ -5045,7 +5045,7 @@
                         }
                         copyText += '\n';
                     }
-                    
+
                     const markLetter = questionContainer.querySelector('ul.mark_letter');
                     if (markLetter) {
                         const options = markLetter.querySelectorAll('li');
@@ -5053,7 +5053,7 @@
                             copyText += option.textContent.trim() + '\n';
                         });
                     }
-                    
+
                     const markGestalt = questionContainer.querySelector('div.mark_gestalt');
                     if (markGestalt) {
                         const rows = markGestalt.querySelectorAll('.gestalt_row, dl');
@@ -5068,10 +5068,10 @@
                             });
                         });
                     }
-                    
+
                     const prefix = await this.dbManager.getSetting('copyPrefix', this.config.get('settings.copyPrefix'));
                     const suffix = await this.dbManager.getSetting('copySuffix', this.config.get('settings.copySuffix'));
-                    
+
                     let finalText = copyText.trim();
                     if (prefix) {
                         const processedPrefix = prefix.replace(/\\n/g, '\n');
@@ -5081,20 +5081,20 @@
                         const processedSuffix = suffix.replace(/\\n/g, '\n');
                         finalText = finalText + processedSuffix;
                     }
-                    
+
                     const textarea = document.createElement('textarea');
                     textarea.value = finalText;
                     textarea.style.position = 'fixed';
                     textarea.style.opacity = '0';
                     document.body.appendChild(textarea);
                     textarea.select();
-                    
+
                     document.execCommand('copy');
                     document.body.removeChild(textarea);
-                    
+
                     this.copyButton.innerText = buttonText.copied;
                     this.copyButton.style.background = colors.successBackground;
-                    
+
                     setTimeout(() => {
                         this.copyButton.innerText = buttonText.copy;
                         this.copyButton.style.background = colors.background;
@@ -5158,7 +5158,7 @@
             const buttonText = this.config.get('editModeButton.text');
             const style = this.styleGenerator.getEditModeButtonStyle(false);
             style.display = 'none'; // 初始隐藏
-            
+
             this.editModeButton = DOMHelper.createElement('button', {
                 innerText: buttonText.edit,
                 style: style,
@@ -5178,7 +5178,7 @@
                 const buttonText = this.config.get('editModeButton.text');
                 const colors = this.config.get('editModeButton.colors');
                 this.noteEditor.toggleEditMode();
-                
+
                 if (this.noteEditor.isEditMode) {
                     this.editModeButton.innerText = buttonText.preview;
                     this.editModeButton.style.backgroundColor = colors.previewBackground;
@@ -5212,11 +5212,11 @@
             this.saveNoteButton.addEventListener('click', async () => {
                 await this.noteEditor.save();
                 Logger.success('💾 笔记已保存');
-                
+
                 // 点击反馈：文字和颜色变化
                 this.saveNoteButton.innerText = buttonText.saved;
                 this.saveNoteButton.style.background = colors.successBackground;
-                
+
                 // 2秒后恢复原状
                 setTimeout(() => {
                     this.saveNoteButton.innerText = buttonText.save;
@@ -5301,7 +5301,7 @@
             this.noteButton.innerText = this.noteEditor.isVisible ? buttonText.hide : buttonText.show;
             this.noteButton.style.background = this.noteEditor.isVisible ? colors.hideBackground : colors.showBackground;
             this.noteButton.dataset.isVisible = String(this.noteEditor.isVisible);
-            
+
             // 联动控制编辑按钮的显示/隐藏
             if (this.noteEditor.isVisible) {
                 this.editModeButton.style.display = 'inline-block';
@@ -5357,17 +5357,17 @@
             // 使用统一的选择器配置获取 fanyaMarking_right
             const sidePanelSelector = this.config.get('selectors.sidePanel');
             const fanyaMarkingRight = document.querySelector(sidePanelSelector) || this.container.parentNode;
-            
+
             // 检测是否为竖屏模式
             const isPortrait = () => window.innerHeight > window.innerWidth;
-            
+
             // 按钮最小宽度配置（用于空间检测）
             const BUTTON_MIN_WIDTH = 140;  // 单个按钮的最小宽度
             const BUTTON_GAP = 8;          // 按钮间距
             const SIDE_MARGIN = 10;        // 侧边距
             const SAFETY_MARGIN = 20;      // 安全边距（防止按钮贴边或被截断）
             const REQUIRED_SPACE = BUTTON_MIN_WIDTH + SIDE_MARGIN * 2 + SAFETY_MARGIN; // 所需最小空间
-            
+
             // 创建按钮容器，使用固定定位
             this.buttonContainer = DOMHelper.createElement('div', {
                 style: {
@@ -5378,10 +5378,10 @@
                     transition: 'all 0.3s ease' // 添加平滑过渡效果
                 }
             });
-            
+
             // 将按钮容器添加到 body
             document.body.appendChild(this.buttonContainer);
-            
+
             /**
              * 检测右侧是否有足够空间显示按钮
              * @param {DOMRect} rect - 侧边栏的位置信息
@@ -5391,7 +5391,7 @@
                 const windowWidth = window.innerWidth;
                 const rightEdge = rect.right;
                 const availableSpace = windowWidth - rightEdge;
-                
+
                 // 调试日志
                 console.log('[按钮布局检测]', {
                     窗口宽度: windowWidth,
@@ -5400,10 +5400,10 @@
                     所需空间: REQUIRED_SPACE,
                     是否充足: availableSpace >= REQUIRED_SPACE
                 });
-                
+
                 return availableSpace >= REQUIRED_SPACE;
             };
-            
+
             /**
              * 更新按钮位置和布局
              * 智能布局逻辑：
@@ -5414,7 +5414,7 @@
              */
             const updatePosition = () => {
                 const rect = fanyaMarkingRight.getBoundingClientRect();
-                
+
                 if (isPortrait()) {
                     // 竖屏模式：按钮横向排列在侧边栏下方
                     this.buttonContainer.style.flexDirection = 'row';
@@ -5425,12 +5425,12 @@
                     this.buttonContainer.style.maxWidth = rect.width + 'px';
                     this.buttonContainer.style.justifyContent = 'flex-start';
                     this.buttonContainer.style.alignItems = 'flex-start';
-                    
+
                     console.log('[按钮布局] 竖屏模式：下方横向排列');
                 } else {
                     // 横屏模式：根据右侧空间决定布局
                     const hasSpace = hasEnoughRightSpace(rect);
-                    
+
                     if (hasSpace) {
                         // 右侧空间充足：按钮纵向排列在侧边栏右边
                         this.buttonContainer.style.flexDirection = 'column';
@@ -5441,7 +5441,7 @@
                         this.buttonContainer.style.maxWidth = 'none';
                         this.buttonContainer.style.justifyContent = 'flex-start';
                         this.buttonContainer.style.alignItems = 'stretch';
-                        
+
                         console.log('[按钮布局] 横屏模式：右侧空间充足，右侧纵向排列');
                     } else {
                         // 右侧空间不足：按钮纵向排列在侧边栏下方（从上到下）
@@ -5454,24 +5454,24 @@
                         this.buttonContainer.style.maxWidth = rect.width + 'px';
                         this.buttonContainer.style.justifyContent = 'flex-start';
                         this.buttonContainer.style.alignItems = 'stretch'; // 修改为 stretch 使按钮占满宽度
-                        
+
                         console.log('[按钮布局] 横屏模式：右侧空间不足，下方纵向排列');
                     }
                 }
             };
-            
+
             // 初始更新位置（延迟确保DOM完全渲染）
             setTimeout(updatePosition, 100);
-            
+
             // 滚动和窗口变化时更新位置
             window.addEventListener('scroll', updatePosition, { passive: true });
             window.addEventListener('resize', updatePosition);
-            
+
             // 监听屏幕方向变化（移动设备）
             if (window.matchMedia) {
                 window.matchMedia('(orientation: portrait)').addEventListener('change', updatePosition);
             }
-            
+
             // 使用 ResizeObserver 监听侧边栏大小变化（更精确的响应式）
             if (typeof ResizeObserver !== 'undefined') {
                 const resizeObserver = new ResizeObserver(() => {
@@ -5521,7 +5521,7 @@
             const buttonText = this.config.get('exportButton.text');
             const buttonTextWithAnswer = this.config.get('exportButton.textWithAnswer');
             const colors = this.config.get('exportButton.colors');
-            
+
             // 创建导出试题按钮（不带答案）
             this.exportButton = DOMHelper.createElement('button', {
                 innerText: buttonText,
@@ -5534,11 +5534,11 @@
 
             this.exportButton.addEventListener('click', () => this._handleExport(false));
             this.buttonContainer.appendChild(this.exportButton);
-            
+
             // 创建导出答案按钮（带答案）
             const exportWithAnswerStyle = this.styleGenerator.getExportButtonStyle();
             exportWithAnswerStyle.background = colors.withAnswerBackground;
-            
+
             this.exportWithAnswerButton = DOMHelper.createElement('button', {
                 innerText: buttonTextWithAnswer,
                 style: exportWithAnswerStyle,
@@ -5563,7 +5563,7 @@
             // 确定当前操作的按钮
             const currentButton = includeAnswer ? this.exportWithAnswerButton : this.exportButton;
             const originalText = currentButton.innerText;
-            
+
             try {
                 // 显示导出中状态
                 currentButton.innerText = '⏳ 导出中...';
@@ -5603,7 +5603,7 @@
 
         _parseQuestionsToDocx() {
             const content = [];
-            
+
             // 获取文档标题（从 mark_title 获取）
             const markTitle = document.querySelector('.mark_title');
             const docTitle = markTitle ? markTitle.innerText.trim() : '试题导出';
@@ -5611,7 +5611,7 @@
             this.controllers.forEach((controller, index) => {
                 // 从控制器获取原始答案HTML（保留完整HTML结构）
                 const answerHTML = controller.originalHTML;
-                
+
                 // 获取题目信息 - 找到完整的题目容器
                 let questionHTML = '';
                 let titleText = `第${index + 1}题`;
@@ -5619,11 +5619,11 @@
                 // 使用 questionId 找到完整的题目容器
                 const questionId = controller.questionId;
                 let questionContainer = null;
-                
+
                 if (questionId && questionId.startsWith('question')) {
                     questionContainer = document.getElementById(questionId);
                 }
-                
+
                 // 如果没找到，尝试从 parent 向上查找
                 if (!questionContainer && controller.parent) {
                     let element = controller.parent;
@@ -5639,22 +5639,22 @@
                 if (questionContainer) {
                     // 克隆元素以避免影响原始DOM
                     const containerClone = questionContainer.cloneNode(true);
-                    
+
                     // 移除答案块（我们单独处理答案）
                     const answerBlocks = containerClone.querySelectorAll('.mark_answer');
                     answerBlocks.forEach(block => block.remove());
-                    
+
                     // 移除脚本添加的按钮
                     const buttons = containerClone.querySelectorAll('button');
                     buttons.forEach(btn => btn.remove());
-                    
+
                     // 移除脚本添加的编辑器容器
                     const editDivs = containerClone.querySelectorAll('div[contenteditable]');
                     editDivs.forEach(div => {
                         const parent = div.closest('div[style*="display: none"]') || div.closest('div[style*="margin-top: 12px"]');
                         if (parent) parent.remove();
                     });
-                    
+
                     // 移除按钮容器（脚本添加的inline-block div）
                     const inlineBlockDivs = containerClone.querySelectorAll('div[style*="display: inline-block"]');
                     inlineBlockDivs.forEach(div => div.remove());
@@ -5671,21 +5671,21 @@
                         if (colorShallow) {
                             titleText += ' ' + colorShallow.textContent.trim();
                         }
-                        
+
                         // 获取题目正文HTML（在 qtContent 中）
                         const qtContent = markName.querySelector('.qtContent');
                         if (qtContent) {
                             questionHTML = qtContent.innerHTML;
                         }
                     }
-                    
+
                     // 获取选项列表 - 支持多种题型
                     // 1. 单选题/多选题: ul.mark_letter
                     const markLetter = containerClone.querySelector('ul.mark_letter');
                     if (markLetter) {
                         questionHTML += markLetter.outerHTML;
                     }
-                    
+
                     // 2. 完型填空/填空题: div.mark_gestalt
                     const markGestalt = containerClone.querySelector('div.mark_gestalt');
                     if (markGestalt) {
@@ -5767,7 +5767,7 @@
             // 根据导出内容选项过滤答案HTML
             const filterAnswerHtml = (answerHTML) => {
                 if (!answerHTML) return '';
-                
+
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = answerHTML;
 
@@ -5816,7 +5816,7 @@
                     } else if (imgUrl.startsWith('/')) {
                         fullUrl = window.location.origin + imgUrl;
                     }
-                    
+
                     console.log('[图片下载] 开始下载:', fullUrl);
 
                     // 检查是否有 GM_xmlhttpRequest 可用
@@ -5831,7 +5831,7 @@
                                 headers: {
                                     'Referer': window.location.href
                                 },
-                                onload: function(response) {
+                                onload: function (response) {
                                     console.log('[图片下载] 响应状态:', response.status, '类型:', response.response?.type);
                                     if (response.status === 200 && response.response) {
                                         const reader = new FileReader();
@@ -5849,11 +5849,11 @@
                                         resolve(fullUrl);
                                     }
                                 },
-                                onerror: function(error) {
+                                onerror: function (error) {
                                     console.error('[图片下载] GM_xmlhttpRequest 错误:', error);
                                     resolve(fullUrl);
                                 },
-                                ontimeout: function() {
+                                ontimeout: function () {
                                     console.warn('[图片下载] 超时:', fullUrl);
                                     resolve(fullUrl);
                                 }
@@ -5892,7 +5892,7 @@
                     img.onload = () => {
                         const originalWidth = img.naturalWidth;
                         const originalHeight = img.naturalHeight;
-                        
+
                         // 只有当宽度超出时才缩放
                         if (originalWidth > MAX_IMAGE_WIDTH) {
                             const scale = MAX_IMAGE_WIDTH / originalWidth;
@@ -5919,7 +5919,7 @@
                 if (!html) return '';
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = html;
-                
+
                 const images = tempDiv.querySelectorAll('img');
                 for (const img of images) {
                     // 优先使用 data-original（高清原图）
@@ -5932,12 +5932,12 @@
                         // 移除可能干扰的属性
                         img.removeAttribute('data-original');
                         img.removeAttribute('data-src');
-                        
+
                         // 检查是否成功转为 base64
                         if (processedSrc.startsWith('data:')) {
                             // 获取尺寸信息，只有超宽的才会被缩放
                             const sizeInfo = await getScaledImageSize(processedSrc);
-                            
+
                             if (sizeInfo.scaled && sizeInfo.width && sizeInfo.height) {
                                 // 只有被缩放的图片才设置固定尺寸
                                 img.setAttribute('width', sizeInfo.width);
@@ -5954,7 +5954,7 @@
                         }
                     }
                 }
-                
+
                 return tempDiv.innerHTML;
             };
 
@@ -5963,12 +5963,12 @@
                 if (!html) return '';
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = html;
-                
+
                 // 移除 element-invisible-hidden 类的元素（包含选项完整内容，如":1968年NATO会议"）
                 // 用户只需要答案字母（如"B"），不需要这些冗余内容
                 const hiddenElements = tempDiv.querySelectorAll('.element-invisible-hidden');
                 hiddenElements.forEach(el => el.remove());
-                
+
                 return tempDiv.innerHTML;
             };
 
@@ -6237,7 +6237,7 @@
                 } catch (e) {
                     console.warn('[导出] html-docx-js 转换失败，回退到 doc 格式:', e);
                     // 回退到 HTML 格式的 doc 文件
-                    blob = new Blob(['\ufeff' + htmlContent], { 
+                    blob = new Blob(['\ufeff' + htmlContent], {
                         type: 'application/msword'
                     });
                     fileExtension = 'doc';
@@ -6245,7 +6245,7 @@
             } else {
                 console.log('[导出] html-docx-js 库不可用，使用 doc 格式');
                 // html-docx-js 库不可用，使用 HTML 格式的 doc 文件
-                blob = new Blob(['\ufeff' + htmlContent], { 
+                blob = new Blob(['\ufeff' + htmlContent], {
                     type: 'application/msword'
                 });
                 fileExtension = 'doc';
@@ -6413,7 +6413,7 @@
     if (window.location.hostname.includes('doubao.com')) {
         // ===================== 豆包AI页面逻辑 =====================
         Logger.log('检测到豆包AI页面，正在初始化自动填充功能...');
-        
+
         /**
          * 等待指定元素加载完成（MutationObserver 自动监听）
          * @param {string} selector - 元素选择器
@@ -6458,71 +6458,83 @@
          */
         async function autoSendMessage() {
             const storageKey = 'chaoxing_doubao_question';
-            
+
+            // 通用触发按钮逻辑（替换原来的 click/MouseEvent）
+            function triggerButton(btn) {
+                if (!btn) return;
+
+                btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+                btn.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+
+                btn.dispatchEvent(new TouchEvent("touchstart", {
+                    bubbles: true,
+                    touches: []
+                }));
+                btn.dispatchEvent(new TouchEvent("touchend", {
+                    bubbles: true,
+                    touches: []
+                }));
+
+                btn.click();
+            }
+
             try {
-                // 读取完整内容（已在超星页面拼接好前后缀）
+                // 读取内容
                 const fullContent = GM_getValue(storageKey, '');
-                
                 console.log('🔍 读取GM存储的完整内容：');
                 console.log('  内容预览:', fullContent ? `${fullContent.substring(0, 100)}...` : '(空)');
                 console.log('  内容长度:', fullContent.length);
-                
+
                 if (!fullContent) {
                     Logger.warn('未找到待提问的题目内容');
-                    GM_setValue(storageKey, '');
+                    GM_deleteValue(storageKey);
                     return;
                 }
-                
+
                 Logger.log('找到待提问题目，准备自动填充和发送...');
-                
-                // 2. 自动等待输入框加载（无固定延迟，元素出现立即执行）
+
+                // 等待输入框
                 const inputElem = await waitForElement('textarea[data-testid="chat_input_input"]');
                 Logger.log('找到输入框，准备填充内容...');
-                
-                // 3. 自动等待发送按钮加载
+
+                // 等待发送按钮
                 const sendBtn = await waitForElement('button[data-testid="chat_input_send_button"]');
                 Logger.log('找到发送按钮');
 
-                // 4. 模拟人工聚焦+初始输入（解锁发送逻辑）
+                // 聚焦输入框
                 inputElem.click();
                 inputElem.focus();
-                
-                // 输入空字符触发初始状态（模拟手动输入），再清空
+
+                // 解锁输入逻辑
                 document.execCommand('insertText', false, ' ');
                 inputElem.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
                 inputElem.select();
                 document.execCommand('backspace');
 
-                // 5. 输入目标内容
+                // 输入内容
                 document.execCommand('insertText', false, fullContent);
                 inputElem.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-                
+
                 Logger.success('题目已填充到输入框');
                 console.log('输入框内容:', inputElem.value.substring(0, 100) + '...');
 
-                // 6. 解锁并点击发送按钮
+                // 解锁发送按钮
                 sendBtn.removeAttribute('disabled');
                 sendBtn.setAttribute('aria-disabled', 'false');
                 sendBtn.style.pointerEvents = 'auto';
-                
-                const rect = sendBtn.getBoundingClientRect();
-                sendBtn.dispatchEvent(new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    clientX: rect.x + rect.width / 2,  // 点击按钮中心（更精准）
-                    clientY: rect.y + rect.height / 2,
-                    isTrusted: true
-                }));
-                
+
+                // 🔥 替换后的强制触发逻辑（不动其他部分）
+                triggerButton(sendBtn);
+x
                 Logger.success('已自动发送题目到豆包AI');
                 console.log('已点击发送按钮');
-                
+
             } catch (error) {
                 Logger.error('豆包AI自动填充失败', error);
                 console.error('详细错误:', error.message);
             } finally {
-                // 无论成功失败，都清除缓存（防止泄露）
-                GM_setValue(storageKey, '');
+                // 清除缓存
+                GM_deleteValue(storageKey);
                 console.log('已清除本地缓存');
             }
         }
@@ -6530,7 +6542,7 @@
         // 页面加载完成后自动执行一次
         autoSendMessage();
         Logger.log('✅ 豆包AI自动填充功能已启动');
-        
+
     } else {
         // ===================== 超星学习通页面逻辑 =====================
         const app = new ChaoxingAnswerHider();
