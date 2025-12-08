@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         超星学习通期末周复习小助手
+// @name         超星学习通高效刷题小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.8.4
+// @version      3.8.4.1
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -10,6 +10,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_deleteValue
 // @grant        GM_openInTab
 // @connect      p.ananas.chaoxing.com
 // @connect      chaoxing.com
@@ -6525,7 +6526,7 @@
 
                 // 🔥 替换后的强制触发逻辑（不动其他部分）
                 triggerButton(sendBtn);
-x
+
                 Logger.success('已自动发送题目到豆包AI');
                 console.log('已点击发送按钮');
 
