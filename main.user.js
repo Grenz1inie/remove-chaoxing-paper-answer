@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.9.1.1
+// @version      3.9.1.2
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、错题记录（支持星级显示）、完整的按钮样式管理、灵活导出试题为Word文档（可配置DOC/DOCX格式、含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -4767,6 +4767,22 @@
             });
         }
 
+        /**
+         * 为按钮添加悬停动画效果（不改变背景色）
+         * @param {HTMLElement} button - 按钮元素
+         */
+        addNoColorChangeHoverEffect(button) {
+            button.addEventListener('mouseenter', () => {
+                button.style.transform = 'translateY(-1px)';
+                button.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+            });
+
+            button.addEventListener('mouseleave', () => {
+                button.style.transform = 'translateY(0)';
+                button.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+            });
+        }
+
         // ========== 笔记编辑器样式 ==========
 
         getNoteEditorStyle() {
@@ -4934,15 +4950,8 @@
                 title: '记录做错次数'
             });
 
-            // 添加悬停效果
-            this.mistakeButton.addEventListener('mouseenter', () => {
-                this.mistakeButton.style.background = colors.hoverBackground;
-                this.mistakeButton.style.transform = 'translateY(-1px)';
-            });
-            this.mistakeButton.addEventListener('mouseleave', () => {
-                this.mistakeButton.style.background = colors.background;
-                this.mistakeButton.style.transform = 'translateY(0)';
-            });
+            // 使用统一的悬停效果管理
+            this.styleGenerator.addSimpleHoverEffect(this.mistakeButton, 'mistakeButton');
 
             this.mistakeButton.addEventListener('click', () => this._handleMistakeAdd());
 
@@ -5632,14 +5641,8 @@
                 }
             });
 
-            // 使用统一的悬停效果管理
-            this.styleGenerator.addToggleHoverEffect(
-                this.noteButton,
-                'noteButton',
-                () => !this.noteEditor.isVisible,
-                'showHoverBackground', 'hideHoverBackground',
-                'showBackground', 'hideBackground'
-            );
+            // 使用无颜色变化的悬停效果（仅动画）
+            this.styleGenerator.addNoColorChangeHoverEffect(this.noteButton);
 
             this.noteButton.addEventListener('click', () => this._handleNoteToggle());
             this.buttonContainer.appendChild(this.noteButton);
@@ -5647,8 +5650,11 @@
 
         _createEditModeToggleButton() {
             const buttonText = this.config.get('editModeButton.text');
+            const colors = this.config.get('editModeButton.colors');
             const style = this.styleGenerator.getEditModeButtonStyle(false);
             style.display = 'none'; // 初始隐藏
+            // 初始状态：预览模式，显示橙色"编辑"按钮
+            style.backgroundColor = colors.previewBackground;
 
             this.editModeButton = DOMHelper.createElement('button', {
                 innerText: buttonText.edit,
@@ -5656,14 +5662,8 @@
                 title: '切换编辑/预览模式'
             });
 
-            // 使用统一的悬停效果管理
-            this.styleGenerator.addToggleHoverEffect(
-                this.editModeButton,
-                'editModeButton',
-                () => !this.noteEditor.isEditMode,
-                'editHoverBackground', 'previewHoverBackground',
-                'editBackground', 'previewBackground'
-            );
+            // 使用无颜色变化的悬停效果（仅动画）
+            this.styleGenerator.addNoColorChangeHoverEffect(this.editModeButton);
 
             this.editModeButton.addEventListener('click', () => {
                 const buttonText = this.config.get('editModeButton.text');
@@ -5671,13 +5671,15 @@
                 this.noteEditor.toggleEditMode();
 
                 if (this.noteEditor.isEditMode) {
+                    // 编辑模式：绿色背景 + "预览"文字
                     this.editModeButton.innerText = buttonText.preview;
-                    this.editModeButton.style.backgroundColor = colors.previewBackground;
+                    this.editModeButton.style.backgroundColor = colors.editBackground;
                     // 编辑模式显示保存按钮
                     this.saveNoteButton.style.display = 'inline-block';
                 } else {
+                    // 预览模式：橙色背景 + "编辑"文字
                     this.editModeButton.innerText = buttonText.edit;
-                    this.editModeButton.style.backgroundColor = colors.editBackground;
+                    this.editModeButton.style.backgroundColor = colors.previewBackground;
                     // 预览模式隐藏保存按钮
                     this.saveNoteButton.style.display = 'none';
                 }
@@ -7484,13 +7486,13 @@
 
                 // 添加额外等待，确保页面完全加载（解决新会话URL重定向问题）
                 Logger.log('⏱️ 等待页面完全加载...');
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
                 let inputElem, sendBtn;
 
                 if (isMobile) {
                     // 移动端：再等待1.5秒（总共3秒）
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    await new Promise(resolve => setTimeout(resolve, 1000));
 
                     // 直接获取元素
                     inputElem = document.querySelector('textarea[data-testid="chat_input_input"]');
