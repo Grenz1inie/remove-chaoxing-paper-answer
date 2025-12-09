@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.9.0.1
+// @version      3.9.1
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、错题记录（支持星级显示）、完整的按钮样式管理、灵活导出试题为Word文档（可配置DOC/DOCX格式、含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -81,9 +81,9 @@
 
             // ========== 问豆包AI按钮配置 ==========
             askDoubaoButton: {
-                // --- 按钮位置配置（绝对定位到复制按钮下方） ---
+                // --- 按钮位置配置（绝对定位到复制按钮下方5px） ---
                 position: {
-                    top: '36px',             // 距离顶部（复制按钮高度 + 间距）
+                    top: '31px',             // 距离顶部（复制按钮26px + 5px间距）
                     right: '0px'             // 距离右侧
                 },
                 // --- 按钮样式配置 ---
@@ -229,12 +229,12 @@
 
             // ========== 错题记录按钮配置 ==========
             mistakeButton: {
-                // --- 按钮位置配置 ---
+                // --- 按钮位置配置（相对定位，插入到mark_name上方） ---
                 position: {
-                    position: 'absolute',    // 绝对定位
-                    top: '8px',              // 距离顶部的距离
-                    left: '8px',             // 距离左侧的距离
-                    zIndex: '10'             // 层级（确保在题目内容上方）
+                    marginTop: '8px',        // 上边距
+                    marginBottom: '8px',     // 下边距（与题目间距）
+                    marginLeft: '0px',       // 左边距
+                    display: 'block'         // 块级元素
                 },
                 // --- 按钮样式配置 ---
                 style: {
@@ -262,9 +262,11 @@
                 stars: {
                     emoji: '⭐',             // 星星表情
                     perRow: 5,               // 每行显示的星星数量
-                    marginTop: '6px',        // 星星容器上边距
+                    marginTop: '6px',        // 星星容器上边距（与按钮间距）
+                    marginBottom: '8px',     // 星星容器下边距（与题目间距）
                     fontSize: '16px',        // 星星大小
-                    gap: '3px'               // 星星之间的间距
+                    gap: '3px',              // 星星之间的间距
+                    buttonShift: '-34px'     // 按钮上移距离（为星星腾出空间）
                 }
             },
 
@@ -4676,13 +4678,11 @@
 
         getMistakeButtonStyle() {
             const config = this.config.get('mistakeButton');
-            const position = config.position;
             const style = config.style;
             const colors = config.colors;
 
             return {
                 ...style,
-                ...position,
                 backgroundColor: colors.background,
                 color: colors.textColor
             };
@@ -4812,6 +4812,7 @@
             this.saveNoteButton = null;
             this.mistakeButton = null;
             this.mistakeStarsContainer = null;
+            this.mistakeContainer = null;
             this.noteEditor = null;
             this.buttonContainer = null;
             this.currentAnswerBlock = null;  // 跟踪当前显示的答案块
@@ -4912,6 +4913,19 @@
         async _createMistakeButton() {
             const buttonText = this.config.get('mistakeButton.text');
             const colors = this.config.get('mistakeButton.colors');
+            const position = this.config.get('mistakeButton.position');
+            const starsConfig = this.config.get('mistakeButton.stars');
+
+            // 创建错题按钮容器（相对定位，插入到mark_name上方）
+            const mistakeContainer = DOMHelper.createElement('div', {
+                style: {
+                    marginTop: position.marginTop,
+                    marginBottom: position.marginBottom,
+                    marginLeft: position.marginLeft,
+                    display: position.display,
+                    transition: 'margin-top 0.3s ease'  // 平滑过渡动画
+                }
+            });
 
             // 创建错题按钮
             this.mistakeButton = DOMHelper.createElement('button', {
@@ -4933,24 +4947,29 @@
             this.mistakeButton.addEventListener('click', () => this._handleMistakeAdd());
 
             // 创建星星显示容器
-            const starsConfig = this.config.get('mistakeButton.stars');
             this.mistakeStarsContainer = DOMHelper.createElement('div', {
                 style: {
-                    position: 'absolute',
-                    top: `calc(${this.config.get('mistakeButton.position.top')} + 32px)`, // 按钮下方
-                    left: this.config.get('mistakeButton.position.left'),
                     display: 'flex',
                     flexWrap: 'wrap',
                     maxWidth: `calc(${starsConfig.perRow} * (${starsConfig.fontSize} + ${starsConfig.gap}))`,
                     gap: starsConfig.gap,
                     fontSize: starsConfig.fontSize,
                     lineHeight: '1',
-                    zIndex: this.config.get('mistakeButton.position.zIndex')
+                    marginTop: starsConfig.marginTop,
+                    marginBottom: starsConfig.marginBottom
                 }
             });
 
-            // 查找题目容器并插入错题按钮和星星容器
+            // 将按钮和星星容器添加到容器
+            mistakeContainer.appendChild(this.mistakeButton);
+            mistakeContainer.appendChild(this.mistakeStarsContainer);
+
+            // 保存容器引用
+            this.mistakeContainer = mistakeContainer;
+
+            // 查找题目容器中的mark_name元素
             let questionContainer = null;
+            let markName = null;
             const questionId = this.questionId;
 
             if (questionId && questionId.startsWith('question')) {
@@ -4969,18 +4988,16 @@
                 }
             }
 
-            // 将错题按钮和星星容器插入到题目容器
+            // 查找mark_name元素并插入错题容器到其上方
             if (questionContainer) {
-                // 确保题目容器有相对定位
-                const currentPosition = window.getComputedStyle(questionContainer).position;
-                if (currentPosition === 'static') {
-                    questionContainer.style.position = 'relative';
+                markName = questionContainer.querySelector('.mark_name');
+                if (markName) {
+                    // 插入到mark_name之前
+                    markName.parentNode.insertBefore(mistakeContainer, markName);
+                    
+                    // 加载已有的错题记录并显示星星
+                    await this._loadMistakeRecord();
                 }
-                questionContainer.appendChild(this.mistakeButton);
-                questionContainer.appendChild(this.mistakeStarsContainer);
-
-                // 加载已有的错题记录并显示星星
-                await this._loadMistakeRecord();
             }
         }
 
@@ -5015,11 +5032,24 @@
             const starsConfig = this.config.get('mistakeButton.stars');
             this.mistakeStarsContainer.innerHTML = '';
             
-            for (let i = 0; i < count; i++) {
-                const star = DOMHelper.createElement('span', {
-                    innerText: starsConfig.emoji
-                });
-                this.mistakeStarsContainer.appendChild(star);
+            if (count > 0) {
+                // 有错题记录，显示星星并上移按钮
+                for (let i = 0; i < count; i++) {
+                    const star = DOMHelper.createElement('span', {
+                        innerText: starsConfig.emoji
+                    });
+                    this.mistakeStarsContainer.appendChild(star);
+                }
+                
+                // 上移按钮为星星腾出空间
+                if (this.mistakeContainer) {
+                    this.mistakeContainer.style.marginTop = starsConfig.buttonShift;
+                }
+            } else {
+                // 没有错题记录，恢复按钮位置
+                if (this.mistakeContainer) {
+                    this.mistakeContainer.style.marginTop = this.config.get('mistakeButton.position.marginTop');
+                }
             }
         }
 
