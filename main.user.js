@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.9.1.2
+// @version      3.9.1.3
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、错题记录（支持星级显示）、完整的按钮样式管理、灵活导出试题为Word文档（可配置DOC/DOCX格式、含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -232,7 +232,7 @@
                 // --- 按钮位置配置（相对定位，插入到mark_name上方） ---
                 position: {
                     marginTop: '8px',        // 上边距
-                    marginBottom: '2px',     // 与星星或题目间距
+                    marginBottom: '0.1px',     // 与星星或题目间距
                     marginLeft: '0px',       // 左边距
                     display: 'block'         // 块级元素
                 },
@@ -262,10 +262,10 @@
                 stars: {
                     emoji: '⭐',             // 星星表情
                     perRow: 5,               // 每行显示的星星数量
-                    marginTop: '2px',        // 星星容器上边距（与按钮间距）
-                    marginBottom: '2px',     // 星星容器下边距（与题目间距）
+                    marginTop: '1px',        // 星星容器上边距（与按钮间距）
+                    marginBottom: '0.1px',     // 星星容器下边距（与题目间距）
                     fontSize: '16px',        // 星星大小
-                    gap: '3px'               // 星星之间的间距
+                    gap: '0.1px'               // 星星之间的间距
                 }
             },
 
@@ -1716,7 +1716,8 @@
                 style: {
                     flex: '1',
                     overflow: 'auto',
-                    padding: '30px'
+                    display: 'flex',
+                    flexDirection: 'column'
                 }
             });
 
@@ -1917,6 +1918,7 @@
                     color: isActive ? '#4299e1' : '#718096',
                     backgroundColor: isActive ? '#2d3748' : 'transparent',
                     fontSize: '13px',
+                    fontWeight: isActive ? 'bold' : 'normal',
                     transition: 'all 0.2s',
                     display: 'flex',
                     alignItems: 'center',
@@ -2025,10 +2027,7 @@
                     alignItems: 'center',
                     boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.06)',
                     zIndex: '100',
-                    marginTop: '0',
-                    marginLeft: '-24px',
-                    marginRight: '-24px',
-                    marginBottom: '-24px'
+                    marginTop: 'auto'
                 }
             });
 
@@ -2173,6 +2172,18 @@
          */
         _renderSettingsPanel(container) {
             container.innerHTML = '';
+            container.style.padding = '0';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+
+            // 创建内容包装器（有padding）
+            const contentWrapper = DOMHelper.createElement('div', {
+                style: {
+                    flex: '1',
+                    padding: '30px',
+                    overflow: 'auto'
+                }
+            });
 
             const settingsContainer = DOMHelper.createCard();
 
@@ -2304,7 +2315,8 @@
             dangerZone.appendChild(dangerTitle);
             dangerZone.appendChild(clearDbSection);
 
-            container.appendChild(dangerZone);
+            contentWrapper.appendChild(dangerZone);
+            container.appendChild(contentWrapper);
 
             // 添加统一的底部操作栏
             const actionBar = this._createFloatingActionBar({
@@ -2616,6 +2628,18 @@
          */
         _renderPrefixSuffixPanel(container, options) {
             container.innerHTML = '';
+            container.style.padding = '0';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+
+            // 创建内容包装器（有padding）
+            const contentWrapper = DOMHelper.createElement('div', {
+                style: {
+                    flex: '1',
+                    padding: '30px',
+                    overflow: 'auto'
+                }
+            });
 
             // 配置表单区域
             const configSection = DOMHelper.createCard();
@@ -2694,7 +2718,10 @@
             previewSection.appendChild(previewTitle);
             previewSection.appendChild(previewHint);
             previewSection.appendChild(previewContent);
-            container.appendChild(previewSection);
+            
+            contentWrapper.appendChild(configSection);
+            contentWrapper.appendChild(previewSection);
+            container.appendChild(contentWrapper);
 
             // 底部操作栏
             const actionBar = this._createFloatingActionBar({
@@ -2748,6 +2775,18 @@
          */
         _renderAIPromptPanel(container) {
             container.innerHTML = '';
+            container.style.padding = '0';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+
+            // 创建内容包装器（有padding）
+            const contentWrapper = DOMHelper.createElement('div', {
+                style: {
+                    flex: '1',
+                    padding: '30px',
+                    overflow: 'auto'
+                }
+            });
 
             // 配置表单区域
             const configSection = DOMHelper.createCard();
@@ -2837,7 +2876,10 @@
             previewSection.appendChild(previewTitle);
             previewSection.appendChild(previewHint);
             previewSection.appendChild(previewContent);
-            container.appendChild(previewSection);
+            
+            contentWrapper.appendChild(configSection);
+            contentWrapper.appendChild(previewSection);
+            container.appendChild(contentWrapper);
 
             // 底部操作栏
             const actionBar = this._createFloatingActionBar({
@@ -2877,6 +2919,18 @@
          */
         _renderExportSettingsPanel(container) {
             container.innerHTML = '';
+            container.style.padding = '0';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+
+            // 创建内容包装器（有padding）
+            const contentWrapper = DOMHelper.createElement('div', {
+                style: {
+                    flex: '1',
+                    padding: '30px',
+                    overflow: 'auto'
+                }
+            });
 
             // 加载导出设置
             const exportDefaults = this.config.get('exportSettings');
@@ -3192,7 +3246,9 @@
             );
             styleContainer.appendChild(marginSection);
 
-            container.appendChild(styleContainer);
+            contentWrapper.appendChild(contentContainer);
+            contentWrapper.appendChild(styleContainer);
+            container.appendChild(contentWrapper);
 
             // 添加统一的底部操作栏
             const actionBar = this._createFloatingActionBar({
@@ -4030,6 +4086,9 @@
          */
         async _renderStylesPanel(container) {
             container.innerHTML = '';
+            container.style.padding = '0';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
 
             // 样式配置的分类
             const styleCategories = [
