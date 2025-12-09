@@ -1915,10 +1915,11 @@
                 style: {
                     padding: '10px 20px 10px 50px',
                     cursor: 'pointer',
-                    color: isActive ? '#4299e1' : '#718096',
+                    color: isActive ? '#63b3ed' : '#718096',
                     backgroundColor: isActive ? '#2d3748' : 'transparent',
                     fontSize: '13px',
                     fontWeight: isActive ? 'bold' : 'normal',
+                    textShadow: isActive ? '0 0 8px rgba(99, 179, 237, 0.5)' : 'none',
                     transition: 'all 0.2s',
                     display: 'flex',
                     alignItems: 'center',
@@ -1954,7 +1955,8 @@
                     subMenuItem.style.color = '#718096';
                 } else {
                     subMenuItem.style.backgroundColor = '#2d3748';
-                    subMenuItem.style.color = '#4299e1';
+                    subMenuItem.style.color = '#63b3ed';
+                    subMenuItem.style.textShadow = '0 0 8px rgba(99, 179, 237, 0.5)';
                 }
             });
 
