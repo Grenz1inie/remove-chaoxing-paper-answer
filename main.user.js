@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.8.5.1
-// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双格式导出试题为Word文档（DOCX/DOC-手机版，含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
+// @version      3.8.5.2
+// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、灵活导出试题为Word文档（可配置DOC/DOCX格式、含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
 // @match        https://www.doubao.com/chat/*
@@ -422,6 +422,7 @@
             // ========== 导出设置配置 ==========
             exportSettings: {
                 // 注意：includeAnswer 已由导出按钮控制，不再从此配置读取
+                exportFormat: 'doc',         // 导出格式：'doc' 或 'docx'（默认doc，兼容性更好）
                 fontFamily: '宋体',          // 字体
                 fontSize: 12,                // 字号（pt）
                 titleFontSize: 18,           // 标题字号（pt）
@@ -2703,6 +2704,7 @@
             // 加载导出设置
             const exportDefaults = this.config.get('exportSettings');
             const exportSettings = {
+                exportFormat: this.settings.exportFormat ?? exportDefaults.exportFormat,
                 fontFamily: this.settings.exportFontFamily ?? exportDefaults.fontFamily,
                 fontSize: this.settings.exportFontSize ?? exportDefaults.fontSize,
                 titleFontSize: this.settings.exportTitleFontSize ?? exportDefaults.titleFontSize,
@@ -2736,6 +2738,125 @@
             });
             tipContainer.appendChild(tipText);
             container.appendChild(tipContainer);
+
+            // ========== 导出格式选项区域 ==========
+            const formatContainer = DOMHelper.createElement('div', {
+                style: {
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    marginBottom: '20px'
+                }
+            });
+
+            const formatTitle = DOMHelper.createElement('h3', {
+                innerText: '📝 导出格式',
+                style: {
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#2d3748',
+                    marginBottom: '16px'
+                }
+            });
+            formatContainer.appendChild(formatTitle);
+
+            // DOC 格式选项
+            const docOption = DOMHelper.createElement('label', {
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginBottom: '12px',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s'
+                }
+            });
+
+            const docRadio = DOMHelper.createElement('input', {
+                type: 'radio',
+                name: 'exportFormat',
+                value: 'doc',
+                checked: exportSettings.exportFormat === 'doc',
+                style: {
+                    marginRight: '8px',
+                    cursor: 'pointer'
+                }
+            });
+
+            const docLabel = DOMHelper.createElement('span', {
+                innerHTML: '<strong>DOC格式</strong> <span style="color: #718096; font-size: 13px;">（默认推荐，兼容性更好）</span>',
+                style: {
+                    fontSize: '14px',
+                    color: '#2d3748'
+                }
+            });
+
+            docOption.appendChild(docRadio);
+            docOption.appendChild(docLabel);
+            formatContainer.appendChild(docOption);
+
+            // DOCX 格式选项
+            const docxOption = DOMHelper.createElement('label', {
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginBottom: '8px',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s'
+                }
+            });
+
+            const docxRadio = DOMHelper.createElement('input', {
+                type: 'radio',
+                name: 'exportFormat',
+                value: 'docx',
+                checked: exportSettings.exportFormat === 'docx',
+                style: {
+                    marginRight: '8px',
+                    cursor: 'pointer'
+                }
+            });
+
+            const docxLabel = DOMHelper.createElement('span', {
+                innerHTML: '<strong>DOCX格式</strong> <span style="color: #e53e3e; font-size: 13px;">（注意：在手机/平板显示可能出现bug）</span>',
+                style: {
+                    fontSize: '14px',
+                    color: '#2d3748'
+                }
+            });
+
+            docxOption.appendChild(docxRadio);
+            docxOption.appendChild(docxLabel);
+            formatContainer.appendChild(docxOption);
+
+            // 监听格式选择变化
+            docRadio.addEventListener('change', () => {
+                if (docRadio.checked) {
+                    this.settings.exportFormat = 'doc';
+                }
+            });
+
+            docxRadio.addEventListener('change', () => {
+                if (docxRadio.checked) {
+                    this.settings.exportFormat = 'docx';
+                }
+            });
+
+            // 悬停效果
+            [docOption, docxOption].forEach(option => {
+                option.addEventListener('mouseenter', () => {
+                    option.style.backgroundColor = '#f7fafc';
+                });
+                option.addEventListener('mouseleave', () => {
+                    option.style.backgroundColor = 'transparent';
+                });
+            });
+
+            container.appendChild(formatContainer);
 
             // ========== 导出内容选项区域 ==========
             const contentContainer = DOMHelper.createElement('div', {
@@ -2900,6 +3021,8 @@
             const actionBar = this._createFloatingActionBar({
                 saveText: '💾 保存导出设置',
                 onSave: async () => {
+                    // 保存导出格式
+                    await this.dbManager.saveSetting('exportFormat', this.settings.exportFormat ?? exportSettings.exportFormat);
                     // 保存样式设置
                     await this.dbManager.saveSetting('exportFontFamily', this.settings.exportFontFamily ?? exportSettings.fontFamily);
                     await this.dbManager.saveSetting('exportFontSize', this.settings.exportFontSize ?? exportSettings.fontSize);
@@ -2916,6 +3039,8 @@
                 onReset: async () => {
                     if (confirm('确定要重置导出设置为默认值吗？')) {
                         const defaults = this.config.get('exportSettings');
+                        // 重置导出格式
+                        this.settings.exportFormat = defaults.exportFormat;
                         // 重置样式设置
                         this.settings.exportFontFamily = defaults.fontFamily;
                         this.settings.exportFontSize = defaults.fontSize;
@@ -5523,27 +5648,27 @@
             const buttonTextWithAnswer = this.config.get('exportButton.textWithAnswer');
             const colors = this.config.get('exportButton.colors');
 
-            // ========== 1. 导出试题按钮（DOCX格式，不带答案）==========
+            // 创建导出试题按钮（不带答案）
             this.exportButton = DOMHelper.createElement('button', {
                 innerText: buttonText,
                 style: this.styleGenerator.getExportButtonStyle(),
-                title: '导出试题为Word文档（DOCX格式，不含答案）'
+                title: '导出试题为Word文档（不含答案）'
             });
 
             // 使用统一的悬停效果管理
             this.styleGenerator.addSimpleHoverEffect(this.exportButton, 'exportButton');
 
-            this.exportButton.addEventListener('click', () => this._handleExport(false, 'docx'));
+            this.exportButton.addEventListener('click', () => this._handleExport(false));
             this.buttonContainer.appendChild(this.exportButton);
 
-            // ========== 2. 导出答案按钮（DOCX格式，带答案）==========
+            // 创建导出答案按钮（带答案）
             const exportWithAnswerStyle = this.styleGenerator.getExportButtonStyle();
             exportWithAnswerStyle.background = colors.withAnswerBackground;
 
             this.exportWithAnswerButton = DOMHelper.createElement('button', {
                 innerText: buttonTextWithAnswer,
                 style: exportWithAnswerStyle,
-                title: '导出试题为Word文档（DOCX格式，含答案）'
+                title: '导出试题为Word文档（含答案）'
             });
 
             // 手动添加悬停效果（使用紫色）
@@ -5556,54 +5681,13 @@
                 this.exportWithAnswerButton.style.transform = 'translateY(0)';
             });
 
-            this.exportWithAnswerButton.addEventListener('click', () => this._handleExport(true, 'docx'));
+            this.exportWithAnswerButton.addEventListener('click', () => this._handleExport(true));
             this.buttonContainer.appendChild(this.exportWithAnswerButton);
-
-            // ========== 3. 导出试题按钮（DOC格式-手机版，不带答案）==========
-            this.exportDocButton = DOMHelper.createElement('button', {
-                innerText: '📱 导出试题(手机版)',
-                style: this.styleGenerator.getExportButtonStyle(),
-                title: '导出试题为DOC格式（兼容性更好，适合手机查看，不含答案）'
-            });
-
-            // 使用统一的悬停效果管理
-            this.styleGenerator.addSimpleHoverEffect(this.exportDocButton, 'exportButton');
-
-            this.exportDocButton.addEventListener('click', () => this._handleExport(false, 'doc'));
-            this.buttonContainer.appendChild(this.exportDocButton);
-
-            // ========== 4. 导出答案按钮（DOC格式-手机版，带答案）==========
-            const exportDocWithAnswerStyle = this.styleGenerator.getExportButtonStyle();
-            exportDocWithAnswerStyle.background = colors.withAnswerBackground;
-
-            this.exportDocWithAnswerButton = DOMHelper.createElement('button', {
-                innerText: '📱 导出答案(手机版)',
-                style: exportDocWithAnswerStyle,
-                title: '导出试题为DOC格式（兼容性更好，适合手机查看，含答案）'
-            });
-
-            // 手动添加悬停效果（使用紫色）
-            this.exportDocWithAnswerButton.addEventListener('mouseenter', () => {
-                this.exportDocWithAnswerButton.style.background = colors.withAnswerHoverBackground;
-                this.exportDocWithAnswerButton.style.transform = 'translateY(-1px)';
-            });
-            this.exportDocWithAnswerButton.addEventListener('mouseleave', () => {
-                this.exportDocWithAnswerButton.style.background = colors.withAnswerBackground;
-                this.exportDocWithAnswerButton.style.transform = 'translateY(0)';
-            });
-
-            this.exportDocWithAnswerButton.addEventListener('click', () => this._handleExport(true, 'doc'));
-            this.buttonContainer.appendChild(this.exportDocWithAnswerButton);
         }
 
-        async _handleExport(includeAnswer = false, format = 'docx') {
+        async _handleExport(includeAnswer = false) {
             // 确定当前操作的按钮
-            let currentButton;
-            if (format === 'docx') {
-                currentButton = includeAnswer ? this.exportWithAnswerButton : this.exportButton;
-            } else {
-                currentButton = includeAnswer ? this.exportDocWithAnswerButton : this.exportDocButton;
-            }
+            const currentButton = includeAnswer ? this.exportWithAnswerButton : this.exportButton;
             const originalText = currentButton.innerText;
 
             try {
@@ -5627,6 +5711,17 @@
                     currentButton.innerText = originalText;
                     currentButton.disabled = false;
                     return;
+                }
+
+                // 从数据库读取用户配置的导出格式
+                const exportDefaults = this.config.get('exportSettings');
+                let format = 'doc'; // 默认doc格式
+                try {
+                    const savedFormat = await this.dbManager.getSetting('exportFormat');
+                    format = savedFormat ?? exportDefaults.exportFormat ?? 'doc';
+                } catch (e) {
+                    console.warn('读取导出格式配置失败，使用默认值:', e);
+                    format = exportDefaults.exportFormat ?? 'doc';
                 }
 
                 // 根据格式调用不同的生成方法
