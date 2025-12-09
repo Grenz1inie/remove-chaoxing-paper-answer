@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.8.4.3
+// @version      3.8.5
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -6455,7 +6455,17 @@
         }
 
         /**
+         * 检测是否为移动端设备
+         * @returns {boolean} true表示移动端，false表示桌面端
+         */
+        function isMobileDevice() {
+            return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        }
+
+        /**
          * 豆包AI自动发送逻辑（读取完整内容并填充）
+         * 桌面端：动态等待元素加载（最多10秒）
+         * 移动端：固定等待3秒让页面加载
          */
         async function autoSendMessage() {
             const storageKey = 'chaoxing_doubao_question';
@@ -6475,13 +6485,35 @@
 
                 Logger.log('找到待提问题目，准备自动填充和发送...');
 
-                // 等待输入框
-                const inputElem = await waitForElement('textarea[data-testid="chat_input_input"]');
-                Logger.log('找到输入框，准备填充内容...');
+                // 检测设备类型并采用不同的等待策略
+                const isMobile = isMobileDevice();
+                console.log(`📱 设备类型: ${isMobile ? '移动端' : '桌面端'}`);
 
-                // 等待发送按钮（确保页面完全加载）
-                await waitForElement('button[data-testid="chat_input_send_button"]');
-                Logger.log('找到发送按钮');
+                let inputElem, sendBtn;
+
+                if (isMobile) {
+                    // 移动端：固定等待3秒让页面加载
+                    Logger.log('⏱️ 移动端模式：等待3秒让页面加载...');
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+
+                    // 直接获取元素
+                    inputElem = document.querySelector('textarea[data-testid="chat_input_input"]');
+                    sendBtn = document.querySelector('button[data-testid="chat_input_send_button"]');
+
+                    if (!inputElem || !sendBtn) {
+                        throw new Error('等待3秒后仍未找到输入框或发送按钮');
+                    }
+
+                    Logger.log('✅ 移动端：已获取输入框和发送按钮');
+                } else {
+                    // 桌面端：动态等待元素加载（最多10秒）
+                    Logger.log('🖥️ 桌面端模式：动态等待元素加载...');
+                    inputElem = await waitForElement('textarea[data-testid="chat_input_input"]');
+                    Logger.log('找到输入框，准备填充内容...');
+
+                    sendBtn = await waitForElement('button[data-testid="chat_input_send_button"]');
+                    Logger.log('找到发送按钮');
+                }
 
                 // 聚焦输入框
                 inputElem.click();
@@ -6519,7 +6551,7 @@
                     keyCode: 13
                 }));
 
-                Logger.success('已自动发送题目到豆包AI（模拟Enter键）');
+                Logger.success(`已自动发送题目到豆包AI（${isMobile ? '移动端' : '桌面端'}模式）`);
                 console.log('已模拟按下 Enter 键发送');
 
             } catch (error) {
