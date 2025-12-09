@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.8.5.2
-// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、灵活导出试题为Word文档（可配置DOC/DOCX格式、含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
+// @version      3.9.0
+// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、错题记录（支持星级显示）、完整的按钮样式管理、灵活导出试题为Word文档（可配置DOC/DOCX格式、含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
 // @match        https://www.doubao.com/chat/*
@@ -227,6 +227,47 @@
                 }
             },
 
+            // ========== 错题记录按钮配置 ==========
+            mistakeButton: {
+                // --- 按钮位置配置 ---
+                position: {
+                    position: 'absolute',    // 绝对定位
+                    top: '8px',              // 距离顶部的距离
+                    left: '8px',             // 距离左侧的距离
+                    zIndex: '10'             // 层级（确保在题目内容上方）
+                },
+                // --- 按钮样式配置 ---
+                style: {
+                    fontSize: '12px',        // 字体大小
+                    padding: '4px 10px',     // 内边距
+                    borderRadius: '6px',     // 圆角半径
+                    border: 'none',          // 边框样式
+                    fontWeight: '500',       // 字体粗细
+                    cursor: 'pointer',       // 鼠标样式
+                    transition: 'all 0.2s',  // 过渡动画
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'  // 阴影效果
+                },
+                // --- 按钮颜色配置 ---
+                colors: {
+                    background: '#f56565',   // 按钮背景色（红色）
+                    textColor: 'white',      // 按钮文字颜色
+                    hoverBackground: '#e53e3e', // 悬停时背景色
+                    hoverOpacity: '0.8'      // 鼠标悬停时的透明度
+                },
+                // --- 按钮文字配置 ---
+                text: {
+                    add: '错题+1'           // 按钮文字
+                },
+                // --- 星星显示配置 ---
+                stars: {
+                    emoji: '⭐',             // 星星表情
+                    perRow: 5,               // 每行显示的星星数量
+                    marginTop: '6px',        // 星星容器上边距
+                    fontSize: '16px',        // 星星大小
+                    gap: '3px'               // 星星之间的间距
+                }
+            },
+
             // ========== 编辑模式切换按钮配置 ==========
             editModeButton: {
                 // --- 按钮位置配置 ---
@@ -438,11 +479,12 @@
             // ========== 数据库配置 ==========
             database: {
                 name: 'ChaoxingNotesDB',     // IndexedDB 数据库名称
-                version: 3,                   // 数据库版本号（v3：添加设置存储）
+                version: 4,                   // 数据库版本号（v4：添加错题记录存储）
                 stores: {
                     notes: 'notes',           // 笔记存储名称
                     attachments: 'attachments', // 附件存储名称
-                    settings: 'settings'      // 用户设置存储名称
+                    settings: 'settings',      // 用户设置存储名称
+                    mistakes: 'mistakes'       // 错题记录存储名称
                 }
             },
 
@@ -517,6 +559,30 @@
             const { courseId, classId, workId } = this.parseWorkInfo();
             return `${courseId}_${classId}_${workId}`;
         }
+
+        /**
+         * 解析题号（从题目标题中提取）
+         * @param {HTMLElement} questionContainer - 题目容器元素
+         * @returns {string} 题号（如"24"），解析失败返回"999"
+         */
+        static parseQuestionNumber(questionContainer) {
+            try {
+                const markName = questionContainer.querySelector('.mark_name');
+                if (!markName) return '999';
+                
+                // 获取第一个文本节点（题号所在位置）
+                const firstTextNode = markName.childNodes[0];
+                if (!firstTextNode || firstTextNode.nodeType !== Node.TEXT_NODE) return '999';
+                
+                // 提取题号（格式如"24. "）
+                const text = firstTextNode.textContent.trim();
+                const match = text.match(/^(\d+)\s*\./);
+                return match ? match[1] : '999';
+            } catch (error) {
+                Logger.error('解析题号失败', error);
+                return '999';
+            }
+        }
     }
 
     // ===================== IndexedDB 管理器 =====================
@@ -573,11 +639,23 @@
                             { keyPath: 'key' }
                         );
                     }
+
+                    // v4: 创建错题记录存储
+                    if (oldVersion < 4 && !db.objectStoreNames.contains(this.config.get('database.stores.mistakes'))) {
+                        const mistakesStore = db.createObjectStore(
+                            this.config.get('database.stores.mistakes'),
+                            { keyPath: 'id' }
+                        );
+                        mistakesStore.createIndex('workKey', 'workKey', { unique: false });
+                        mistakesStore.createIndex('questionId', 'questionId', { unique: false });
+                        mistakesStore.createIndex('questionNo', 'questionNo', { unique: false });
+                        mistakesStore.createIndex('count', 'count', { unique: false });
+                    }
                 };
             });
         }
 
-        async saveNote(workKey, questionId, content) {
+        async saveNote(workKey, questionId, questionNo, content) {
             if (!this.db) await this.init();
 
             return new Promise((resolve, reject) => {
@@ -587,11 +665,12 @@
                 );
                 const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
 
-                const id = `${workKey}_${questionId}`;
+                const id = `${workKey}_${questionId}_${questionNo}`;
                 const data = {
                     id,
                     workKey,
                     questionId,
+                    questionNo,
                     content,
                     contentType: 'text',  // 内容类型：text, html等
                     hasAttachments: false, // 是否有附件
@@ -606,7 +685,7 @@
             });
         }
 
-        async getNote(workKey, questionId) {
+        async getNote(workKey, questionId, questionNo) {
             if (!this.db) await this.init();
 
             return new Promise((resolve, reject) => {
@@ -616,7 +695,7 @@
                 );
                 const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
 
-                const id = `${workKey}_${questionId}`;
+                const id = `${workKey}_${questionId}_${questionNo}`;
                 const request = objectStore.get(id);
 
                 request.onsuccess = () => resolve(request.result?.content || '');
@@ -660,7 +739,7 @@
             });
         }
 
-        async deleteNote(workKey, questionId) {
+        async deleteNote(workKey, questionId, questionNo) {
             if (!this.db) await this.init();
 
             return new Promise((resolve, reject) => {
@@ -670,7 +749,7 @@
                 );
                 const objectStore = transaction.objectStore(this.config.get('database.stores.notes'));
 
-                const id = `${workKey}_${questionId}`;
+                const id = `${workKey}_${questionId}_${questionNo}`;
                 const request = objectStore.delete(id);
 
                 request.onsuccess = () => resolve();
@@ -827,7 +906,8 @@
                     const storeNames = [
                         this.config.get('database.stores.notes'),
                         this.config.get('database.stores.settings'),
-                        this.config.get('database.stores.attachments')
+                        this.config.get('database.stores.attachments'),
+                        this.config.get('database.stores.mistakes')
                     ];
 
                     const transaction = this.db.transaction(storeNames, 'readwrite');
@@ -857,12 +937,108 @@
                 }
             });
         }
+
+        /**
+         * 保存错题记录（增加错题次数）
+         * @param {string} workKey - 作业标识
+         * @param {string} questionId - 题目ID
+         * @param {string} questionNo - 题号
+         */
+        async addMistake(workKey, questionId, questionNo) {
+            if (!this.db) await this.init();
+
+            return new Promise((resolve, reject) => {
+                const transaction = this.db.transaction(
+                    [this.config.get('database.stores.mistakes')],
+                    'readwrite'
+                );
+                const objectStore = transaction.objectStore(this.config.get('database.stores.mistakes'));
+
+                const id = `${workKey}_${questionId}_${questionNo}_mistakes`;
+                
+                // 先尝试获取现有记录
+                const getRequest = objectStore.get(id);
+                
+                getRequest.onsuccess = () => {
+                    const existing = getRequest.result;
+                    const now = Date.now();
+                    
+                    const data = existing ? {
+                        ...existing,
+                        count: existing.count + 1,
+                        times: [...existing.times, now],
+                        updatedAt: now
+                    } : {
+                        id,
+                        workKey,
+                        questionId,
+                        questionNo,
+                        count: 1,
+                        times: [now],
+                        createdAt: now,
+                        updatedAt: now
+                    };
+
+                    const putRequest = objectStore.put(data);
+                    putRequest.onsuccess = () => resolve(data);
+                    putRequest.onerror = () => reject(putRequest.error);
+                };
+                
+                getRequest.onerror = () => reject(getRequest.error);
+            });
+        }
+
+        /**
+         * 获取错题记录
+         * @param {string} workKey - 作业标识
+         * @param {string} questionId - 题目ID
+         * @param {string} questionNo - 题号
+         */
+        async getMistake(workKey, questionId, questionNo) {
+            if (!this.db) await this.init();
+
+            return new Promise((resolve, reject) => {
+                const transaction = this.db.transaction(
+                    [this.config.get('database.stores.mistakes')],
+                    'readonly'
+                );
+                const objectStore = transaction.objectStore(this.config.get('database.stores.mistakes'));
+
+                const id = `${workKey}_${questionId}_${questionNo}_mistakes`;
+                const request = objectStore.get(id);
+
+                request.onsuccess = () => resolve(request.result || null);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * 获取当前作业的所有错题记录
+         * @param {string} workKey - 作业标识
+         */
+        async getAllMistakes(workKey) {
+            if (!this.db) await this.init();
+
+            return new Promise((resolve, reject) => {
+                const transaction = this.db.transaction(
+                    [this.config.get('database.stores.mistakes')],
+                    'readonly'
+                );
+                const objectStore = transaction.objectStore(this.config.get('database.stores.mistakes'));
+                const index = objectStore.index('workKey');
+                const request = index.getAll(workKey);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
     }
 
     // ===================== 笔记编辑器组件 =====================
     class NoteEditor {
-        constructor(questionId, workKey, dbManager, config, styleGenerator) {
+        constructor(questionId, questionNo, workKey, dbManager, config, styleGenerator) {
             this.questionId = questionId;
+            this.questionNo = questionNo;
             this.workKey = workKey;
             this.dbManager = dbManager;
             this.config = config;
@@ -967,7 +1143,7 @@
 
             // 加载已保存的笔记
             try {
-                const savedContent = await this.dbManager.getNote(this.workKey, this.questionId);
+                const savedContent = await this.dbManager.getNote(this.workKey, this.questionId, this.questionNo);
                 if (savedContent) {
                     this.editor.innerHTML = this._sanitizeHTML(savedContent);
                 }
@@ -1270,7 +1446,7 @@
         async save() {
             try {
                 const content = this.editor.innerHTML;
-                await this.dbManager.saveNote(this.workKey, this.questionId, content);
+                await this.dbManager.saveNote(this.workKey, this.questionId, this.questionNo, content);
             } catch (error) {
                 Logger.error('保存笔记失败', error);
             }
@@ -2822,7 +2998,7 @@
             });
 
             const docxLabel = DOMHelper.createElement('span', {
-                innerHTML: '<strong>DOCX格式</strong> <span style="color: #e53e3e; font-size: 13px;">（注意：在手机/平板显示可能出现bug）</span>',
+                innerHTML: '<strong>DOCX格式</strong> <span style="color: #e53e3e; font-size: 13px;">（注意：在手机/平板上浏览docx可能出现空白或图片失效的bug）</span>',
                 style: {
                     fontSize: '14px',
                     color: '#2d3748'
@@ -3555,8 +3731,13 @@
                 this._updateNotesInfo();
             });
 
+            // 格式化题目标题（包含题号）
+            const questionNo = note.questionNo || '999';
+            const questionIdShort = note.questionId.replace('question', 'Question');
+            const questionTitle = `${questionIdShort}_No${questionNo}`;
+            
             const questionId = DOMHelper.createElement('span', {
-                innerText: note.questionId,
+                innerText: questionTitle,
                 style: {
                     fontSize: '14px',
                     fontWeight: '600',
@@ -4493,6 +4674,20 @@
             return this._getInlineButtonStyle('saveNoteButton', 'background');
         }
 
+        getMistakeButtonStyle() {
+            const config = this.config.get('mistakeButton');
+            const position = config.position;
+            const style = config.style;
+            const colors = config.colors;
+
+            return {
+                ...style,
+                ...position,
+                backgroundColor: colors.background,
+                color: colors.textColor
+            };
+        }
+
         getEditModeButtonStyle(isEditMode = false) {
             return this._getInlineButtonStyle('editModeButton', isEditMode ? 'previewBackground' : 'editBackground');
         }
@@ -4615,11 +4810,14 @@
             this.toggleButton = null;
             this.noteButton = null;
             this.saveNoteButton = null;
+            this.mistakeButton = null;
+            this.mistakeStarsContainer = null;
             this.noteEditor = null;
             this.buttonContainer = null;
             this.currentAnswerBlock = null;  // 跟踪当前显示的答案块
             this.isHidden = false;
             this.questionId = this._extractQuestionId();
+            this.questionNo = this._extractQuestionNo();
         }
 
         _extractQuestionId() {
@@ -4633,6 +4831,31 @@
             }
             // 如果没找到，生成一个唯一标识
             return `question_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        _extractQuestionNo() {
+            // 查找题目容器
+            let questionContainer = null;
+            const questionId = this.questionId;
+
+            if (questionId && questionId.startsWith('question')) {
+                questionContainer = document.getElementById(questionId);
+            }
+
+            // 如果没找到，尝试从 parent 向上查找
+            if (!questionContainer && this.parent) {
+                let element = this.parent;
+                while (element && element !== document.body) {
+                    if (element.classList && (element.classList.contains('questionLi') || element.classList.contains('mark_item'))) {
+                        questionContainer = element;
+                        break;
+                    }
+                    element = element.parentElement;
+                }
+            }
+
+            // 使用URLParser解析题号
+            return questionContainer ? URLParser.parseQuestionNumber(questionContainer) : '999';
         }
 
         async initialize() {
@@ -4661,6 +4884,9 @@
                 }
             });
 
+            // 创建错题按钮（定位到题目区域左上角）
+            await this._createMistakeButton();
+
             // 创建复制按钮（定位到题目区域右上角）
             this._createCopyButton();
 
@@ -4681,6 +4907,120 @@
 
             // 插入按钮容器
             DOMHelper.insertElement(this.buttonContainer, this.parent, this.nextSibling);
+        }
+
+        async _createMistakeButton() {
+            const buttonText = this.config.get('mistakeButton.text');
+            const colors = this.config.get('mistakeButton.colors');
+
+            // 创建错题按钮
+            this.mistakeButton = DOMHelper.createElement('button', {
+                innerText: buttonText.add,
+                style: this.styleGenerator.getMistakeButtonStyle(),
+                title: '记录做错次数'
+            });
+
+            // 添加悬停效果
+            this.mistakeButton.addEventListener('mouseenter', () => {
+                this.mistakeButton.style.background = colors.hoverBackground;
+                this.mistakeButton.style.transform = 'translateY(-1px)';
+            });
+            this.mistakeButton.addEventListener('mouseleave', () => {
+                this.mistakeButton.style.background = colors.background;
+                this.mistakeButton.style.transform = 'translateY(0)';
+            });
+
+            this.mistakeButton.addEventListener('click', () => this._handleMistakeAdd());
+
+            // 创建星星显示容器
+            const starsConfig = this.config.get('mistakeButton.stars');
+            this.mistakeStarsContainer = DOMHelper.createElement('div', {
+                style: {
+                    position: 'absolute',
+                    top: `calc(${this.config.get('mistakeButton.position.top')} + 32px)`, // 按钮下方
+                    left: this.config.get('mistakeButton.position.left'),
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    maxWidth: `calc(${starsConfig.perRow} * (${starsConfig.fontSize} + ${starsConfig.gap}))`,
+                    gap: starsConfig.gap,
+                    fontSize: starsConfig.fontSize,
+                    lineHeight: '1',
+                    zIndex: this.config.get('mistakeButton.position.zIndex')
+                }
+            });
+
+            // 查找题目容器并插入错题按钮和星星容器
+            let questionContainer = null;
+            const questionId = this.questionId;
+
+            if (questionId && questionId.startsWith('question')) {
+                questionContainer = document.getElementById(questionId);
+            }
+
+            // 如果没找到，尝试从 parent 向上查找
+            if (!questionContainer && this.parent) {
+                let element = this.parent;
+                while (element && element !== document.body) {
+                    if (element.classList && (element.classList.contains('questionLi') || element.classList.contains('mark_item'))) {
+                        questionContainer = element;
+                        break;
+                    }
+                    element = element.parentElement;
+                }
+            }
+
+            // 将错题按钮和星星容器插入到题目容器
+            if (questionContainer) {
+                // 确保题目容器有相对定位
+                const currentPosition = window.getComputedStyle(questionContainer).position;
+                if (currentPosition === 'static') {
+                    questionContainer.style.position = 'relative';
+                }
+                questionContainer.appendChild(this.mistakeButton);
+                questionContainer.appendChild(this.mistakeStarsContainer);
+
+                // 加载已有的错题记录并显示星星
+                await this._loadMistakeRecord();
+            }
+        }
+
+        async _loadMistakeRecord() {
+            try {
+                const mistake = await this.dbManager.getMistake(this.workKey, this.questionId, this.questionNo);
+                if (mistake && mistake.count > 0) {
+                    this._renderStars(mistake.count);
+                }
+            } catch (error) {
+                Logger.error('加载错题记录失败', error);
+            }
+        }
+
+        async _handleMistakeAdd() {
+            try {
+                const mistake = await this.dbManager.addMistake(this.workKey, this.questionId, this.questionNo);
+                this._renderStars(mistake.count);
+                
+                // 显示提示
+                const originalText = this.mistakeButton.innerText;
+                this.mistakeButton.innerText = '✅ 已记录';
+                setTimeout(() => {
+                    this.mistakeButton.innerText = originalText;
+                }, 1000);
+            } catch (error) {
+                Logger.error('添加错题记录失败', error);
+            }
+        }
+
+        _renderStars(count) {
+            const starsConfig = this.config.get('mistakeButton.stars');
+            this.mistakeStarsContainer.innerHTML = '';
+            
+            for (let i = 0; i < count; i++) {
+                const star = DOMHelper.createElement('span', {
+                    innerText: starsConfig.emoji
+                });
+                this.mistakeStarsContainer.appendChild(star);
+            }
         }
 
         _createCopyButton() {
@@ -5355,6 +5695,7 @@
         async _createNoteEditor() {
             this.noteEditor = new NoteEditor(
                 this.questionId,
+                this.questionNo,
                 this.workKey,
                 this.dbManager,
                 this.config,
