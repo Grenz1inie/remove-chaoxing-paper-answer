@@ -36,8 +36,8 @@
 
 ## 🖼️ 预览图
 
-<img src="images/1.png" alt="预览1" width="50%">
-<img src="images/2.png" alt="预览2" width="50%">
+<img src="https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@main/images/1.png" alt="预览1" width="50%">
+<img src="https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@main/images/2.png" alt="预览2" width="50%">
 
 ---
 
