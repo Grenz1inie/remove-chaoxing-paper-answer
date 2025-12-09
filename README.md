@@ -3,7 +3,11 @@
 窝趣！考试只剩一周了怎么办！\
 希望该Script能像热带风味冰红茶一样温润同学们不安的心~
 
-## 🚀 主要功能
+>项目永久开源，谨以此致敬素未谋面的恩人软院期末开源祖师cg学长 
+
+## 🚀 主要功能（支持桌面端/移动端）
+
+>Script生效范围：超星学习通作业浏览界面（https://\*.chaoxing.com/mooc-ans/mooc2/work/view\*）
 
 1. **🤖 智能AI助手** - 可定制提示词的一键问豆包AI，自动跨域提问（基于Web自动化，而非传统的调用模型API或题库检索）
 2. **👁️ 答案控制** - 灵活的显示/隐藏答案，方便二刷、三刷、甚至多刷
@@ -12,24 +16,21 @@
 5. **📄 高级导出** - 可定制的导出所有作业题目功能（支持选择导出得分、答案、解析等），快速生成刷题集或背题手册
 6. **⚙️ 深度自定义** - 除提供高可用的默认配置外，还设有控制面板作为配置管理入口，对上述所有功能进行深度定制
 
+>Script仍处于开发阶段，尚有很多不足之处，诚挚且热烈欢迎各位大佬进行PR或Issues。
+
 ---
 
 ## 🧩 安装方式
-
-> 🌟 每次打开作业页面自动运行，支持答案自由控制、富文本笔记、样式自定义，让刷题学习更高效！
-
-### 方式一：从 Greasy Fork 安装（推荐）
-
-1. 安装浏览器插件 [Tampermonkey（油猴）](https://www.tampermonkey.net/)  
-2. 点击以下链接安装脚本：  
-   👉 [**超星学习通高效刷题小助手 - Greasy Fork**](https://greasyfork.org/zh-CN/scripts/555192)
-3. 进入超星作业页面，脚本会自动运行
-
-### 方式二：直接安装脚本
-
-1. 确保已安装 [Tampermonkey](https://www.tampermonkey.net/)
+### 方式一：从 Greasy Fork 安装（需要翻墙）
+1. 安装浏览器插件 [Tampermonkey](https://www.tampermonkey.net)
 2. 点击以下链接直接安装：  
-   👉 [**直接安装脚本**](https://update.greasyfork.org/scripts/555192/超星学习通高效刷题小助手.user.js)
+   👉 [**直接安装脚本**](https://update.greasyfork.org/scripts/555192/超星学习通期末周复习小助手.user.js)
+
+### 方式二：从 ScriptCat 安装（无需翻墙）
+1. 安装浏览器插件 [ScriptCat](https://scriptcat.org/zh-CN)
+2. 点击以下链接直接安装：  
+   👉 [**直接安装脚本**](https://scriptcat.org/scripts/code/4822/超星学习通期末周复习小助手.user.js)
+
 
 ---
 
@@ -37,7 +38,6 @@
 
 <img src="images/1.png" alt="预览1" width="50%">
 <img src="images/2.png" alt="预览2" width="50%">
-<img src="images/3.png" alt="预览3" width="50%">
 
 ---
 
