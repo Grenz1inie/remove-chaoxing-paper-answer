@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.9.1
+// @version      3.9.1.1
 // @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、错题记录（支持星级显示）、完整的按钮样式管理、灵活导出试题为Word文档（可配置DOC/DOCX格式、含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -232,7 +232,7 @@
                 // --- 按钮位置配置（相对定位，插入到mark_name上方） ---
                 position: {
                     marginTop: '8px',        // 上边距
-                    marginBottom: '8px',     // 下边距（与题目间距）
+                    marginBottom: '2px',     // 与星星或题目间距
                     marginLeft: '0px',       // 左边距
                     display: 'block'         // 块级元素
                 },
@@ -262,11 +262,10 @@
                 stars: {
                     emoji: '⭐',             // 星星表情
                     perRow: 5,               // 每行显示的星星数量
-                    marginTop: '6px',        // 星星容器上边距（与按钮间距）
-                    marginBottom: '8px',     // 星星容器下边距（与题目间距）
+                    marginTop: '2px',        // 星星容器上边距（与按钮间距）
+                    marginBottom: '2px',     // 星星容器下边距（与题目间距）
                     fontSize: '16px',        // 星星大小
-                    gap: '3px',              // 星星之间的间距
-                    buttonShift: '-34px'     // 按钮上移距离（为星星腾出空间）
+                    gap: '3px'               // 星星之间的间距
                 }
             },
 
@@ -4916,14 +4915,15 @@
             const position = this.config.get('mistakeButton.position');
             const starsConfig = this.config.get('mistakeButton.stars');
 
-            // 创建错题按钮容器（相对定位，插入到mark_name上方）
+            // 创建错题按钮容器（使用flexbox，星星在中间撑开空间）
             const mistakeContainer = DOMHelper.createElement('div', {
                 style: {
                     marginTop: position.marginTop,
                     marginBottom: position.marginBottom,
                     marginLeft: position.marginLeft,
-                    display: position.display,
-                    transition: 'margin-top 0.3s ease'  // 平滑过渡动画
+                    display: 'flex',
+                    flexDirection: 'column',   // 垂直排列
+                    alignItems: 'flex-start'   // 左对齐
                 }
             });
 
@@ -4946,7 +4946,7 @@
 
             this.mistakeButton.addEventListener('click', () => this._handleMistakeAdd());
 
-            // 创建星星显示容器
+            // 创建星星显示容器（弹性布局，会撑开空间）
             this.mistakeStarsContainer = DOMHelper.createElement('div', {
                 style: {
                     display: 'flex',
@@ -4960,7 +4960,7 @@
                 }
             });
 
-            // 将按钮和星星容器添加到容器
+            // 将按钮和星星容器添加到容器（按钮在上，星星在下）
             mistakeContainer.appendChild(this.mistakeButton);
             mistakeContainer.appendChild(this.mistakeStarsContainer);
 
@@ -5033,23 +5033,18 @@
             this.mistakeStarsContainer.innerHTML = '';
             
             if (count > 0) {
-                // 有错题记录，显示星星并上移按钮
+                // 显示星星容器（弹性布局会自动撑开空间）
+                this.mistakeStarsContainer.style.display = 'flex';
+                
                 for (let i = 0; i < count; i++) {
                     const star = DOMHelper.createElement('span', {
                         innerText: starsConfig.emoji
                     });
                     this.mistakeStarsContainer.appendChild(star);
                 }
-                
-                // 上移按钮为星星腾出空间
-                if (this.mistakeContainer) {
-                    this.mistakeContainer.style.marginTop = starsConfig.buttonShift;
-                }
             } else {
-                // 没有错题记录，恢复按钮位置
-                if (this.mistakeContainer) {
-                    this.mistakeContainer.style.marginTop = this.config.get('mistakeButton.position.marginTop');
-                }
+                // 隐藏星星容器（不占空间）
+                this.mistakeStarsContainer.style.display = 'none';
             }
         }
 
@@ -7487,12 +7482,15 @@
                 const isMobile = isMobileDevice();
                 console.log(`📱 设备类型: ${isMobile ? '移动端' : '桌面端'}`);
 
+                // 添加额外等待，确保页面完全加载（解决新会话URL重定向问题）
+                Logger.log('⏱️ 等待页面完全加载...');
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
                 let inputElem, sendBtn;
 
                 if (isMobile) {
-                    // 移动端：固定等待3秒让页面加载
-                    Logger.log('⏱️ 移动端模式：等待3秒让页面加载...');
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    // 移动端：再等待1.5秒（总共3秒）
+                    await new Promise(resolve => setTimeout(resolve, 1500));
 
                     // 直接获取元素
                     inputElem = document.querySelector('textarea[data-testid="chat_input_input"]');
@@ -7529,6 +7527,9 @@
 
                 Logger.success('题目已填充到输入框');
                 console.log('输入框内容:', inputElem.value.substring(0, 100) + '...');
+
+                // 额外等待一小段时间，确保输入完全处理
+                await new Promise(resolve => setTimeout(resolve, 300));
 
                 // 使用 Enter 键发送（兼容桌面端和移动端）
                 inputElem.dispatchEvent(new KeyboardEvent('keydown', {
