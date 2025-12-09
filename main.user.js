@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.8.5
-// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双按钮导出试题为Word文档（含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
+// @version      3.8.5.1
+// @description  一键隐藏超星学习通作业页面中所有答案块，支持单个/全局控制、一键复制题目（可配置前缀后缀、支持图片复制到Word）、一键问豆包AI（智能跨域提问+会话复用）、富文本笔记编辑(16个格式按钮)、编辑/预览模式切换、完整的按钮样式管理、双格式导出试题为Word文档（DOCX/DOC-手机版，含图片、可选导出内容）、竖屏响应式布局、样式持久化存储。
 // @author       John
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
 // @match        https://www.doubao.com/chat/*
@@ -5523,27 +5523,27 @@
             const buttonTextWithAnswer = this.config.get('exportButton.textWithAnswer');
             const colors = this.config.get('exportButton.colors');
 
-            // 创建导出试题按钮（不带答案）
+            // ========== 1. 导出试题按钮（DOCX格式，不带答案）==========
             this.exportButton = DOMHelper.createElement('button', {
                 innerText: buttonText,
                 style: this.styleGenerator.getExportButtonStyle(),
-                title: '导出试题为Word文档（不含答案）'
+                title: '导出试题为Word文档（DOCX格式，不含答案）'
             });
 
             // 使用统一的悬停效果管理
             this.styleGenerator.addSimpleHoverEffect(this.exportButton, 'exportButton');
 
-            this.exportButton.addEventListener('click', () => this._handleExport(false));
+            this.exportButton.addEventListener('click', () => this._handleExport(false, 'docx'));
             this.buttonContainer.appendChild(this.exportButton);
 
-            // 创建导出答案按钮（带答案）
+            // ========== 2. 导出答案按钮（DOCX格式，带答案）==========
             const exportWithAnswerStyle = this.styleGenerator.getExportButtonStyle();
             exportWithAnswerStyle.background = colors.withAnswerBackground;
 
             this.exportWithAnswerButton = DOMHelper.createElement('button', {
                 innerText: buttonTextWithAnswer,
                 style: exportWithAnswerStyle,
-                title: '导出试题为Word文档（含答案）'
+                title: '导出试题为Word文档（DOCX格式，含答案）'
             });
 
             // 手动添加悬停效果（使用紫色）
@@ -5556,13 +5556,54 @@
                 this.exportWithAnswerButton.style.transform = 'translateY(0)';
             });
 
-            this.exportWithAnswerButton.addEventListener('click', () => this._handleExport(true));
+            this.exportWithAnswerButton.addEventListener('click', () => this._handleExport(true, 'docx'));
             this.buttonContainer.appendChild(this.exportWithAnswerButton);
+
+            // ========== 3. 导出试题按钮（DOC格式-手机版，不带答案）==========
+            this.exportDocButton = DOMHelper.createElement('button', {
+                innerText: '📱 导出试题(手机版)',
+                style: this.styleGenerator.getExportButtonStyle(),
+                title: '导出试题为DOC格式（兼容性更好，适合手机查看，不含答案）'
+            });
+
+            // 使用统一的悬停效果管理
+            this.styleGenerator.addSimpleHoverEffect(this.exportDocButton, 'exportButton');
+
+            this.exportDocButton.addEventListener('click', () => this._handleExport(false, 'doc'));
+            this.buttonContainer.appendChild(this.exportDocButton);
+
+            // ========== 4. 导出答案按钮（DOC格式-手机版，带答案）==========
+            const exportDocWithAnswerStyle = this.styleGenerator.getExportButtonStyle();
+            exportDocWithAnswerStyle.background = colors.withAnswerBackground;
+
+            this.exportDocWithAnswerButton = DOMHelper.createElement('button', {
+                innerText: '📱 导出答案(手机版)',
+                style: exportDocWithAnswerStyle,
+                title: '导出试题为DOC格式（兼容性更好，适合手机查看，含答案）'
+            });
+
+            // 手动添加悬停效果（使用紫色）
+            this.exportDocWithAnswerButton.addEventListener('mouseenter', () => {
+                this.exportDocWithAnswerButton.style.background = colors.withAnswerHoverBackground;
+                this.exportDocWithAnswerButton.style.transform = 'translateY(-1px)';
+            });
+            this.exportDocWithAnswerButton.addEventListener('mouseleave', () => {
+                this.exportDocWithAnswerButton.style.background = colors.withAnswerBackground;
+                this.exportDocWithAnswerButton.style.transform = 'translateY(0)';
+            });
+
+            this.exportDocWithAnswerButton.addEventListener('click', () => this._handleExport(true, 'doc'));
+            this.buttonContainer.appendChild(this.exportDocWithAnswerButton);
         }
 
-        async _handleExport(includeAnswer = false) {
+        async _handleExport(includeAnswer = false, format = 'docx') {
             // 确定当前操作的按钮
-            const currentButton = includeAnswer ? this.exportWithAnswerButton : this.exportButton;
+            let currentButton;
+            if (format === 'docx') {
+                currentButton = includeAnswer ? this.exportWithAnswerButton : this.exportButton;
+            } else {
+                currentButton = includeAnswer ? this.exportDocWithAnswerButton : this.exportDocButton;
+            }
             const originalText = currentButton.innerText;
 
             try {
@@ -5588,8 +5629,12 @@
                     return;
                 }
 
-                // 生成并下载文档，传入是否包含答案的参数
-                await this._generateDocx(docContent, includeAnswer);
+                // 根据格式调用不同的生成方法
+                if (format === 'docx') {
+                    await this._generateDocx(docContent, includeAnswer);
+                } else {
+                    await this._generateDoc(docContent, includeAnswer);
+                }
 
                 // 恢复按钮状态
                 currentButton.innerText = originalText;
@@ -6257,6 +6302,493 @@
             const link = document.createElement('a');
             link.href = url;
             link.download = `${safeTitle}_${dateStr}_${timeStr}.${fileExtension}`;
+
+            // 触发下载
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        /**
+         * 生成 DOC 格式文档（手机版-兼容性更好）
+         * 直接使用 HTML 格式的 .doc 文件，跳过 html-docx-js 转换
+         * @param {Object} content - 文档内容对象
+         * @param {boolean} includeAnswer - 是否包含答案
+         */
+        async _generateDoc(content, includeAnswer = false) {
+            // 获取导出设置（与docx共用配置）
+            const exportDefaults = this.config.get('exportSettings');
+            let exportSettings = {};
+            let contentOptions = {};
+            try {
+                const allSettings = await this.dbManager.getAllSettings();
+                exportSettings = {
+                    fontFamily: allSettings.exportFontFamily ?? exportDefaults.fontFamily,
+                    fontSize: allSettings.exportFontSize ?? exportDefaults.fontSize,
+                    titleFontSize: allSettings.exportTitleFontSize ?? exportDefaults.titleFontSize,
+                    lineHeight: allSettings.exportLineHeight ?? exportDefaults.lineHeight,
+                    pageMargin: allSettings.exportPageMargin ?? exportDefaults.pageMargin
+                };
+                // 导出内容选项
+                contentOptions = {
+                    exportMyAnswer: allSettings.exportMyAnswer ?? exportDefaults.exportMyAnswer,
+                    exportCorrectAnswer: allSettings.exportCorrectAnswer ?? exportDefaults.exportCorrectAnswer,
+                    exportScore: allSettings.exportScore ?? exportDefaults.exportScore,
+                    exportAnalysis: allSettings.exportAnalysis ?? exportDefaults.exportAnalysis
+                };
+            } catch (e) {
+                exportSettings = { ...exportDefaults };
+                contentOptions = {
+                    exportMyAnswer: exportDefaults.exportMyAnswer,
+                    exportCorrectAnswer: exportDefaults.exportCorrectAnswer,
+                    exportScore: exportDefaults.exportScore,
+                    exportAnalysis: exportDefaults.exportAnalysis
+                };
+            }
+
+            // 根据导出内容选项过滤答案HTML（复用_generateDocx中的逻辑）
+            const filterAnswerHtml = (answerHTML) => {
+                if (!answerHTML) return '';
+
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = answerHTML;
+
+                if (!contentOptions.exportMyAnswer) {
+                    const myAnswerSpans = tempDiv.querySelectorAll('.stuAnswerContent');
+                    myAnswerSpans.forEach(span => {
+                        const parentSpan = span.closest('span.colorDeep.marginRight40.fl') || span.parentElement;
+                        if (parentSpan) parentSpan.remove();
+                    });
+                }
+
+                if (!contentOptions.exportCorrectAnswer) {
+                    const correctAnswerSpans = tempDiv.querySelectorAll('.rightAnswerContent');
+                    correctAnswerSpans.forEach(span => {
+                        const parentSpan = span.closest('span.colorGreen.marginRight40.fl') || span.parentElement;
+                        if (parentSpan) parentSpan.remove();
+                    });
+                }
+
+                if (!contentOptions.exportScore) {
+                    const scoreDiv = tempDiv.querySelector('.mark_score');
+                    if (scoreDiv) scoreDiv.remove();
+                }
+
+                if (!contentOptions.exportAnalysis) {
+                    const analysisDiv = tempDiv.querySelector('.analysisDiv');
+                    if (analysisDiv) analysisDiv.remove();
+                }
+
+                return tempDiv.innerHTML;
+            };
+
+            // 使用 GM_xmlhttpRequest 下载图片（复用_generateDocx中的逻辑）
+            const downloadImageAsBase64 = (imgUrl) => {
+                return new Promise((resolve) => {
+                    let fullUrl = imgUrl;
+                    if (imgUrl.startsWith('//')) {
+                        fullUrl = 'https:' + imgUrl;
+                    } else if (imgUrl.startsWith('/')) {
+                        fullUrl = window.location.origin + imgUrl;
+                    }
+
+                    console.log('[图片下载] 开始下载:', fullUrl);
+
+                    if (typeof GM_xmlhttpRequest === 'function') {
+                        console.log('[图片下载] 使用 GM_xmlhttpRequest');
+                        try {
+                            GM_xmlhttpRequest({
+                                method: 'GET',
+                                url: fullUrl,
+                                responseType: 'blob',
+                                timeout: 15000,
+                                headers: {
+                                    'Referer': window.location.href
+                                },
+                                onload: function (response) {
+                                    console.log('[图片下载] 响应状态:', response.status, '类型:', response.response?.type);
+                                    if (response.status === 200 && response.response) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                            console.log('[图片下载] 转换成功, base64长度:', reader.result?.length);
+                                            resolve(reader.result);
+                                        };
+                                        reader.onerror = (e) => {
+                                            console.error('[图片下载] FileReader 错误:', e);
+                                            resolve(fullUrl);
+                                        };
+                                        reader.readAsDataURL(response.response);
+                                    } else {
+                                        console.warn('[图片下载] 响应错误:', response.status, response.statusText);
+                                        resolve(fullUrl);
+                                    }
+                                },
+                                onerror: function (error) {
+                                    console.error('[图片下载] GM_xmlhttpRequest 错误:', error);
+                                    resolve(fullUrl);
+                                },
+                                ontimeout: function () {
+                                    console.warn('[图片下载] 超时:', fullUrl);
+                                    resolve(fullUrl);
+                                }
+                            });
+                        } catch (e) {
+                            console.error('[图片下载] GM_xmlhttpRequest 异常:', e);
+                            resolve(fullUrl);
+                        }
+                    } else {
+                        console.warn('[图片下载] GM_xmlhttpRequest 不可用，尝试 fetch');
+                        fetch(fullUrl, { mode: 'cors', credentials: 'include' })
+                            .then(response => response.blob())
+                            .then(blob => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve(reader.result);
+                                reader.onerror = () => resolve(fullUrl);
+                                reader.readAsDataURL(blob);
+                            })
+                            .catch(e => {
+                                console.error('[图片下载] fetch 错误:', e);
+                                resolve(fullUrl);
+                            });
+                    }
+                });
+            };
+
+            const MAX_IMAGE_WIDTH = 600;
+
+            const getScaledImageSize = (base64Data) => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const originalWidth = img.naturalWidth;
+                        const originalHeight = img.naturalHeight;
+
+                        if (originalWidth > MAX_IMAGE_WIDTH) {
+                            const scale = MAX_IMAGE_WIDTH / originalWidth;
+                            const newWidth = MAX_IMAGE_WIDTH;
+                            const newHeight = Math.round(originalHeight * scale);
+                            console.log(`[图片缩放] ${originalWidth}x${originalHeight} → ${newWidth}x${newHeight}`);
+                            resolve({ width: newWidth, height: newHeight, scaled: true });
+                        } else {
+                            console.log(`[图片尺寸] ${originalWidth}x${originalHeight} (无需缩放)`);
+                            resolve({ width: originalWidth, height: originalHeight, scaled: false });
+                        }
+                    };
+                    img.onerror = () => {
+                        console.warn('[图片尺寸] 无法获取尺寸');
+                        resolve({ width: null, height: null, scaled: false });
+                    };
+                    img.src = base64Data;
+                });
+            };
+
+            const processImagesInHtml = async (html) => {
+                if (!html) return '';
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+
+                const images = tempDiv.querySelectorAll('img');
+                for (const img of images) {
+                    const originalSrc = img.getAttribute('data-original');
+                    const src = originalSrc || img.getAttribute('src');
+                    if (src) {
+                        console.log('正在处理图片:', src);
+                        const processedSrc = await downloadImageAsBase64(src);
+                        img.setAttribute('src', processedSrc);
+                        img.removeAttribute('data-original');
+                        img.removeAttribute('data-src');
+
+                        if (processedSrc.startsWith('data:')) {
+                            const sizeInfo = await getScaledImageSize(processedSrc);
+
+                            if (sizeInfo.scaled && sizeInfo.width && sizeInfo.height) {
+                                img.setAttribute('width', sizeInfo.width);
+                                img.setAttribute('height', sizeInfo.height);
+                                img.style.width = `${sizeInfo.width}px`;
+                                img.style.height = `${sizeInfo.height}px`;
+                            }
+                        } else {
+                            console.warn('图片保留原URL:', processedSrc);
+                            img.style.maxWidth = `${MAX_IMAGE_WIDTH}px`;
+                            img.style.height = 'auto';
+                        }
+                    }
+                }
+
+                return tempDiv.innerHTML;
+            };
+
+            const cleanHtml = (html) => {
+                if (!html) return '';
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+
+                const hiddenElements = tempDiv.querySelectorAll('.element-invisible-hidden');
+                hiddenElements.forEach(el => el.remove());
+
+                return tempDiv.innerHTML;
+            };
+
+            // 构建纯HTML格式文档（与docx使用相同的HTML结构和样式）
+            let htmlContent = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="ProgId" content="Word.Document">
+    <meta name="Generator" content="Microsoft Word 15">
+    <!--[if gte mso 9]>
+    <xml>
+        <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+    </xml>
+    <![endif]-->
+    <style>
+        /* 页面基础设置 */
+        @page { 
+            size: A4; 
+            margin: ${exportSettings.pageMargin};
+        }
+        body { 
+            font-family: '${exportSettings.fontFamily}', SimSun, serif; 
+            font-size: ${exportSettings.fontSize}pt; 
+            line-height: ${exportSettings.lineHeight};
+            color: #333;
+        }
+        
+        /* 文档标题 */
+        .doc-title {
+            text-align: center;
+            font-size: ${exportSettings.titleFontSize}pt;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #000;
+        }
+        
+        /* 题目容器（添加明显分隔线） */
+        .question {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #2d3748;
+            page-break-inside: avoid;
+        }
+        .question:last-child {
+            border-bottom: none;
+        }
+        
+        /* 题目标题（题号和分值） */
+        .question-header {
+            font-weight: bold;
+            font-size: ${exportSettings.fontSize}pt;
+            color: #000;
+            margin-bottom: 10px;
+            background-color: #f5f5f5;
+            padding: 5px 10px;
+        }
+        
+        /* 题目内容区域 */
+        .question-content {
+            margin: 10px 0;
+        }
+        .question-content img {
+            max-width: 500px;
+            height: auto;
+        }
+        
+        /* 答案区域 */
+        .answer-section {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #fff8f8;
+            border-left: 3px solid #e74c3c;
+        }
+        .answer-label {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        .answer-content {
+            margin-top: 5px;
+        }
+        .answer-content img {
+            max-width: 500px;
+            height: auto;
+        }
+        
+        /* ========== 保留原始网页样式 ========== */
+        
+        /* 题目名称样式 */
+        .mark_name {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .colorShallow {
+            color: #999;
+            font-weight: normal;
+        }
+        .colorDeep {
+            color: #333;
+        }
+        .colorGreen {
+            color: #48bb78;
+        }
+        
+        /* 单选/多选题选项样式 */
+        .mark_letter {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+        .mark_letter li {
+            padding: 8px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .mark_letter li:last-child {
+            border-bottom: none;
+        }
+        
+        /* 完型填空选项样式 */
+        .mark_gestalt {
+            margin: 15px 0;
+        }
+        .gestalt_row {
+            margin: 12px 0;
+            padding: 8px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .gestalt_row:last-child {
+            border-bottom: none;
+        }
+        .gestalt_row dt {
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+        .gestalt_row dd {
+            display: inline-block;
+            margin: 4px 20px 4px 0;
+        }
+        .gestalt_num {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        /* 答案详情样式 */
+        .mark_answer {
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 4px;
+        }
+        .mark_key {
+            margin-bottom: 10px;
+        }
+        .mark_fill dt {
+            font-weight: bold;
+        }
+        .mark_fill dd {
+            display: inline;
+        }
+        .gestalt_fill {
+            display: inline-block;
+            margin-right: 15px;
+            padding: 2px 8px;
+            background: #edf2f7;
+            border-radius: 4px;
+        }
+        .mark_score {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .totalScore {
+            font-weight: bold;
+            color: #e53e3e;
+        }
+        .fontWeight {
+            font-weight: bold;
+        }
+        .marginRight40 {
+            margin-right: 40px;
+        }
+        .fl {
+            display: inline-block;
+        }
+        .fr {
+            float: right;
+        }
+        .stuAnswerContent, .rightAnswerContent {
+            font-weight: bold;
+        }
+        
+        /* 表格样式 */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+        }
+        td, th {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="doc-title">${this._escapeHtml(content.docTitle)}</div>
+`;
+
+            // 处理每道题目
+            for (const item of content.questions) {
+                const processedQuestionHtml = await processImagesInHtml(cleanHtml(item.questionHTML || ''));
+
+                htmlContent += `
+    <div class="question">
+        <div class="question-header">${this._escapeHtml(item.title)}</div>
+        <div class="question-content">${processedQuestionHtml}</div>`;
+
+                if (includeAnswer && item.answerHTML) {
+                    const filteredAnswerHtml = filterAnswerHtml(item.answerHTML);
+                    if (filteredAnswerHtml.trim()) {
+                        const processedAnswerHtml = await processImagesInHtml(cleanHtml(filteredAnswerHtml));
+                        htmlContent += `
+        <div class="answer-section">
+            <div class="answer-label">答案</div>
+            <div class="answer-content">${processedAnswerHtml}</div>
+        </div>`;
+                    }
+                }
+
+                htmlContent += `
+    </div>
+`;
+            }
+
+            htmlContent += `
+</body>
+</html>`;
+
+            // 生成文件名（与docx使用相同的命名规则）
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+            const safeTitle = content.docTitle.replace(/[\\/:*?"<>|]/g, '_').substring(0, 50);
+
+            // 直接生成DOC格式（跳过html-docx-js转换）
+            console.log('[导出] 生成 DOC 格式文件（手机版）');
+            const blob = new Blob(['\ufeff' + htmlContent], {
+                type: 'application/msword'
+            });
+            Logger.success('正在生成 DOC 文件（手机版）...');
+
+            // 生成下载链接
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${safeTitle}_${dateStr}_${timeStr}.doc`;
 
             // 触发下载
             document.body.appendChild(link);
