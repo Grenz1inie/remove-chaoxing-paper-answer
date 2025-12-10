@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.9.1.3
+// @version      3.9.1.4
 // @description  这是一款面向学习场景的脚本工具，其集成了支持提示词定制的智能 AI 助手模块，通过 Web 自动化技术实现跨域提问（区别于传统模型 API 调用或题库检索方式）；同时提供答案动态显隐控制功能，适配多轮刷题需求；内置错题星级标记系统，基于错误频次实现重点内容优先级管理；搭载本地持久化存储的富文本笔记组件，支持知识点与解析的实时记录与安全留存；具备可配置化作业题目导出能力，支持得分、答案、解析等字段的自定义筛选，可快速生成结构化刷题集或背题手册；此外，工具还提供可视化控制面板作为配置入口，支持对上述全功能模块的参数与逻辑进行深度个性化定制，为高效学习与复习流程提供技术支撑。
 // @author       YJohn
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -7520,8 +7520,7 @@
 
         /**
          * 豆包AI自动发送逻辑（读取完整内容并填充）
-         * 桌面端：动态等待元素加载（最多10秒）
-         * 移动端：固定等待3秒让页面加载
+         * 固定等待1.5秒确保页面加载完成
          */
         async function autoSendMessage() {
             const storageKey = 'chaoxing_doubao_question';
@@ -7541,38 +7540,19 @@
 
                 Logger.log('找到待提问题目，准备自动填充和发送...');
 
-                // 检测设备类型并采用不同的等待策略
-                const isMobile = isMobileDevice();
-                console.log(`📱 设备类型: ${isMobile ? '移动端' : '桌面端'}`);
+                // 强制固定等待1.5秒，确保页面完全加载
+                Logger.log('⏱️ 等待 1.5 秒确保页面加载...');
+                await new Promise(resolve => setTimeout(resolve, 1500));
 
-                // 添加额外等待，确保页面完全加载（解决新会话URL重定向问题）
-                Logger.log('⏱️ 等待页面完全加载...');
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // 直接获取元素
+                const inputElem = document.querySelector('textarea[data-testid="chat_input_input"]');
+                const sendBtn = document.querySelector('button[data-testid="chat_input_send_button"]');
 
-                let inputElem, sendBtn;
-
-                if (isMobile) {
-                    // 移动端：再等待1.5秒（总共3秒）
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-
-                    // 直接获取元素
-                    inputElem = document.querySelector('textarea[data-testid="chat_input_input"]');
-                    sendBtn = document.querySelector('button[data-testid="chat_input_send_button"]');
-
-                    if (!inputElem || !sendBtn) {
-                        throw new Error('等待3秒后仍未找到输入框或发送按钮');
-                    }
-
-                    Logger.log('✅ 移动端：已获取输入框和发送按钮');
-                } else {
-                    // 桌面端：动态等待元素加载（最多10秒）
-                    Logger.log('🖥️ 桌面端模式：动态等待元素加载...');
-                    inputElem = await waitForElement('textarea[data-testid="chat_input_input"]');
-                    Logger.log('找到输入框，准备填充内容...');
-
-                    sendBtn = await waitForElement('button[data-testid="chat_input_send_button"]');
-                    Logger.log('找到发送按钮');
+                if (!inputElem || !sendBtn) {
+                    throw new Error('等待1.5秒后仍未找到输入框或发送按钮');
                 }
+
+                Logger.log('✅ 已获取输入框和发送按钮');
 
                 // 聚焦输入框
                 inputElem.click();
@@ -7594,7 +7574,7 @@
                 // 额外等待一小段时间，确保输入完全处理
                 await new Promise(resolve => setTimeout(resolve, 300));
 
-                // 使用 Enter 键发送（兼容桌面端和移动端）
+                // 使用 Enter 键发送
                 inputElem.dispatchEvent(new KeyboardEvent('keydown', {
                     bubbles: true,
                     cancelable: true,
@@ -7613,7 +7593,7 @@
                     keyCode: 13
                 }));
 
-                Logger.success(`已自动发送题目到豆包AI（${isMobile ? '移动端' : '桌面端'}模式）`);
+                Logger.success('已自动发送题目到豆包AI');
                 console.log('已模拟按下 Enter 键发送');
 
             } catch (error) {
