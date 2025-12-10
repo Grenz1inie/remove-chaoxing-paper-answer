@@ -4392,10 +4392,6 @@
             }
         }
 
-        static removeElement(element) {
-            element?.parentNode?.removeChild(element);
-        }
-
         static ensureRelativePosition(element) {
             if (getComputedStyle(element).position === 'static') {
                 element.style.position = 'relative';
@@ -5670,8 +5666,7 @@
                 style: this.styleGenerator.getAnswerButtonStyle(true),
                 title: '点击显示/隐藏当前答案块',
                 dataset: {
-                    isHidden: 'true',
-                    originalHTML: this.originalHTML
+                    isHidden: 'true'
                 }
             });
 
@@ -6148,8 +6143,8 @@
             const docTitle = markTitle ? markTitle.innerText.trim() : '试题导出';
 
             this.controllers.forEach((controller, index) => {
-                // 从控制器获取原始答案HTML（保留完整HTML结构）
-                const answerHTML = controller.originalHTML;
+                // 从答案块获取原始HTML（保留完整HTML结构）
+                const answerHTML = controller.block.outerHTML;
 
                 // 获取题目信息 - 找到完整的题目容器
                 let questionHTML = '';
