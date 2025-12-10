@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.9.1.5
+// @version      3.10.0
 // @description  这是一款面向学习场景的脚本工具，其集成了支持提示词定制的智能 AI 助手模块，通过 Web 自动化技术实现跨域提问（区别于传统模型 API 调用或题库检索方式）；同时提供答案动态显隐控制功能，适配多轮刷题需求；内置错题星级标记系统，基于错误频次实现重点内容优先级管理；搭载本地持久化存储的富文本笔记组件，支持知识点与解析的实时记录与安全留存；具备可配置化作业题目导出能力，支持得分、答案、解析等字段的自定义筛选，可快速生成结构化刷题集或背题手册；此外，工具还提供可视化控制面板作为配置入口，支持对上述全功能模块的参数与逻辑进行深度个性化定制，为高效学习与复习流程提供技术支撑。
 // @author       YJohn
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -4882,7 +4882,6 @@
             this.appInstance = appInstance; // 保存应用实例引用，用于访问doubaoTabRef
             this.parent = block.parentNode;
             this.nextSibling = block.nextSibling;
-            this.originalHTML = block.outerHTML;
             this.toggleButton = null;
             this.noteButton = null;
             this.saveNoteButton = null;
@@ -4891,7 +4890,6 @@
             this.mistakeContainer = null;
             this.noteEditor = null;
             this.buttonContainer = null;
-            this.currentAnswerBlock = null;  // 跟踪当前显示的答案块
             this.isHidden = false;
             this.questionId = this._extractQuestionId();
             this.questionNo = this._extractQuestionNo();
@@ -4943,9 +4941,8 @@
         }
 
         _hideBlockInitial() {
-            // 初始化时删除原始答案块
-            DOMHelper.removeElement(this.block);
-            this.currentAnswerBlock = null;
+            // 初始化时隐藏答案块（使用 display:none）
+            this.block.style.display = 'none';
             this.isHidden = true;
         }
 
@@ -5797,42 +5794,14 @@
         }
 
         _handleAnswerToggle() {
-            if (this.isHidden) {
-                this._showBlock();
-            } else {
-                this._hideBlock();
-            }
+            this.isHidden = !this.isHidden;
+            this._updateBlockVisibility();
             this._updateAnswerButtonState();
         }
 
-        _showBlock() {
-            // 如果已经有显示的答案块，先删除它（防止重复）
-            if (this.currentAnswerBlock && this.currentAnswerBlock.parentNode) {
-                DOMHelper.removeElement(this.currentAnswerBlock);
-            }
-
-            const tempContainer = document.createElement('div');
-            tempContainer.innerHTML = this.originalHTML;
-            const restoredBlock = tempContainer.firstChild;
-
-            // 保存对新创建的答案块的引用
-            this.currentAnswerBlock = restoredBlock;
-
-            // 插入到笔记编辑器之后（如果可见）或按钮容器之后
-            const insertAfter = this.noteEditor.isVisible ?
-                this.noteEditor.getElement().nextSibling :
-                this.buttonContainer.nextSibling;
-            DOMHelper.insertElement(restoredBlock, this.parent, insertAfter);
-            this.isHidden = false;
-        }
-
-        _hideBlock() {
-            // 删除当前显示的答案块
-            if (this.currentAnswerBlock && this.currentAnswerBlock.parentNode) {
-                DOMHelper.removeElement(this.currentAnswerBlock);
-                this.currentAnswerBlock = null;
-            }
-            this.isHidden = true;
+        _updateBlockVisibility() {
+            // 使用 display 属性控制显示/隐藏
+            this.block.style.display = this.isHidden ? 'none' : '';
         }
 
         _updateAnswerButtonState() {
@@ -7334,16 +7303,24 @@
         }
 
         _handleGlobalToggle() {
-            const allHidden = this.controllers.every(ctrl => ctrl.getState());
-
-            this.controllers.forEach(controller => {
-                const shouldToggle = allHidden ? controller.getState() : !controller.getState();
-                if (shouldToggle) {
-                    controller.toggle();
-                }
+            // 获取所有答案块元素
+            const answerBlocks = document.querySelectorAll(this.config.get('selectors.answerBlock'));
+            
+            // 检查当前状态（只要有一个显示就算显示状态）
+            const isAnyVisible = Array.from(answerBlocks).some(block => block.style.display !== 'none');
+            
+            // 切换所有答案块的显示状态
+            answerBlocks.forEach(block => {
+                block.style.display = isAnyVisible ? 'none' : '';
             });
-
-            this._updateGlobalButtonState(!allHidden);
+            
+            // 同步更新所有控制器的状态
+            this.controllers.forEach(controller => {
+                controller.isHidden = !isAnyVisible;
+                controller._updateAnswerButtonState();
+            });
+            
+            this._updateGlobalButtonState(!isAnyVisible);
         }
 
         _updateGlobalButtonState(allHidden) {
