@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.9.1.4
+// @version      3.9.1.5
 // @description  这是一款面向学习场景的脚本工具，其集成了支持提示词定制的智能 AI 助手模块，通过 Web 自动化技术实现跨域提问（区别于传统模型 API 调用或题库检索方式）；同时提供答案动态显隐控制功能，适配多轮刷题需求；内置错题星级标记系统，基于错误频次实现重点内容优先级管理；搭载本地持久化存储的富文本笔记组件，支持知识点与解析的实时记录与安全留存；具备可配置化作业题目导出能力，支持得分、答案、解析等字段的自定义筛选，可快速生成结构化刷题集或背题手册；此外，工具还提供可视化控制面板作为配置入口，支持对上述全功能模块的参数与逻辑进行深度个性化定制，为高效学习与复习流程提供技术支撑。
 // @author       YJohn
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -7470,45 +7470,6 @@
     if (window.location.hostname.includes('doubao.com')) {
         // ===================== 豆包AI页面逻辑 =====================
         Logger.log('检测到豆包AI页面，正在初始化自动填充功能...');
-
-        /**
-         * 等待指定元素加载完成（MutationObserver 自动监听）
-         * @param {string} selector - 元素选择器
-         * @param {number} timeout - 超时时间（默认10秒）
-         * @returns {Promise<HTMLElement>} 加载完成的元素
-         */
-        function waitForElement(selector, timeout = 10000) {
-            return new Promise((resolve, reject) => {
-                // 先检查元素是否已存在
-                const existingElem = document.querySelector(selector);
-                if (existingElem) {
-                    resolve(existingElem);
-                    return;
-                }
-
-                // 监听DOM变化，自动识别元素加载
-                const observer = new MutationObserver((mutations) => {
-                    const elem = document.querySelector(selector);
-                    if (elem) {
-                        observer.disconnect(); // 找到元素后停止监听
-                        resolve(elem);
-                    }
-                });
-
-                // 监听整个文档的DOM变化（包含子节点新增/移除）
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true,
-                    attributes: false
-                });
-
-                // 超时兜底（避免无限等待）
-                setTimeout(() => {
-                    observer.disconnect();
-                    reject(new Error(`超时未找到元素：${selector}`));
-                }, timeout);
-            });
-        }
 
         /**
          * 检测是否为移动端设备
