@@ -1,7 +1,7 @@
 /**
  * NoteEditor - 富文本笔记编辑器
  * 提供所见即所得的笔记编辑功能
- * @version 3.12.0.8
+ * @version 3.12.0.9
  */
 class NoteEditor {
     constructor(questionId, questionNo, workKey, dbManager, config, styleGenerator) {

@@ -1,7 +1,7 @@
 /**
  * StyleGenerator - 样式生成器
  * 负责生成各种按钮和UI组件的样式
- * @version 3.12.0.8
+ * @version 3.12.0.9
  */
 class StyleGenerator {
     constructor(config) {

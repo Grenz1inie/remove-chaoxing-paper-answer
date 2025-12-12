@@ -1,7 +1,7 @@
 /**
  * DOMHelper - DOM操作辅助类
  * 提供通用的DOM元素创建和操作方法
- * @version 3.12.0.8
+ * @version 3.12.0.9
  */
 class DOMHelper {
     static createElement(tag, attributes = {}) {

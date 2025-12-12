@@ -1,7 +1,7 @@
 /**
  * ControlPanelUI - 控制面板UI组件
  * 提供设置、笔记管理、样式管理等功能的面板界面
- * @version 3.12.0.8
+ * @version 3.12.0.9
  */
 class ControlPanelUI {
     constructor(dbManager, workKey, config) {

@@ -1,7 +1,7 @@
 /**
  * DatabaseManager - IndexedDB数据库管理器
  * 负责笔记、设置、错题集等数据的持久化存储
- * @version 3.12.0.8
+ * @version 3.12.0.9
  * 
  * 数据库结构（v2 简化版，不兼容旧版）：
  * - notes: { id: 'workKey_questionId', workKey, questionId, questionNo, content, createdAt, updatedAt }
