@@ -36,6 +36,31 @@ class URLParser {
         }, 0);
         return `page_${Math.abs(hash).toString(36)}`;
     }
+
+    /**
+     * 从题目容器中解析题号
+     * @param {HTMLElement} questionContainer - 题目容器元素
+     * @returns {string} 题号字符串，解析失败返回'999'
+     */
+    static parseQuestionNumber(questionContainer) {
+        try {
+            const markName = questionContainer.querySelector('.mark_name');
+            if (!markName) return '999';
+            
+            // 获取第一个文本节点（题号所在位置）
+            const firstTextNode = markName.childNodes[0];
+            if (!firstTextNode || firstTextNode.nodeType !== Node.TEXT_NODE) return '999';
+            
+            // 提取题号（格式如"24. "）
+            const text = firstTextNode.textContent.trim();
+            const match = text.match(/^(\d+)\s*\./);
+            return match ? match[1] : '999';
+        } catch (error) {
+            // 使用console.error避免循环依赖Logger
+            console.error('解析题号失败', error);
+            return '999';
+        }
+    }
 }
 
 // 导出供其他模块使用
