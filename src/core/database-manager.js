@@ -1,14 +1,19 @@
 /**
  * DatabaseManager - IndexedDB数据库管理器
  * 负责笔记、设置、错题集等数据的持久化存储
- * @version 3.12.0.7
+ * @version 3.12.0.8
+ * 
+ * 数据库结构（v2 简化版，不兼容旧版）：
+ * - notes: { id: 'workKey_questionId', workKey, questionId, content, createdAt, updatedAt }
+ * - settings: { key, value }
+ * - mistakes: { id: 'workKey_questionId_mistake', workKey, questionId, questionNo, count, createdAt, updatedAt }
  */
 class DatabaseManager {
     constructor(config) {
         this.config = config;
         this.db = null;
-        this.dbName = config.get('database.name');
-        this.dbVersion = config.get('database.version');
+        this.dbName = 'ChaoxingNotesDB_v2'; // 使用新数据库名，与旧版完全隔离
+        this.dbVersion = 1;
     }
 
     /**
@@ -26,93 +31,63 @@ class DatabaseManager {
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                const transaction = event.target.transaction;
-                const oldVersion = event.oldVersion;
-                
-                // 创建新的对象存储
-                this._createStores(db, oldVersion);
-                
-                // 为已存在的表添加缺失的索引（数据库升级场景）
-                this._upgradeIndexes(db, transaction, oldVersion);
+                this._createStores(db);
             };
         });
     }
 
     /**
-     * 升级已存在表的索引
+     * 创建对象存储（表）
+     * 使用组合键作为主键，简化查询逻辑
      */
-    _upgradeIndexes(db, transaction, oldVersion) {
-        // 为 notes 表添加复合索引（如果缺失）
-        if (db.objectStoreNames.contains('notes')) {
-            const notesStore = transaction.objectStore('notes');
-            if (!notesStore.indexNames.contains('workKey_questionId')) {
-                notesStore.createIndex('workKey_questionId', ['workKey', 'questionId'], { unique: true });
-            }
-        }
-        
-        // 为 mistakes 表添加复合索引（如果缺失）
-        if (db.objectStoreNames.contains('mistakes')) {
-            const mistakesStore = transaction.objectStore('mistakes');
-            if (!mistakesStore.indexNames.contains('workKey_questionId')) {
-                mistakesStore.createIndex('workKey_questionId', ['workKey', 'questionId'], { unique: true });
-            }
-        }
-    }
-
-    /**
-     * 创建对象存储（表）和索引
-     * 支持数据库升级时为已存在的表添加新索引
-     */
-    _createStores(db, oldVersion) {
-        // 笔记存储（按 workKey + questionId 索引）
+    _createStores(db) {
+        // 笔记存储 - 主键: workKey_questionId
         if (!db.objectStoreNames.contains('notes')) {
-            const notesStore = db.createObjectStore('notes', { keyPath: 'id', autoIncrement: true });
+            const notesStore = db.createObjectStore('notes', { keyPath: 'id' });
             notesStore.createIndex('workKey', 'workKey', { unique: false });
-            notesStore.createIndex('questionId', 'questionId', { unique: false });
-            notesStore.createIndex('workKey_questionId', ['workKey', 'questionId'], { unique: true });
         }
 
-        // 设置存储（全局配置）
+        // 设置存储
         if (!db.objectStoreNames.contains('settings')) {
             db.createObjectStore('settings', { keyPath: 'key' });
         }
 
-        // 错题集存储
+        // 错题集存储 - 主键: workKey_questionId_mistake
         if (!db.objectStoreNames.contains('mistakes')) {
-            const mistakesStore = db.createObjectStore('mistakes', { keyPath: 'id', autoIncrement: true });
+            const mistakesStore = db.createObjectStore('mistakes', { keyPath: 'id' });
             mistakesStore.createIndex('workKey', 'workKey', { unique: false });
-            mistakesStore.createIndex('questionId', 'questionId', { unique: false });
-            mistakesStore.createIndex('workKey_questionId', ['workKey', 'questionId'], { unique: true });
         }
     }
 
     // ===================== 笔记操作 =====================
 
     /**
+     * 生成笔记ID
+     */
+    _getNoteId(workKey, questionId) {
+        return `${workKey}_${questionId}`;
+    }
+
+    /**
      * 保存笔记（新增或更新）
      */
     async saveNote(workKey, questionId, content) {
         const store = this._getStore('notes', 'readwrite');
-        const index = store.index('workKey_questionId');
+        const id = this._getNoteId(workKey, questionId);
 
         return new Promise((resolve, reject) => {
-            const getRequest = index.get([workKey, questionId]);
+            const getRequest = store.get(id);
 
             getRequest.onsuccess = () => {
                 const existing = getRequest.result;
                 const noteData = {
+                    id,
                     workKey,
                     questionId,
                     content,
+                    createdAt: existing?.createdAt || new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
-
-                if (existing) {
-                    noteData.id = existing.id;
-                    noteData.createdAt = existing.createdAt;
-                } else {
-                    noteData.createdAt = new Date().toISOString();
-                }
 
                 const putRequest = store.put(noteData);
                 putRequest.onsuccess = () => resolve(noteData);
@@ -128,10 +103,10 @@ class DatabaseManager {
      */
     async getNote(workKey, questionId) {
         const store = this._getStore('notes', 'readonly');
-        const index = store.index('workKey_questionId');
+        const id = this._getNoteId(workKey, questionId);
 
         return new Promise((resolve, reject) => {
-            const request = index.get([workKey, questionId]);
+            const request = store.get(id);
             request.onsuccess = () => resolve(request.result || null);
             request.onerror = () => reject(request.error);
         });
@@ -142,23 +117,12 @@ class DatabaseManager {
      */
     async deleteNote(workKey, questionId) {
         const store = this._getStore('notes', 'readwrite');
-        const index = store.index('workKey_questionId');
+        const id = this._getNoteId(workKey, questionId);
 
         return new Promise((resolve, reject) => {
-            const getRequest = index.get([workKey, questionId]);
-
-            getRequest.onsuccess = () => {
-                const existing = getRequest.result;
-                if (existing) {
-                    const deleteRequest = store.delete(existing.id);
-                    deleteRequest.onsuccess = () => resolve(true);
-                    deleteRequest.onerror = () => reject(deleteRequest.error);
-                } else {
-                    resolve(false);
-                }
-            };
-
-            getRequest.onerror = () => reject(getRequest.error);
+            const request = store.delete(id);
+            request.onsuccess = () => resolve(true);
+            request.onerror = () => reject(request.error);
         });
     }
 
@@ -177,7 +141,7 @@ class DatabaseManager {
     }
 
     /**
-     * 获取所有笔记（用于导出）
+     * 获取所有笔记（用于导出和控制面板）
      */
     async getAllNotes() {
         const store = this._getStore('notes', 'readonly');
@@ -190,6 +154,13 @@ class DatabaseManager {
     }
 
     /**
+     * 获取所有域名下的笔记（兼容控制面板调用）
+     */
+    async getAllDomainNotes() {
+        return this.getAllNotes();
+    }
+
+    /**
      * 批量导入笔记
      */
     async importNotes(notes) {
@@ -198,38 +169,24 @@ class DatabaseManager {
 
         for (const note of notes) {
             try {
+                const id = this._getNoteId(note.workKey, note.questionId);
+                const noteData = {
+                    id,
+                    workKey: note.workKey,
+                    questionId: note.questionId,
+                    content: note.content,
+                    createdAt: note.createdAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
                 await new Promise((resolve, reject) => {
-                    // 先检查是否存在
-                    const index = store.index('workKey_questionId');
-                    const getRequest = index.get([note.workKey, note.questionId]);
-
-                    getRequest.onsuccess = () => {
-                        const existing = getRequest.result;
-                        const noteData = {
-                            workKey: note.workKey,
-                            questionId: note.questionId,
-                            content: note.content,
-                            createdAt: note.createdAt || new Date().toISOString(),
-                            updatedAt: new Date().toISOString()
-                        };
-
-                        if (existing) {
-                            noteData.id = existing.id;
-                        }
-
-                        const putRequest = store.put(noteData);
-                        putRequest.onsuccess = () => {
-                            results.push({ success: true, note: noteData });
-                            resolve();
-                        };
-                        putRequest.onerror = () => {
-                            results.push({ success: false, note, error: putRequest.error });
-                            resolve();
-                        };
+                    const putRequest = store.put(noteData);
+                    putRequest.onsuccess = () => {
+                        results.push({ success: true, note: noteData });
+                        resolve();
                     };
-
-                    getRequest.onerror = () => {
-                        results.push({ success: false, note, error: getRequest.error });
+                    putRequest.onerror = () => {
+                        results.push({ success: false, note, error: putRequest.error });
                         resolve();
                     };
                 });
@@ -250,8 +207,8 @@ class DatabaseManager {
         const store = this._getStore('settings', 'readwrite');
 
         return new Promise((resolve, reject) => {
-            const request = store.put({ key, value, updatedAt: new Date().toISOString() });
-            request.onsuccess = () => resolve({ key, value });
+            const request = store.put({ key, value });
+            request.onsuccess = () => resolve(value);
             request.onerror = () => reject(request.error);
         });
     }
@@ -264,10 +221,7 @@ class DatabaseManager {
 
         return new Promise((resolve, reject) => {
             const request = store.get(key);
-            request.onsuccess = () => {
-                const result = request.result;
-                resolve(result ? result.value : defaultValue);
-            };
+            request.onsuccess = () => resolve(request.result?.value ?? defaultValue);
             request.onerror = () => reject(request.error);
         });
     }
@@ -304,78 +258,13 @@ class DatabaseManager {
         });
     }
 
-    // ===================== 错题集操作 =====================
+    // ===================== 错题操作 =====================
 
     /**
-     * 添加到错题集
+     * 生成错题ID
      */
-    async addMistake(workKey, questionId, questionData) {
-        const store = this._getStore('mistakes', 'readwrite');
-        const index = store.index('workKey_questionId');
-
-        return new Promise((resolve, reject) => {
-            const getRequest = index.get([workKey, questionId]);
-
-            getRequest.onsuccess = () => {
-                const existing = getRequest.result;
-                const mistakeData = {
-                    workKey,
-                    questionId,
-                    ...questionData,
-                    addedAt: existing?.addedAt || new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
-
-                if (existing) {
-                    mistakeData.id = existing.id;
-                }
-
-                const putRequest = store.put(mistakeData);
-                putRequest.onsuccess = () => resolve(mistakeData);
-                putRequest.onerror = () => reject(putRequest.error);
-            };
-
-            getRequest.onerror = () => reject(getRequest.error);
-        });
-    }
-
-    /**
-     * 从错题集移除
-     */
-    async removeMistake(workKey, questionId) {
-        const store = this._getStore('mistakes', 'readwrite');
-        const index = store.index('workKey_questionId');
-
-        return new Promise((resolve, reject) => {
-            const getRequest = index.get([workKey, questionId]);
-
-            getRequest.onsuccess = () => {
-                const existing = getRequest.result;
-                if (existing) {
-                    const deleteRequest = store.delete(existing.id);
-                    deleteRequest.onsuccess = () => resolve(true);
-                    deleteRequest.onerror = () => reject(deleteRequest.error);
-                } else {
-                    resolve(false);
-                }
-            };
-
-            getRequest.onerror = () => reject(getRequest.error);
-        });
-    }
-
-    /**
-     * 检查是否在错题集中
-     */
-    async isMistake(workKey, questionId) {
-        const store = this._getStore('mistakes', 'readonly');
-        const index = store.index('workKey_questionId');
-
-        return new Promise((resolve, reject) => {
-            const request = index.get([workKey, questionId]);
-            request.onsuccess = () => resolve(!!request.result);
-            request.onerror = () => reject(request.error);
-        });
+    _getMistakeId(workKey, questionId) {
+        return `${workKey}_${questionId}_mistake`;
     }
 
     /**
@@ -383,10 +272,10 @@ class DatabaseManager {
      */
     async getMistake(workKey, questionId, questionNo) {
         const store = this._getStore('mistakes', 'readonly');
-        const index = store.index('workKey_questionId');
+        const id = this._getMistakeId(workKey, questionId);
 
         return new Promise((resolve, reject) => {
-            const request = index.get([workKey, questionId]);
+            const request = store.get(id);
             request.onsuccess = () => resolve(request.result || null);
             request.onerror = () => reject(request.error);
         });
@@ -397,27 +286,22 @@ class DatabaseManager {
      */
     async addMistake(workKey, questionId, questionNo) {
         const store = this._getStore('mistakes', 'readwrite');
-        const index = store.index('workKey_questionId');
+        const id = this._getMistakeId(workKey, questionId);
 
         return new Promise((resolve, reject) => {
-            const getRequest = index.get([workKey, questionId]);
+            const getRequest = store.get(id);
 
             getRequest.onsuccess = () => {
                 const existing = getRequest.result;
                 const mistakeData = {
+                    id,
                     workKey,
                     questionId,
                     questionNo,
                     count: (existing?.count || 0) + 1,
+                    createdAt: existing?.createdAt || new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
-
-                if (existing) {
-                    mistakeData.id = existing.id;
-                    mistakeData.createdAt = existing.createdAt;
-                } else {
-                    mistakeData.createdAt = new Date().toISOString();
-                }
 
                 const putRequest = store.put(mistakeData);
                 putRequest.onsuccess = () => resolve(mistakeData);
@@ -425,6 +309,20 @@ class DatabaseManager {
             };
 
             getRequest.onerror = () => reject(getRequest.error);
+        });
+    }
+
+    /**
+     * 重置错题计数
+     */
+    async resetMistake(workKey, questionId) {
+        const store = this._getStore('mistakes', 'readwrite');
+        const id = this._getMistakeId(workKey, questionId);
+
+        return new Promise((resolve, reject) => {
+            const request = store.delete(id);
+            request.onsuccess = () => resolve(true);
+            request.onerror = () => reject(request.error);
         });
     }
 
@@ -478,6 +376,50 @@ class DatabaseManager {
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
             });
+        }
+
+        return true;
+    }
+
+    /**
+     * 导出所有数据（用于备份）
+     */
+    async exportAllData() {
+        const notes = await this.getAllNotes();
+        const settings = await this.getAllSettings();
+        const mistakes = await this.getAllMistakes();
+
+        return {
+            version: this.dbVersion,
+            exportedAt: new Date().toISOString(),
+            data: { notes, settings, mistakes }
+        };
+    }
+
+    /**
+     * 导入数据（用于恢复）
+     */
+    async importAllData(data) {
+        if (data.data?.notes) {
+            await this.importNotes(data.data.notes);
+        }
+        
+        if (data.data?.settings) {
+            for (const [key, value] of Object.entries(data.data.settings)) {
+                await this.saveSetting(key, value);
+            }
+        }
+
+        if (data.data?.mistakes) {
+            const store = this._getStore('mistakes', 'readwrite');
+            for (const mistake of data.data.mistakes) {
+                const id = this._getMistakeId(mistake.workKey, mistake.questionId);
+                await new Promise((resolve, reject) => {
+                    const putRequest = store.put({ ...mistake, id });
+                    putRequest.onsuccess = () => resolve();
+                    putRequest.onerror = () => reject(putRequest.error);
+                });
+            }
         }
 
         return true;
