@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         （开发版）超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.12.0.6
+// @version      3.12.0.7
 // @description  这是一款面向学习场景的脚本工具，其集成了支持提示词定制的智能 AI 助手模块，通过 Web 自动化技术实现跨域提问（区别于传统模型 API 调用或题库检索方式）；同时提供答案动态显隐控制功能，适配多轮刷题需求；内置错题星级标记系统，基于错误频次实现重点内容优先级管理；搭载本地持久化存储的富文本笔记组件，支持知识点与解析的实时记录与安全留存；具备可配置化作业题目导出能力，支持得分、答案、解析等字段的自定义筛选，可快速生成结构化刷题集或背题手册；此外，工具还提供可视化控制面板作为配置入口，支持对上述全功能模块的参数与逻辑进行深度个性化定制，为高效学习与复习流程提供技术支撑。
 // @author       YJohn
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -19,17 +19,17 @@
 // @connect      *.doubao.com
 // @connect      *
 // @require      https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/config.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/src/core/logger.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/src/core/url-parser.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/src/core/database-manager.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/src/ui/styles/style-generator.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/src/ui/components/dom-helper.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/src/ui/components/note-editor.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/src/ui/components/control-panel.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/src/controllers/answer-block-controller.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/src/controllers/global-controller.js
-// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@2fb358a/src/app.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/config.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/src/core/logger.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/src/core/url-parser.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/src/core/database-manager.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/src/ui/styles/style-generator.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/src/ui/components/dom-helper.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/src/ui/components/note-editor.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/src/ui/components/control-panel.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/src/controllers/answer-block-controller.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/src/controllers/global-controller.js
+// @require      https://cdn.jsdelivr.net/gh/Grenz1inie/remove-chaoxing-paper-answer@3da5a52/src/app.js
 // @run-at       document-end
 // @license MIT
 // @downloadURL https://update.greasyfork.org/scripts/555192/%E8%B6%85%E6%98%9F%E5%AD%A6%E4%B9%A0%E9%80%9A%E9%AB%98%E6%95%88%E5%88%B7%E9%A2%98%E5%B0%8F%E5%8A%A9%E6%89%8B.user.js

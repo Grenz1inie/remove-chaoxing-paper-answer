@@ -1,7 +1,7 @@
 /**
  * DatabaseManager - IndexedDB数据库管理器
  * 负责笔记、设置、错题集等数据的持久化存储
- * @version 3.12.0.6
+ * @version 3.12.0.7
  */
 class DatabaseManager {
     constructor(config) {
