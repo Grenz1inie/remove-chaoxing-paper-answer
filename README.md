@@ -41,19 +41,33 @@
 
 ---
 
-## ✨ 最新版本特性 (v3.10.0)
+## ✨ 最新版本特性 (v3.12.0)
 
-### 🔄 重大重构
-- **答案显示逻辑重构**：采用原生 `display` 属性控制答案显示/隐藏
-  - 移除复杂的 DOM 创建/删除逻辑，简化为 `display: 'none'` / `display: ''`
-  - 全局和单个答案控制器统一使用相同的显示/隐藏逻辑
-  - 提升性能和稳定性，降低代码复杂度
-  - 清理冗余代码（移除 `originalHTML`、`currentAnswerBlock` 等旧变量）
+### 🏗️ 模块化架构重构
+- **多文件模块拆分**：将7000+行的单文件拆分为12个独立模块
+  - `config.js` - 配置管理模块
+  - `src/core/logger.js` - 日志工具类
+  - `src/core/url-parser.js` - URL解析工具类
+  - `src/core/database-manager.js` - IndexedDB数据库管理器
+  - `src/ui/styles/style-generator.js` - 样式生成器
+  - `src/ui/components/dom-helper.js` - DOM操作辅助类
+  - `src/ui/components/note-editor.js` - 富文本笔记编辑器
+  - `src/ui/components/control-panel.js` - 控制面板UI组件
+  - `src/controllers/answer-block-controller.js` - 答案块控制器
+  - `src/controllers/global-controller.js` - 全局控制器
+  - `src/app.js` - 主应用类
+  - `main.user.js` - 精简入口文件（从7060行减至187行）
 
-### ⚡ 性能优化
-- **减少 DOM 操作**：不再频繁创建/删除答案块元素，直接操作样式属性
-- **代码简化**：核心逻辑从 30+ 行简化到 3 行，提升可维护性
-- **兼容性增强**：使用标准 DOM API，确保跨浏览器兼容性
+### 📦 CDN加载优化
+- **jsDelivr CDN分发**：所有模块通过jsDelivr CDN加载，提升加载速度
+- **按需加载**：各模块独立加载，便于缓存和更新
+- **版本控制**：支持通过分支/标签指定模块版本
+
+### 🔧 架构优势
+- **高可维护性**：单一职责原则，每个模块功能明确
+- **高可扩展性**：新功能可独立开发和集成
+- **易于调试**：问题可定位到具体模块
+- **代码复用**：公共组件可在多处复用
 
 ---
 
@@ -106,6 +120,13 @@
 ---
 
 ## 📜 完整更新日志
+
+### v3.12.0 (2025-01-XX) 🏗️ 模块化架构重构
+- **多文件模块拆分**：将7060行单文件拆分为12个独立模块
+- **目录结构规范化**：建立 `src/core`、`src/ui`、`src/controllers` 标准目录
+- **CDN分发优化**：所有模块通过jsDelivr CDN加载
+- **入口文件精简**：main.user.js从7060行精简至187行（减少97%）
+- **架构现代化**：采用高可用、高可维护、高可扩展的模块化设计
 
 ### v3.10.0 (2025-12-10) 🔄 重大重构
 - **答案显示逻辑重构**：采用原生 `display` 属性控制答案显示/隐藏
