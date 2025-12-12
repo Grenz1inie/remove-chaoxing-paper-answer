@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         （开发版）超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.13.1
+// @version      3.13.2
 // @description  这是一款面向学习场景的脚本工具，其集成了支持提示词定制的智能 AI 助手模块，通过 Web 自动化技术实现跨域提问（区别于传统模型 API 调用或题库检索方式）；同时提供答案动态显隐控制功能，适配多轮刷题需求；内置错题星级标记系统，基于错误频次实现重点内容优先级管理；搭载本地持久化存储的富文本笔记组件，支持知识点与解析的实时记录与安全留存；具备可配置化作业题目导出能力，支持得分、答案、解析等字段的自定义筛选，可快速生成结构化刷题集或背题手册；此外，工具还提供可视化控制面板作为配置入口，支持对上述全功能模块的参数与逻辑进行深度个性化定制，为高效学习与复习流程提供技术支撑。
 // @author       YJohn
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -75,8 +75,51 @@
             sendBtnSelector: '#flow-end-msg-send',
             waitTimeout: 10000,
             pollInterval: 100,
-            chunkSize: 2 * 1024 * 1024
+            chunkSize: 2 * 1024 * 1024,
+            elementLoadTimeout: 10000
         };
+
+        /**
+         * 自动等待元素加载完成（MutationObserver）
+         * @param {string} selector - 元素选择器
+         * @param {number} timeout - 超时时间
+         * @returns {Promise<HTMLElement>} 加载完成的元素
+         */
+        function waitForElement(selector, timeout = DOUBAO_CONFIG.elementLoadTimeout) {
+            return new Promise((resolve, reject) => {
+                // 先检查元素是否已存在
+                const existingElem = document.querySelector(selector);
+                if (existingElem) {
+                    console.log(`[元素等待] 元素已存在: ${selector}`);
+                    resolve(existingElem);
+                    return;
+                }
+
+                console.log(`[元素等待] 开始监听元素: ${selector}`);
+                // 监听DOM变化，自动识别元素加载
+                const observer = new MutationObserver(() => {
+                    const elem = document.querySelector(selector);
+                    if (elem) {
+                        observer.disconnect();
+                        console.log(`[元素等待] 元素加载成功: ${selector}`);
+                        resolve(elem);
+                    }
+                });
+
+                // 监听整个文档的DOM变化
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                    attributes: false
+                });
+
+                // 超时兜底
+                setTimeout(() => {
+                    observer.disconnect();
+                    reject(new Error(`超时未找到元素: ${selector}`));
+                }, timeout);
+            });
+        }
 
         /**
          * 读取混合内容（文字+多图）
@@ -221,6 +264,17 @@
         }
 
         /**
+         * 解锁发送按钮（移除禁用状态）
+         */
+        function unlockSendButton(sendBtn) {
+            console.log('[发送按钮解锁] 开始解锁发送按钮');
+            sendBtn.removeAttribute('disabled');
+            sendBtn.setAttribute('aria-disabled', 'false');
+            sendBtn.style.pointerEvents = 'auto';
+            console.log('[发送按钮解锁] 解锁完成');
+        }
+
+        /**
          * 检查发送按钮是否可用
          */
         function isSendBtnEnabled() {
@@ -267,9 +321,11 @@
          */
         async function autoSendMessage() {
             try {
-                // 等待页面加载
-                Logger.log('⏱️ 等待1.5秒确保页面加载...');
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                // 自动等待元素加载（无固定延迟）
+                Logger.log('🔍 等待页面元素加载...');
+                const inputElem = await waitForElement(DOUBAO_CONFIG.inputSelector);
+                const sendBtn = await waitForElement(DOUBAO_CONFIG.sendBtnSelector);
+                Logger.success('✅ 输入框和发送按钮已加载');
 
                 // 读取混合内容
                 const mixedContent = readMixedContent();
@@ -277,12 +333,6 @@
                     Logger.warn('未找到待提问的内容');
                     clearMixedContent();
                     return;
-                }
-
-                // 检查输入框
-                const inputElem = document.querySelector(DOUBAO_CONFIG.inputSelector);
-                if (!inputElem) {
-                    throw new Error('未找到输入框');
                 }
 
                 // 判断场景类型
@@ -330,16 +380,16 @@
                     }
                 }
 
-                // 轮询检测发送按钮
+                // 解锁并轮询检测发送按钮
                 Logger.log('所有内容已输入，开始轮询检测发送按钮...');
                 const canSend = await waitSendBtnWithPolling();
 
                 if (canSend) {
-                    const sendBtn = document.querySelector(DOUBAO_CONFIG.sendBtnSelector);
-                    if (sendBtn) {
-                        sendBtn.click();
-                        Logger.success('✅ 已自动发送到豆包AI');
-                    }
+                    // 解锁发送按钮（确保可点击）
+                    unlockSendButton(sendBtn);
+                    // 点击发送
+                    sendBtn.click();
+                    Logger.success('✅ 已自动发送到豆包AI');
                 } else {
                     alert('⚠️ 发送按钮超时不可用，请手动点击发送');
                     Logger.warn('发送按钮10秒超时');
