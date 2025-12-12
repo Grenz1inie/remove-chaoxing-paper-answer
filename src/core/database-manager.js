@@ -350,6 +350,56 @@ class DatabaseManager {
     }
 
     /**
+     * 获取特定题目的错题记录
+     */
+    async getMistake(workKey, questionId, questionNo) {
+        const store = this._getStore('mistakes', 'readonly');
+        const index = store.index('workKey_questionId');
+
+        return new Promise((resolve, reject) => {
+            const request = index.get([workKey, questionId]);
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    /**
+     * 添加错题记录（增加计数）
+     */
+    async addMistake(workKey, questionId, questionNo) {
+        const store = this._getStore('mistakes', 'readwrite');
+        const index = store.index('workKey_questionId');
+
+        return new Promise((resolve, reject) => {
+            const getRequest = index.get([workKey, questionId]);
+
+            getRequest.onsuccess = () => {
+                const existing = getRequest.result;
+                const mistakeData = {
+                    workKey,
+                    questionId,
+                    questionNo,
+                    count: (existing?.count || 0) + 1,
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (existing) {
+                    mistakeData.id = existing.id;
+                    mistakeData.createdAt = existing.createdAt;
+                } else {
+                    mistakeData.createdAt = new Date().toISOString();
+                }
+
+                const putRequest = store.put(mistakeData);
+                putRequest.onsuccess = () => resolve(mistakeData);
+                putRequest.onerror = () => reject(putRequest.error);
+            };
+
+            getRequest.onerror = () => reject(getRequest.error);
+        });
+    }
+
+    /**
      * 获取所有错题
      */
     async getAllMistakes() {

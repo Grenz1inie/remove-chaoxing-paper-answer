@@ -111,9 +111,9 @@ class NoteEditor {
 
         // 加载已保存的笔记
         try {
-            const savedContent = await this.dbManager.getNote(this.workKey, this.questionId, this.questionNo);
-            if (savedContent) {
-                this.editor.innerHTML = this._sanitizeHTML(savedContent);
+            const note = await this.dbManager.getNote(this.workKey, this.questionId);
+            if (note && note.content) {
+                this.editor.innerHTML = this._sanitizeHTML(note.content);
             }
         } catch (error) {
             Logger.error(this.config.get('messages.noteLoadError'), error);
@@ -414,7 +414,7 @@ class NoteEditor {
     async save() {
         try {
             const content = this.editor.innerHTML;
-            await this.dbManager.saveNote(this.workKey, this.questionId, this.questionNo, content);
+            await this.dbManager.saveNote(this.workKey, this.questionId, content);
         } catch (error) {
             Logger.error('保存笔记失败', error);
         }
