@@ -128,6 +128,35 @@ class DatabaseManager {
     }
 
     /**
+     * 批量删除笔记（通过ID列表）
+     */
+    async deleteNotes(noteIds) {
+        const store = this._getStore('notes', 'readwrite');
+        const results = { success: 0, failed: 0 };
+
+        for (const noteId of noteIds) {
+            try {
+                await new Promise((resolve, reject) => {
+                    const request = store.delete(noteId);
+                    request.onsuccess = () => {
+                        results.success++;
+                        resolve();
+                    };
+                    request.onerror = () => {
+                        results.failed++;
+                        reject(request.error);
+                    };
+                });
+            } catch (error) {
+                results.failed++;
+                console.error(`删除笔记失败 ${noteId}:`, error);
+            }
+        }
+
+        return results;
+    }
+
+    /**
      * 获取当前作业的所有笔记
      */
     async getNotesByWorkKey(workKey) {
