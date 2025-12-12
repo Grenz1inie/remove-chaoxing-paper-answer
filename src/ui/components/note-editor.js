@@ -414,7 +414,7 @@ class NoteEditor {
     async save() {
         try {
             const content = this.editor.innerHTML;
-            await this.dbManager.saveNote(this.workKey, this.questionId, content);
+            await this.dbManager.saveNote(this.workKey, this.questionId, content, this.questionNo);
         } catch (error) {
             Logger.error('保存笔记失败', error);
         }

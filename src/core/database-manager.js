@@ -4,7 +4,7 @@
  * @version 3.12.0.8
  * 
  * 数据库结构（v2 简化版，不兼容旧版）：
- * - notes: { id: 'workKey_questionId', workKey, questionId, content, createdAt, updatedAt }
+ * - notes: { id: 'workKey_questionId', workKey, questionId, questionNo, content, createdAt, updatedAt }
  * - settings: { key, value }
  * - mistakes: { id: 'workKey_questionId_mistake', workKey, questionId, questionNo, count, createdAt, updatedAt }
  */
@@ -71,7 +71,7 @@ class DatabaseManager {
     /**
      * 保存笔记（新增或更新）
      */
-    async saveNote(workKey, questionId, content) {
+    async saveNote(workKey, questionId, content, questionNo = '999') {
         const store = this._getStore('notes', 'readwrite');
         const id = this._getNoteId(workKey, questionId);
 
@@ -84,6 +84,7 @@ class DatabaseManager {
                     id,
                     workKey,
                     questionId,
+                    questionNo,
                     content,
                     createdAt: existing?.createdAt || new Date().toISOString(),
                     updatedAt: new Date().toISOString()
