@@ -454,7 +454,7 @@ class Config {
         // ========== 数据库配置 ==========
         database: {
             name: 'ChaoxingNotesDB',     // IndexedDB 数据库名称
-            version: 4,                   // 数据库版本号（v4：添加错题记录存储）
+            version: 5,                   // 数据库版本号（v5：添加复合索引支持）
             stores: {
                 notes: 'notes',           // 笔记存储名称
                 attachments: 'attachments', // 附件存储名称

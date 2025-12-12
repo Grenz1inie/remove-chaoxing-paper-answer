@@ -26,15 +26,44 @@ class DatabaseManager {
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                this._createStores(db);
+                const transaction = event.target.transaction;
+                const oldVersion = event.oldVersion;
+                
+                // 创建新的对象存储
+                this._createStores(db, oldVersion);
+                
+                // 为已存在的表添加缺失的索引（数据库升级场景）
+                this._upgradeIndexes(db, transaction, oldVersion);
             };
         });
     }
 
     /**
-     * 创建对象存储（表）
+     * 升级已存在表的索引
      */
-    _createStores(db) {
+    _upgradeIndexes(db, transaction, oldVersion) {
+        // 为 notes 表添加复合索引（如果缺失）
+        if (db.objectStoreNames.contains('notes')) {
+            const notesStore = transaction.objectStore('notes');
+            if (!notesStore.indexNames.contains('workKey_questionId')) {
+                notesStore.createIndex('workKey_questionId', ['workKey', 'questionId'], { unique: true });
+            }
+        }
+        
+        // 为 mistakes 表添加复合索引（如果缺失）
+        if (db.objectStoreNames.contains('mistakes')) {
+            const mistakesStore = transaction.objectStore('mistakes');
+            if (!mistakesStore.indexNames.contains('workKey_questionId')) {
+                mistakesStore.createIndex('workKey_questionId', ['workKey', 'questionId'], { unique: true });
+            }
+        }
+    }
+
+    /**
+     * 创建对象存储（表）和索引
+     * 支持数据库升级时为已存在的表添加新索引
+     */
+    _createStores(db, oldVersion) {
         // 笔记存储（按 workKey + questionId 索引）
         if (!db.objectStoreNames.contains('notes')) {
             const notesStore = db.createObjectStore('notes', { keyPath: 'id', autoIncrement: true });
