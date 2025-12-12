@@ -64,6 +64,38 @@ class AnswerBlockController {
         return questionContainer ? URLParser.parseQuestionNumber(questionContainer) : '999';
     }
 
+    /**
+     * 下载图片并转换为Base64
+     * @param {string} url - 图片URL
+     * @returns {Promise<{base64: string, type: string}>} Base64数据和MIME类型
+     */
+    _downloadImageAsBase64(url) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: url,
+                responseType: 'blob',
+                onload: (response) => {
+                    try {
+                        const blob = response.response;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            resolve({
+                                base64: reader.result,
+                                type: blob.type || 'image/png'
+                            });
+                        };
+                        reader.onerror = () => reject(new Error('FileReader转换失败'));
+                        reader.readAsDataURL(blob);
+                    } catch (error) {
+                        reject(error);
+                    }
+                },
+                onerror: (error) => reject(new Error(`图片下载失败: ${url}`))
+            });
+        });
+    }
+
     async initialize() {
         this._hideBlockInitial();
         await this._createButtons();
@@ -435,8 +467,46 @@ class AnswerBlockController {
             });
         }
 
-        // 使用 GM_setValue 存储题目内容（拼接好前后缀后存储）
-        const storageKey = this.config.get('askDoubaoButton.storageKey');
+        // 4. 提取题目中的图片
+        Logger.log('开始提取题目图片...');
+        const images = [];
+        const qtContent = markName ? markName.querySelector('.qtContent') : null;
+        if (qtContent) {
+            const imgElements = qtContent.querySelectorAll('img');
+            for (let i = 0; i < imgElements.length; i++) {
+                const imgUrl = imgElements[i].src || imgElements[i].getAttribute('data-original');
+                if (imgUrl) {
+                    images.push(imgUrl);
+                    console.log(`📷 发现图片 ${i + 1}: ${imgUrl}`);
+                }
+            }
+        }
+        Logger.log(`共找到 ${images.length} 张图片`);
+
+        // 5. 下载图片并转换为Base64
+        const imageDataList = [];
+        if (images.length > 0) {
+            Logger.log('开始下载图片...');
+            for (let i = 0; i < images.length; i++) {
+                try {
+                    Logger.log(`下载图片 ${i + 1}/${images.length}...`);
+                    const imageData = await this._downloadImageAsBase64(images[i]);
+                    imageDataList.push({
+                        url: images[i],
+                        base64: imageData.base64,
+                        type: imageData.type,
+                        name: `image_${i}.png`
+                    });
+                    Logger.success(`图片 ${i + 1} 下载成功`);
+                } catch (error) {
+                    Logger.warn(`图片 ${i + 1} 下载失败，跳过: ${error.message}`);
+                    // 跳过失败的图片，继续下载其他图片
+                }
+            }
+            Logger.log(`成功下载 ${imageDataList.length}/${images.length} 张图片`);
+        }
+
+        // 使用 GM_setValue 存储题目内容+图片（支持多图分片存储）
         const doubaoBaseUrl = this.config.get('askDoubaoButton.doubaoUrl');
 
         try {
@@ -466,8 +536,8 @@ class AnswerBlockController {
             // 拼接完整内容（前缀 + 题目 + 后缀）
             const fullContent = processedPrefix + questionText.trim() + processedSuffix;
 
-            // 存储完整内容到GM缓存
-            GM_setValue(storageKey, fullContent);
+            // 存储混合内容到GM缓存（文字+多图支持）
+            this._saveMixedContent(fullContent, imageDataList);
 
             // 构建目标URL
             const targetUrl = aiChatId ? `https://www.doubao.com/chat/${aiChatId}` : doubaoBaseUrl;
@@ -477,7 +547,8 @@ class AnswerBlockController {
             console.log('  前缀:', processedPrefix ? `"${processedPrefix}"` : '(无)');
             console.log('  题目长度:', questionText.trim().length);
             console.log('  后缀:', processedSuffix ? `"${processedSuffix}"` : '(无)');
-            console.log('  最终内容长度:', fullContent.length);
+            console.log('  文字内容长度:', fullContent.length);
+            console.log('  图片数量:', imageDataList.length);
             console.log('  目标URL:', targetUrl);
 
             // 关闭旧的豆包AI标签页（如果存在）
@@ -977,6 +1048,53 @@ class AnswerBlockController {
 
     getState() {
         return this.isHidden;
+    }
+
+    /**
+     * 存储混合内容（文字+多图分片存储）
+     * @param {string} text - 文字内容
+     * @param {Array} imageDataList - 图片数据数组 [{base64, type, name, url}]
+     */
+    _saveMixedContent(text, imageDataList) {
+        const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB分片大小
+        
+        console.log(`[分片存储] 开始存储混合内容：文字=${!!text}, 图片数=${imageDataList.length}`);
+
+        // 构建元信息
+        const meta = {
+            text: text,
+            hasText: !!text,
+            hasImage: imageDataList.length > 0,
+            imageCount: imageDataList.length,
+            images: imageDataList.map((img, index) => ({
+                name: img.name,
+                type: img.type,
+                url: img.url,
+                totalLen: img.base64.length,
+                totalChunks: Math.ceil(img.base64.length / CHUNK_SIZE),
+                index: index
+            }))
+        };
+
+        // 存储元信息
+        GM_setValue('chaoxing_doubao_meta', meta);
+        console.log(`[分片存储] 元信息已保存，图片数=${meta.imageCount}`);
+
+        // 存储每张图片的Base64分片
+        imageDataList.forEach((imageData, imgIndex) => {
+            const base64 = imageData.base64;
+            const totalChunks = Math.ceil(base64.length / CHUNK_SIZE);
+            
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * CHUNK_SIZE;
+                const end = Math.min((i + 1) * CHUNK_SIZE, base64.length);
+                const chunk = base64.slice(start, end);
+                GM_setValue(`chaoxing_doubao_img${imgIndex}_chunk_${i}`, chunk);
+                console.log(`[分片存储] 图片${imgIndex} 分片${i + 1}/${totalChunks} 已保存，长度=${chunk.length}`);
+            }
+        });
+
+        Logger.success(`混合内容已保存：文字=${meta.hasText}, 图片=${meta.imageCount}张`);
     }
 }
 

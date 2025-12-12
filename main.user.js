@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         （开发版）超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.12.0.9
+// @version      3.13.0
 // @description  这是一款面向学习场景的脚本工具，其集成了支持提示词定制的智能 AI 助手模块，通过 Web 自动化技术实现跨域提问（区别于传统模型 API 调用或题库检索方式）；同时提供答案动态显隐控制功能，适配多轮刷题需求；内置错题星级标记系统，基于错误频次实现重点内容优先级管理；搭载本地持久化存储的富文本笔记组件，支持知识点与解析的实时记录与安全留存；具备可配置化作业题目导出能力，支持得分、答案、解析等字段的自定义筛选，可快速生成结构化刷题集或背题手册；此外，工具还提供可视化控制面板作为配置入口，支持对上述全功能模块的参数与逻辑进行深度个性化定制，为高效学习与复习流程提供技术支撑。
 // @author       YJohn
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -68,115 +68,261 @@
     // 检测当前页面是超星还是豆包
     if (window.location.hostname.includes('doubao.com')) {
         // ===================== 豆包AI页面逻辑 =====================
-        Logger.log('检测到豆包AI页面，正在初始化自动填充功能...');
+        Logger.log('检测到豆包AI页面，正在初始化自动填充功能（支持文字+多图）...');
+
+        const DOUBAO_CONFIG = {
+            inputSelector: 'textarea[data-testid="chat_input_input"]',
+            sendBtnSelector: '#flow-end-msg-send',
+            waitTimeout: 10000,
+            pollInterval: 100,
+            chunkSize: 2 * 1024 * 1024
+        };
 
         /**
-         * 检测是否为移动端设备
-         * @returns {boolean} true表示移动端，false表示桌面端
+         * 读取混合内容（文字+多图）
          */
-        function isMobileDevice() {
-            return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        function readMixedContent() {
+            console.log('[分片读取] 开始读取混合内容');
+            const meta = GM_getValue('chaoxing_doubao_meta', null);
+            if (!meta) {
+                console.log('[分片读取] 未找到元信息');
+                return null;
+            }
+
+            const result = {
+                text: meta.text || '',
+                hasText: meta.hasText,
+                hasImage: meta.hasImage,
+                imageCount: meta.imageCount,
+                images: []
+            };
+
+            // 读取每张图片的分片
+            if (meta.hasImage && meta.images && meta.images.length > 0) {
+                for (let imgIndex = 0; imgIndex < meta.images.length; imgIndex++) {
+                    const imgMeta = meta.images[imgIndex];
+                    let fullBase64 = '';
+
+                    // 拼接该图片的所有分片
+                    for (let i = 0; i < imgMeta.totalChunks; i++) {
+                        const chunk = GM_getValue(`chaoxing_doubao_img${imgIndex}_chunk_${i}`, '');
+                        if (!chunk) {
+                            console.error(`[分片读取] 图片${imgIndex} 分片${i}为空`);
+                            throw new Error(`图片${imgIndex} 分片${i}为空`);
+                        }
+                        fullBase64 += chunk;
+                    }
+
+                    if (fullBase64.length !== imgMeta.totalLen) {
+                        console.error(`[分片读取] 图片${imgIndex} 拼接异常`);
+                        throw new Error(`图片${imgIndex} 拼接异常`);
+                    }
+
+                    result.images.push({
+                        base64: fullBase64,
+                        type: imgMeta.type,
+                        name: imgMeta.name
+                    });
+
+                    console.log(`[分片读取] 图片${imgIndex + 1}/${meta.images.length} 读取完成`);
+                }
+            }
+
+            console.log(`[分片读取] 混合内容读取完成：文字=${result.hasText}, 图片=${result.imageCount}张`);
+            return result;
         }
 
         /**
-         * 豆包AI自动发送逻辑（读取完整内容并填充）
-         * 固定等待1.5秒确保页面加载完成
+         * 清理混合内容缓存
+         */
+        function clearMixedContent() {
+            console.log('[分片清理] 开始清理混合内容');
+            const meta = GM_getValue('chaoxing_doubao_meta', null);
+            if (meta && meta.hasImage && meta.images) {
+                for (let imgIndex = 0; imgIndex < meta.images.length; imgIndex++) {
+                    const imgMeta = meta.images[imgIndex];
+                    for (let i = 0; i < imgMeta.totalChunks; i++) {
+                        GM_deleteValue(`chaoxing_doubao_img${imgIndex}_chunk_${i}`);
+                    }
+                }
+            }
+            GM_deleteValue('chaoxing_doubao_meta');
+            console.log('[分片清理] 清理完成');
+        }
+
+        /**
+         * Base64转File对象
+         */
+        function base64ToFile(base64, name, type) {
+            const pure = base64.split(',')[1];
+            const bytes = atob(pure);
+            const buf = new ArrayBuffer(bytes.length);
+            const uint8 = new Uint8Array(buf);
+            for (let i = 0; i < bytes.length; i++) {
+                uint8[i] = bytes.charCodeAt(i);
+            }
+            return new File([buf], name, { type: type });
+        }
+
+        /**
+         * 输入文字到输入框
+         */
+        function inputTextToInput(text) {
+            console.log('[文字输入] 开始输入文字');
+            return new Promise(resolve => {
+                const input = document.querySelector(DOUBAO_CONFIG.inputSelector);
+                if (!input) {
+                    throw new Error('未找到输入框');
+                }
+                input.focus();
+                input.value = (input.value || '') + text;
+                input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                console.log('[文字输入] 文字输入完成');
+                setTimeout(resolve, 300);
+            });
+        }
+
+        /**
+         * 粘贴图片到输入框
+         */
+        function pasteImageToInput(file) {
+            console.log('[图片粘贴] 开始粘贴图片');
+            return new Promise(resolve => {
+                const input = document.querySelector(DOUBAO_CONFIG.inputSelector);
+                if (!input) {
+                    throw new Error('未找到输入框');
+                }
+
+                const dt = new DataTransfer();
+                dt.items.add(file);
+
+                const pasteEvent = new ClipboardEvent('paste', {
+                    bubbles: true,
+                    cancelable: true,
+                    clipboardData: dt
+                });
+
+                input.focus();
+                input.dispatchEvent(pasteEvent);
+                console.log('[图片粘贴] 粘贴完成');
+                resolve();
+            });
+        }
+
+        /**
+         * 检查发送按钮是否可用
+         */
+        function isSendBtnEnabled() {
+            const btn = document.querySelector(DOUBAO_CONFIG.sendBtnSelector);
+            if (!btn) return false;
+            const ariaDisabled = btn.getAttribute('aria-disabled') === 'true';
+            return !ariaDisabled;
+        }
+
+        /**
+         * 轮询等待发送按钮可用
+         */
+        function waitSendBtnWithPolling() {
+            return new Promise(resolve => {
+                console.log(`[轮询检测] 开始轮询，间隔=${DOUBAO_CONFIG.pollInterval}ms，超时=${DOUBAO_CONFIG.waitTimeout}ms`);
+                
+                // 立即检查一次
+                if (isSendBtnEnabled()) {
+                    console.log('[轮询检测] 按钮已可用');
+                    return resolve(true);
+                }
+
+                let pollCount = 0;
+                const pollTimer = setInterval(() => {
+                    pollCount++;
+                    if (isSendBtnEnabled()) {
+                        clearInterval(pollTimer);
+                        clearTimeout(timeoutTimer);
+                        console.log(`[轮询检测] 第${pollCount}次检测成功，按钮可用`);
+                        resolve(true);
+                    }
+                }, DOUBAO_CONFIG.pollInterval);
+
+                const timeoutTimer = setTimeout(() => {
+                    clearInterval(pollTimer);
+                    console.log(`[轮询检测] 超时，共轮询${pollCount}次`);
+                    resolve(false);
+                }, DOUBAO_CONFIG.waitTimeout);
+            });
+        }
+
+        /**
+         * 豆包AI自动发送逻辑（支持文字+多图）
          */
         async function autoSendMessage() {
-            const storageKey = 'chaoxing_doubao_question';
-
             try {
-                // 读取内容
-                const fullContent = GM_getValue(storageKey, '');
-                console.log('🔍 读取GM存储的完整内容：');
-                console.log('  内容预览:', fullContent ? `${fullContent.substring(0, 100)}...` : '(空)');
-                console.log('  内容长度:', fullContent.length);
+                // 等待页面加载
+                Logger.log('⏱️ 等待1.5秒确保页面加载...');
+                await new Promise(resolve => setTimeout(resolve, 1500));
 
-                if (!fullContent) {
-                    Logger.warn('未找到待提问的题目内容');
-                    GM_deleteValue(storageKey);
+                // 读取混合内容
+                const mixedContent = readMixedContent();
+                if (!mixedContent || (!mixedContent.hasText && !mixedContent.hasImage)) {
+                    Logger.warn('未找到待提问的内容');
+                    clearMixedContent();
                     return;
                 }
 
-                Logger.log('找到待提问题目，准备自动填充和发送...');
+                Logger.log(`找到混合内容：文字=${mixedContent.hasText}, 图片=${mixedContent.imageCount}张`);
 
-                // 强制固定等待1.5秒，确保页面完全加载
-                Logger.log('⏱️ 等待 1.5 秒确保页面加载...');
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                // 直接获取元素
-                const inputElem = document.querySelector('textarea[data-testid="chat_input_input"]');
-                const sendBtn = document.querySelector('button[data-testid="chat_input_send_button"]');
-
-                if (!inputElem || !sendBtn) {
-                    throw new Error('等待1.5秒后仍未找到输入框或发送按钮');
+                // 检查输入框
+                const inputElem = document.querySelector(DOUBAO_CONFIG.inputSelector);
+                if (!inputElem) {
+                    throw new Error('未找到输入框');
                 }
 
-                Logger.log('✅ 已获取输入框和发送按钮');
+                // 1. 先输入文字
+                if (mixedContent.hasText) {
+                    await inputTextToInput(mixedContent.text);
+                    Logger.success('文字已输入');
+                }
 
-                // 聚焦输入框
-                inputElem.click();
-                inputElem.focus();
+                // 2. 依次粘贴所有图片（无间隔）
+                if (mixedContent.hasImage && mixedContent.images.length > 0) {
+                    for (let i = 0; i < mixedContent.images.length; i++) {
+                        const imgData = mixedContent.images[i];
+                        const file = base64ToFile(imgData.base64, imgData.name, imgData.type);
+                        await pasteImageToInput(file);
+                        Logger.success(`图片${i + 1}/${mixedContent.imageCount} 已粘贴`);
+                    }
+                }
 
-                // 解锁输入逻辑
-                document.execCommand('insertText', false, ' ');
-                inputElem.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-                inputElem.select();
-                document.execCommand('backspace');
+                // 3. 轮询检测发送按钮
+                Logger.log('所有内容已输入，开始轮询检测发送按钮...');
+                const canSend = await waitSendBtnWithPolling();
 
-                // 输入内容
-                document.execCommand('insertText', false, fullContent);
-                inputElem.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-
-                Logger.success('题目已填充到输入框');
-                console.log('输入框内容:', inputElem.value.substring(0, 100) + '...');
-
-                // 额外等待一小段时间，确保输入完全处理
-                await new Promise(resolve => setTimeout(resolve, 300));
-
-                // 使用 Enter 键发送
-                inputElem.dispatchEvent(new KeyboardEvent('keydown', {
-                    bubbles: true,
-                    cancelable: true,
-                    key: 'Enter',
-                    code: 'Enter',
-                    which: 13,
-                    keyCode: 13
-                }));
-
-                inputElem.dispatchEvent(new KeyboardEvent('keyup', {
-                    bubbles: true,
-                    cancelable: true,
-                    key: 'Enter',
-                    code: 'Enter',
-                    which: 13,
-                    keyCode: 13
-                }));
-
-                Logger.success('已自动发送题目到豆包AI');
-                console.log('已模拟按下 Enter 键发送');
+                if (canSend) {
+                    const sendBtn = document.querySelector(DOUBAO_CONFIG.sendBtnSelector);
+                    if (sendBtn) {
+                        sendBtn.click();
+                        Logger.success('✅ 已自动发送到豆包AI');
+                    }
+                } else {
+                    alert('⚠️ 发送按钮超时不可用，请手动点击发送');
+                    Logger.warn('发送按钮10秒超时');
+                }
 
             } catch (error) {
                 Logger.error('豆包AI自动填充失败', error);
-                console.error('详细错误:', error.message);
+                console.error('详细错误:', error);
             } finally {
                 // 清除缓存
-                try {
-                    GM_deleteValue(storageKey);
-                    console.log('已清除本地缓存');
-                } catch (e) {
-                    console.warn('清除缓存失败（可忽略）:', e);
-                }
+                clearMixedContent();
+                console.log('已清除缓存');
             }
         }
 
-        // 页面加载完成后自动执行一次（包裹在try-catch中防止崩溃）
+        // 页面加载完成后自动执行
         try {
             autoSendMessage();
             Logger.log('✅ 豆包AI自动填充功能已启动');
         } catch (error) {
             console.error('❌ 豆包AI自动填充启动失败:', error);
-            // 即使失败也不影响页面使用
         }
 
     } else {
