@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         （开发版）超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.13.2
+// @version      3.13.3
 // @description  这是一款面向学习场景的脚本工具，其集成了支持提示词定制的智能 AI 助手模块，通过 Web 自动化技术实现跨域提问（区别于传统模型 API 调用或题库检索方式）；同时提供答案动态显隐控制功能，适配多轮刷题需求；内置错题星级标记系统，基于错误频次实现重点内容优先级管理；搭载本地持久化存储的富文本笔记组件，支持知识点与解析的实时记录与安全留存；具备可配置化作业题目导出能力，支持得分、答案、解析等字段的自定义筛选，可快速生成结构化刷题集或背题手册；此外，工具还提供可视化控制面板作为配置入口，支持对上述全功能模块的参数与逻辑进行深度个性化定制，为高效学习与复习流程提供技术支撑。
 // @author       YJohn
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
-// @match        https://www.doubao.com/chat/*
+// @match        https://www.doubao.com/chat*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=chaoxing.com
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -76,50 +76,8 @@
             waitTimeout: 10000,
             pollInterval: 100,
             chunkSize: 2 * 1024 * 1024,
-            elementLoadTimeout: 10000
+            pageLoadWait: 1500
         };
-
-        /**
-         * 自动等待元素加载完成（MutationObserver）
-         * @param {string} selector - 元素选择器
-         * @param {number} timeout - 超时时间
-         * @returns {Promise<HTMLElement>} 加载完成的元素
-         */
-        function waitForElement(selector, timeout = DOUBAO_CONFIG.elementLoadTimeout) {
-            return new Promise((resolve, reject) => {
-                // 先检查元素是否已存在
-                const existingElem = document.querySelector(selector);
-                if (existingElem) {
-                    console.log(`[元素等待] 元素已存在: ${selector}`);
-                    resolve(existingElem);
-                    return;
-                }
-
-                console.log(`[元素等待] 开始监听元素: ${selector}`);
-                // 监听DOM变化，自动识别元素加载
-                const observer = new MutationObserver(() => {
-                    const elem = document.querySelector(selector);
-                    if (elem) {
-                        observer.disconnect();
-                        console.log(`[元素等待] 元素加载成功: ${selector}`);
-                        resolve(elem);
-                    }
-                });
-
-                // 监听整个文档的DOM变化
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true,
-                    attributes: false
-                });
-
-                // 超时兜底
-                setTimeout(() => {
-                    observer.disconnect();
-                    reject(new Error(`超时未找到元素: ${selector}`));
-                }, timeout);
-            });
-        }
 
         /**
          * 读取混合内容（文字+多图）
@@ -237,7 +195,7 @@
         }
 
         /**
-         * 粘贴图片到输入框
+         * 粘贴图片到输入框（使用temp7.txt的正确逻辑）
          */
         function pasteImageToInput(file) {
             console.log('[图片粘贴] 开始粘贴图片');
@@ -250,16 +208,21 @@
                 const dt = new DataTransfer();
                 dt.items.add(file);
 
-                const pasteEvent = new ClipboardEvent('paste', {
-                    bubbles: true,
-                    cancelable: true,
-                    clipboardData: dt
+                // 使用createEvent + initEvent方式（temp7正确实现）
+                const pasteEvent = document.createEvent('Event');
+                pasteEvent.initEvent('paste', true, true);
+                Object.defineProperty(pasteEvent, 'clipboardData', {
+                    value: dt,
+                    enumerable: true
                 });
 
                 input.focus();
                 input.dispatchEvent(pasteEvent);
-                console.log('[图片粘贴] 粘贴完成');
-                resolve();
+                console.log('[图片粘贴] 粘贴事件已触发，等待200ms');
+                setTimeout(() => {
+                    console.log('[图片粘贴] 粘贴完成');
+                    resolve();
+                }, 200);
             });
         }
 
@@ -321,11 +284,17 @@
          */
         async function autoSendMessage() {
             try {
-                // 自动等待元素加载（无固定延迟）
-                Logger.log('🔍 等待页面元素加载...');
-                const inputElem = await waitForElement(DOUBAO_CONFIG.inputSelector);
-                const sendBtn = await waitForElement(DOUBAO_CONFIG.sendBtnSelector);
-                Logger.success('✅ 输入框和发送按钮已加载');
+                // 固定等待页面加载
+                Logger.log(`⏱️ 等待${DOUBAO_CONFIG.pageLoadWait}ms确保页面加载...`);
+                await new Promise(resolve => setTimeout(resolve, DOUBAO_CONFIG.pageLoadWait));
+
+                // 获取输入框和发送按钮
+                const inputElem = document.querySelector(DOUBAO_CONFIG.inputSelector);
+                const sendBtn = document.querySelector(DOUBAO_CONFIG.sendBtnSelector);
+                if (!inputElem || !sendBtn) {
+                    throw new Error('未找到输入框或发送按钮');
+                }
+                Logger.success('✅ 输入框和发送按钮已获取');
 
                 // 读取混合内容
                 const mixedContent = readMixedContent();
