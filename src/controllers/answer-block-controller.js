@@ -1,7 +1,7 @@
 /**
  * AnswerBlockController - 答案块控制器
  * 负责单个答案块的显示/隐藏、笔记、复制、AI问答等功能
- * @version 3.12.0.3
+ * @version 3.12.0.4
  */
 class AnswerBlockController {
     constructor(block, config, styleGenerator, dbManager, workKey, appInstance) {

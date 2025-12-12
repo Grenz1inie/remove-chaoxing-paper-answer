@@ -1,4 +1,8 @@
-// ===================== 配置管理模块 =====================
+/**
+ * Config - 配置管理模块
+ * 提供全局配置的管理与深度合并功能
+ * @version 3.12.0.4
+ */
 class Config {
     static DEFAULT = {
         // ========== DOM 选择器配置 ==========
@@ -498,3 +502,6 @@ class Config {
         return result;
     }
 }
+
+// 导出供其他模块使用
+window.Config = Config;
