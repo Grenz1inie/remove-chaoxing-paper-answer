@@ -1,7 +1,7 @@
 /**
  * Config - 配置管理模块
  * 提供全局配置的管理与深度合并功能
- * @version 3.12.0.5
+ * @version 3.12.0.6
  */
 class Config {
     static DEFAULT = {
