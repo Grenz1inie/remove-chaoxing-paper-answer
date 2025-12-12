@@ -1,7 +1,7 @@
 /**
  * GlobalController - 全局控制器
  * 负责全局按钮（显示全部/隐藏全部、控制面板、导出）的创建和管理
- * @version 3.12.0
+ * @version 3.12.0.3
  */
 class GlobalController {
     constructor(container, controllers, config, styleGenerator, dbManager, workKey) {

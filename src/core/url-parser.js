@@ -1,7 +1,7 @@
 /**
  * URLParser - URL解析工具类
  * 负责从URL中提取作业/试卷的唯一标识
- * @version 3.12.0
+ * @version 3.12.0.3
  */
 class URLParser {
     /**
