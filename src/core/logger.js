@@ -1,7 +1,7 @@
 /**
  * Logger - 日志工具类
  * 提供统一的控制台日志输出接口
- * @version 3.12.0.7
+ * @version 3.12.0.8
  */
 class Logger {
     static PREFIX = '🎓 [超星答案助手]';

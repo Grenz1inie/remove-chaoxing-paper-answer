@@ -1,7 +1,7 @@
 /**
  * ChaoxingAnswerHider - 主应用类
  * 超星学习通答案助手的核心应用类
- * @version 3.12.0.7
+ * @version 3.12.0.8
  */
 class ChaoxingAnswerHider {
     constructor(customConfig = {}) {
