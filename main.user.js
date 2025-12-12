@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         （开发版）超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.13.0
+// @version      3.13.1
 // @description  这是一款面向学习场景的脚本工具，其集成了支持提示词定制的智能 AI 助手模块，通过 Web 自动化技术实现跨域提问（区别于传统模型 API 调用或题库检索方式）；同时提供答案动态显隐控制功能，适配多轮刷题需求；内置错题星级标记系统，基于错误频次实现重点内容优先级管理；搭载本地持久化存储的富文本笔记组件，支持知识点与解析的实时记录与安全留存；具备可配置化作业题目导出能力，支持得分、答案、解析等字段的自定义筛选，可快速生成结构化刷题集或背题手册；此外，工具还提供可视化控制面板作为配置入口，支持对上述全功能模块的参数与逻辑进行深度个性化定制，为高效学习与复习流程提供技术支撑。
 // @author       YJohn
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
@@ -165,18 +165,29 @@
         }
 
         /**
-         * 输入文字到输入框
+         * 解锁输入框（模拟人工聚焦+初始输入，激活发送逻辑）
          */
-        function inputTextToInput(text) {
+        function unlockInputBox(inputElem) {
+            console.log('[输入框解锁] 开始解锁输入框');
+            inputElem.click();
+            inputElem.focus();
+            // 输入空字符触发初始状态（模拟手动输入），再清空
+            document.execCommand('insertText', false, ' ');
+            inputElem.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+            inputElem.select();
+            document.execCommand('backspace');
+            console.log('[输入框解锁] 解锁完成');
+        }
+
+        /**
+         * 输入文字到输入框（使用temp3.txt的正确逻辑）
+         */
+        function inputTextToInput(inputElem, text) {
             console.log('[文字输入] 开始输入文字');
             return new Promise(resolve => {
-                const input = document.querySelector(DOUBAO_CONFIG.inputSelector);
-                if (!input) {
-                    throw new Error('未找到输入框');
-                }
-                input.focus();
-                input.value = (input.value || '') + text;
-                input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                // 使用document.execCommand确保内容不被清空
+                document.execCommand('insertText', false, text);
+                inputElem.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
                 console.log('[文字输入] 文字输入完成');
                 setTimeout(resolve, 300);
             });
@@ -252,7 +263,7 @@
         }
 
         /**
-         * 豆包AI自动发送逻辑（支持文字+多图）
+         * 豆包AI自动发送逻辑（支持纯文字/纯图片/混合场景）
          */
         async function autoSendMessage() {
             try {
@@ -268,31 +279,58 @@
                     return;
                 }
 
-                Logger.log(`找到混合内容：文字=${mixedContent.hasText}, 图片=${mixedContent.imageCount}张`);
-
                 // 检查输入框
                 const inputElem = document.querySelector(DOUBAO_CONFIG.inputSelector);
                 if (!inputElem) {
                     throw new Error('未找到输入框');
                 }
 
-                // 1. 先输入文字
-                if (mixedContent.hasText) {
-                    await inputTextToInput(mixedContent.text);
-                    Logger.success('文字已输入');
+                // 判断场景类型
+                const isTextOnly = mixedContent.hasText && !mixedContent.hasImage;
+                const isImageOnly = !mixedContent.hasText && mixedContent.hasImage;
+                const isMixed = mixedContent.hasText && mixedContent.hasImage;
+
+                if (isTextOnly) {
+                    Logger.log('📝 检测到纯文字场景');
+                } else if (isImageOnly) {
+                    Logger.log('🖼️ 检测到纯图片场景');
+                } else if (isMixed) {
+                    Logger.log('🎨 检测到混合内容场景（文字+图片）');
                 }
 
-                // 2. 依次粘贴所有图片（无间隔）
-                if (mixedContent.hasImage && mixedContent.images.length > 0) {
+                // 所有场景都需要先解锁输入框
+                unlockInputBox(inputElem);
+
+                // 场景1: 纯文字
+                if (isTextOnly) {
+                    await inputTextToInput(inputElem, mixedContent.text);
+                    Logger.success('✅ 纯文字已输入');
+                }
+                // 场景2: 纯图片
+                else if (isImageOnly) {
                     for (let i = 0; i < mixedContent.images.length; i++) {
                         const imgData = mixedContent.images[i];
                         const file = base64ToFile(imgData.base64, imgData.name, imgData.type);
                         await pasteImageToInput(file);
-                        Logger.success(`图片${i + 1}/${mixedContent.imageCount} 已粘贴`);
+                        Logger.success(`✅ 图片${i + 1}/${mixedContent.imageCount} 已粘贴`);
+                    }
+                }
+                // 场景3: 混合内容（文字 + 图片）
+                else if (isMixed) {
+                    // 先输入文字
+                    await inputTextToInput(inputElem, mixedContent.text);
+                    Logger.success('✅ 文字已输入');
+                    
+                    // 再依次粘贴所有图片
+                    for (let i = 0; i < mixedContent.images.length; i++) {
+                        const imgData = mixedContent.images[i];
+                        const file = base64ToFile(imgData.base64, imgData.name, imgData.type);
+                        await pasteImageToInput(file);
+                        Logger.success(`✅ 图片${i + 1}/${mixedContent.imageCount} 已粘贴`);
                     }
                 }
 
-                // 3. 轮询检测发送按钮
+                // 轮询检测发送按钮
                 Logger.log('所有内容已输入，开始轮询检测发送按钮...');
                 const canSend = await waitSendBtnWithPolling();
 
