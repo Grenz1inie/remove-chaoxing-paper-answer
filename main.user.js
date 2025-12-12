@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         （开发版）超星学习通期末周复习小助手
 // @namespace    http://tampermonkey.net/
-// @version      3.13.4
+// @version      3.13.5
 // @description  这是一款面向学习场景的脚本工具，其集成了支持提示词定制的智能 AI 助手模块，通过 Web 自动化技术实现跨域提问（区别于传统模型 API 调用或题库检索方式）；同时提供答案动态显隐控制功能，适配多轮刷题需求；内置错题星级标记系统，基于错误频次实现重点内容优先级管理；搭载本地持久化存储的富文本笔记组件，支持知识点与解析的实时记录与安全留存；具备可配置化作业题目导出能力，支持得分、答案、解析等字段的自定义筛选，可快速生成结构化刷题集或背题手册；此外，工具还提供可视化控制面板作为配置入口，支持对上述全功能模块的参数与逻辑进行深度个性化定制，为高效学习与复习流程提供技术支撑。
 // @author       YJohn
 // @match        https://*.chaoxing.com/mooc-ans/mooc2/work/view*
-// @match        https://www.doubao.com/chat/*
+// @match        https://www.doubao.com/chat*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=chaoxing.com
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -72,7 +72,8 @@
 
         const DOUBAO_CONFIG = {
             inputSelector: 'textarea[data-testid="chat_input_input"]',
-            sendBtnSelector: '#flow-end-msg-send',
+            sendBtnSelector: 'button[data-testid="chat_input_send_button"]',  // 用于点击发送
+            statusBtnSelector: '#flow-end-msg-send',  // 用于状态检测
             waitTimeout: 10000,
             pollInterval: 100,
             chunkSize: 2 * 1024 * 1024,
@@ -238,10 +239,10 @@
         }
 
         /**
-         * 检查发送按钮是否可用
+         * 检查发送按钮是否可用（使用状态检测选择器）
          */
         function isSendBtnEnabled() {
-            const btn = document.querySelector(DOUBAO_CONFIG.sendBtnSelector);
+            const btn = document.querySelector(DOUBAO_CONFIG.statusBtnSelector);
             if (!btn) return false;
             const ariaDisabled = btn.getAttribute('aria-disabled') === 'true';
             return !ariaDisabled;
